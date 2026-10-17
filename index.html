@@ -11564,23 +11564,26 @@ body.orizz #pesca-pan{left:auto;right:136px;bottom:16px}
      MOTORE
      ===================================================================== */
   class Fine extends Error { }
+  // testi 'tu / l'avversario': online il tavolo li scrive per tutti e due, ognuno li legge dal suo lato
+  const V = (p, tu, lui) => S && S.online ? '\u0001' + p.i + '\u0002' + tu + '\u0002' + lui + '\u0003' : (p.ia ? lui : tu);
+  const risolvi = (t, chi) => String(t == null ? '' : t).replace(/\u0001(\d)\u0002([^\u0002]*)\u0002([^\u0003]*)\u0003/g, (m, i, tu, lui) => (+i === chi ? tu : lui));
   let S = null, uidN = 1;
   const nuovaIst = c => ({ uid: uidN++, c });
   const avv = p => S.g[1 - p.i];
   const pronte = p => p.tire - p.tireGirate;
 
-  function nuovaPartita(mioMazzo, mioLeader) {
+  function nuovaPartita(mioMazzo, mioLeader, amico) {
     const crea = (i, nome, ia, mazzo, leader) => ({
       i, nome, ia, leader: { c: PER_ID[leader], girato: false, usato: -1, morteUsata: -1 },
       mazzo: mescola(mazzo.map(id => nuovaIst(PER_ID[id]))), mano: [], belinate: [], bormida: [], campo: [],
       tire: 0, tireGirate: 0, nTurni: 0
     });
     const lIA = LEADER.filter(l => !l.alt)[rnd(5)].id;
-    S = { g: [crea(0, 'Tu', false, mioMazzo, mioLeader), crea(1, 'Avversario', true, mazzoCasuale(), Math.random() < 0.5 ? lIA : String(+lIA + 1).padStart(3, '0'))], turno: 0, att: 0, primo: rnd(2), fase: 'inizio', fine: null, log: [], occupato: false };
+    S = { g: [crea(0, 'Tu', false, mioMazzo, mioLeader), amico ? crea(1, amico.nome, true, amico.mazzo, amico.leader) : crea(1, 'Avversario', true, mazzoCasuale(), Math.random() < 0.5 ? lIA : String(+lIA + 1).padStart(3, '0'))], turno: 0, att: 0, primo: rnd(2), fase: 'inizio', fine: null, log: [], occupato: false };
     S.att = S.primo;
   }
 
-  function log(t, forte) { if (!S) return; S.log.push(t); if (S.log.length > 80) S.log.shift(); UI.log(t, forte); }
+  function log(t, forte) { if (!S) return; S.log.push(t); if (S.log.length > 80) S.log.shift(); UI.log(risolvi(t, 0), forte); }
 
   function potenza(p, ch) {
     let v = ch.c.p + ch.bonusT - ch.malusT + ch.comb;
@@ -11602,13 +11605,13 @@ body.orizz #pesca-pan{left:auto;right:136px;bottom:16px}
   }
   function perde(p, motivo) {
     S.fine = { vince: avv(p).i, motivo };
-    log((p.ia ? 'L\'avversario' : 'Hai') + ' perso: ' + motivo, true);
+    log(V(p, 'Hai', 'L\'avversario ha') + ' perso: ' + motivo, true);
     throw new Fine();
   }
   async function perdiBelinata(p) {
-    if (!p.belinate.length) perde(p, p.ia ? 'colpito senza più Belinate' : 'sei stato colpito senza più Belinate');
+    if (!p.belinate.length) perde(p, V(p, 'sei stato colpito senza più Belinate', 'colpito senza più Belinate'));
     const c = p.belinate.shift(); p.mano.push(c);
-    log((p.ia ? 'L\'avversario perde' : 'Perdi') + ' una Belinata' + (p.ia ? '' : ': ' + c.c.n + ' va in mano') + ' (ne restano ' + p.belinate.length + ')', true);
+    log(V(p, 'Perdi', 'L\'avversario perde') + ' una Belinata' + V(p, ': ' + c.c.n + ' va in mano', '') + ' (ne restano ' + p.belinate.length + ')', true);
     UI.colpo(p); UI.render(); await attesa(650);
   }
   function paga(p, n) { if (pronte(p) < n) return false; p.tireGirate += n; return true; }
@@ -11629,11 +11632,11 @@ body.orizz #pesca-pan{left:auto;right:136px;bottom:16px}
     if (reset) { ch.eq.splice(ch.eq.indexOf(reset), 1); p.bormida.push(reset); log(ch.c.n + ' resta in gioco grazie a ' + reset.c.n); return false; }
     const eqMorte = ch.eq.filter(e => e.c.morte);
     lascia(p, ch, 'bormida');
-    log(ch.c.n + (p.ia ? ' (avversario)' : '') + ' è eliminato');
+    log(ch.c.n + V(p, '', ' (avversario)') + ' è eliminato');
     UI.render();
     if (ch.c.morte) await esegui(p, ch.c.morte, ch);
     for (const e of eqMorte) await esegui(p, e.c.morte, ch);
-    if (p.leader.c.passivo === 'pescaMorte' && p.leader.morteUsata !== S.turno) { p.leader.morteUsata = S.turno; if (pesca(p, 1)) log(p.leader.c.n + ': ' + (p.ia ? 'l\'avversario pesca' : 'peschi') + ' 1 carta'); }
+    if (p.leader.c.passivo === 'pescaMorte' && p.leader.morteUsata !== S.turno) { p.leader.morteUsata = S.turno; if (pesca(p, 1)) log(p.leader.c.n + ': ' + V(p, 'peschi', 'l\'avversario pesca') + ' 1 carta'); }
     return true;
   }
   // girare con un effetto: Occhiali (immune), Casco (torna pronto la prima volta per turno)
@@ -11646,25 +11649,25 @@ body.orizz #pesca-pan{left:auto;right:136px;bottom:16px}
   /* ---------- effetti ---------- */
   async function scegli(p, req) {
     if (!req.cand.length && !req.vuotoOk) return [];
-    const r = p.ia ? IA.scegli(p, req) : await UI.scegli(req);
+    const r = p.remoto ? await RETE.scegli(p, req) : p.ia ? IA.scegli(p, req) : await UI.scegli(Object.assign({}, req, { titolo: risolvi(req.titolo, 0) }));
     return r || [];
   }
   async function scartaDa(p, n, titolo) {
     n = Math.min(n, p.mano.length); if (!n) return;
     const sc = await scegli(p, { scopo: 'scarta', titolo: titolo || ('Scarta ' + n + ' carta' + (n > 1 ? 'e' : '')), cand: p.mano.slice(), min: n, max: n, tipo: 'mano' });
     sc.forEach(c => { const i = p.mano.indexOf(c); if (i >= 0) { p.mano.splice(i, 1); p.bormida.push(c); } });
-    if (sc.length) log((p.ia ? 'L\'avversario scarta ' : 'Scarti ') + sc.map(c => c.c.n).join(', '));
+    if (sc.length) log(V(p, 'Scarti ', 'L\'avversario scarta ') + sc.map(c => c.c.n).join(', '));
   }
   async function esegui(p, fx, fonte) {
     const o = avv(p), nomeF = fonte ? fonte.c.n : '';
     for (const f of fx) {
       if (S.fine) return;
       switch (f.op) {
-        case 'pesca': { const k = pesca(p, f.n); log(nomeF + ': ' + (p.ia ? 'l\'avversario pesca ' : 'peschi ') + k + ' carta' + (k === 1 ? '' : 'e')); break; }
+        case 'pesca': { const k = pesca(p, f.n); log(nomeF + ': ' + V(p, 'peschi ', 'l\'avversario pesca ') + k + ' carta' + (k === 1 ? '' : 'e')); break; }
         case 'scarta': await scartaDa(p, f.n, nomeF + ': scarta 1 carta'); break;
         case 'avvScarta': await scartaDa(o, 1, nomeF + ': devi scartare 1 carta'); break;
         case 'ogniAvvScarta': await scartaDa(o, 1, nomeF + ': devi scartare 1 carta'); break;
-        case 'avvBelinata': log(nomeF + ': ' + (o.ia ? 'l\'avversario perde' : 'perdi') + ' 1 Belinata'); await perdiBelinata(o); break;
+        case 'avvBelinata': log(nomeF + ': ' + V(o, 'perdi', 'l\'avversario perde') + ' 1 Belinata'); await perdiBelinata(o); break;
         case 'tire': { const k = Math.min(f.n, p.tireGirate); p.tireGirate -= k; log(nomeF + ': ' + k + ' Tir' + (k === 1 ? 'a torna pronta' : 'e tornano pronte')); break; }
         case 'gira': {
           const cand = o.campo.filter(ch => !ch.girato && ch.c.c <= f.max && !ch.eq.some(e => e.c.noGira));
@@ -11695,17 +11698,17 @@ body.orizz #pesca-pan{left:auto;right:136px;bottom:16px}
           sel.forEach(ch => { ch.bonusT += f.v; log(ch.c.n + ' guadagna +' + f.v + ' Potenza fino alla fine del turno'); });
           break;
         }
-        case 'bonusTutti': p.campo.forEach(ch => { ch.bonusT += f.v; }); log(nomeF + ': i Character ' + (p.ia ? 'avversari' : 'tuoi') + ' guadagnano +' + f.v); break;
+        case 'bonusTutti': p.campo.forEach(ch => { ch.bonusT += f.v; }); log(nomeF + ': i Character ' + V(p, 'tuoi', 'avversari') + ' guadagnano +' + f.v); break;
         case 'riprendiC': case 'riprendiE': case 'riprendi': {
           const cand = p.bormida.filter(c => f.op === 'riprendi' || (f.op === 'riprendiE' ? c.c.t === 'E' : c.c.t === 'C' && c.c.c <= f.max));
           const sel = await scegli(p, { scopo: 'riprendi', titolo: nomeF + ': riprendi dalla Bormida ' + (f.op === 'riprendiE' ? '1 Equipaggiamento' : f.op === 'riprendi' ? '1 carta' : 'un Character (costo ' + f.max + ' o meno)'), cand, min: cand.length ? 1 : 0, max: 1, tipo: 'carte' });
-          sel.forEach(c => { p.bormida.splice(p.bormida.indexOf(c), 1); p.mano.push(c); log(nomeF + ': ' + (p.ia ? 'l\'avversario riprende ' : 'riprendi ') + c.c.n); });
+          sel.forEach(c => { p.bormida.splice(p.bormida.indexOf(c), 1); p.mano.push(c); log(nomeF + ': ' + V(p, 'riprendi ', 'l\'avversario riprende ') + c.c.n); });
           break;
         }
         case 'cerca': {
           const top = p.mazzo.splice(0, 5), cand = top.filter(c => c.c.t === f.tipo);
           const sel = await scegli(p, { scopo: 'cerca', titolo: nomeF + ': prime 5 carte, prendi 1 ' + NOMI_TIPO[f.tipo], cand, min: cand.length ? 1 : 0, max: 1, tipo: 'carte', mostra: top });
-          sel.forEach(c => { top.splice(top.indexOf(c), 1); p.mano.push(c); log(nomeF + ': ' + (p.ia ? 'l\'avversario aggiunge ' : 'aggiungi ') + c.c.n + ' alla mano'); });
+          sel.forEach(c => { top.splice(top.indexOf(c), 1); p.mano.push(c); log(nomeF + ': ' + V(p, 'aggiungi ', 'l\'avversario aggiunge ') + c.c.n + ' alla mano'); });
           p.mazzo.push(...mescola(top));
           if (!sel.length) log(nomeF + ': nessun ' + NOMI_TIPO[f.tipo] + ' tra le prime 5');
           break;
@@ -11738,6 +11741,7 @@ body.orizz #pesca-pan{left:auto;right:136px;bottom:16px}
     return true;
   }
   async function gioca(p, c, opz) {
+    if (ospite()) { RETE.manda('gioca', c.uid); return true; }      // online: la mossa la fa il tavolo dell'amico
     opz = opz || {};
     if (!giocabile(p, c)) return false;
     const card = c.c;
@@ -11754,32 +11758,34 @@ body.orizz #pesca-pan{left:auto;right:136px;bottom:16px}
     paga(p, card.c); p.mano.splice(p.mano.indexOf(c), 1);
     if (card.t === 'C') {
       const ch = { uid: c.uid, c: card, girato: false, entrato: S.turno, eq: [], bonusT: 0, malusT: 0, comb: 0, telUsato: -1, cascoUsato: -1 };
-      p.campo.push(ch); nuovi.add(ch.uid); log((p.ia ? 'L\'avversario gioca ' : 'Giochi ') + card.n, p.ia); UI.render(); UI.mostra(p, card);
+      p.campo.push(ch); nuovi.add(ch.uid); log(V(p, 'Giochi ', 'L\'avversario gioca ') + card.n, p.ia); UI.render(); UI.mostra(p, card);
       if (card.etb) { await attesa(p.ia ? 500 : 150); await esegui(p, card.etb, ch); }
     } else if (card.t === 'E') {
-      dest.eq.push(c); log((p.ia ? 'L\'avversario assegna ' : 'Assegni ') + card.n + ' a ' + dest.c.n, p.ia); UI.mostra(p, card);
+      dest.eq.push(c); log(V(p, 'Assegni ', 'L\'avversario assegna ') + card.n + ' a ' + dest.c.n, p.ia); UI.mostra(p, card);
     } else {
-      log((p.ia ? 'L\'avversario gioca ' : 'Giochi ') + card.n, p.ia); UI.render(); UI.mostra(p, card);
+      log(V(p, 'Giochi ', 'L\'avversario gioca ') + card.n, p.ia); UI.render(); UI.mostra(p, card);
       await attesa(p.ia ? 500 : 150);
       await esegui(p, card.fx, c); p.bormida.push(c);
     }
     UI.render(); return true;
   }
   async function usaLeader(p) {
+    if (ospite()) { RETE.manda('leader', 0); return true; }
     if (!leaderAbilUsabile(p)) return false;
     paga(p, p.leader.c.abil.costo); p.leader.usato = S.turno;
-    log((p.ia ? 'L\'avversario usa ' : 'Usi ') + p.leader.c.n + ' (' + p.leader.c.abil.costo + ' Tir' + (p.leader.c.abil.costo === 1 ? 'a' : 'e') + ')', p.ia);
+    log(V(p, 'Usi ', 'L\'avversario usa ') + p.leader.c.n + ' (' + p.leader.c.abil.costo + ' Tir' + (p.leader.c.abil.costo === 1 ? 'a' : 'e') + ')', p.ia);
     await esegui(p, p.leader.c.abil.fx, p.leader); UI.render(); return true;
   }
 
   /* ---------- attacco e blocco ---------- */
   async function attacca(p, ch) {          // ch = Character, oppure null per il Belinone
+    if (ospite()) { RETE.manda('attacca', ch ? ch.uid : 0); return true; }
     const d = avv(p), nomeA = ch ? ch.c.n : p.leader.c.n;
     if (ch) {
       if (!puoAttaccare(p, ch)) return false;
       ch.girato = true; ch.comb = (ch.c.att || 0) + ch.eq.reduce((s, e) => s + (e.c.att || 0), 0);
     } else { if (!leaderPuoAttaccare(p)) return false; p.leader.girato = true; }
-    log((p.ia ? 'L\'avversario attacca con ' : 'Attacchi con ') + nomeA + (ch ? ' (' + potenza(p, ch) + ')' : ' (3000)'), true);
+    log(V(p, 'Attacchi con ', 'L\'avversario attacca con ') + nomeA + (ch ? ' (' + potenza(p, ch) + ')' : ' (3000)'), true);
     UI.attacco(p, ch); UI.render(); await attesa(p.ia ? 500 : 250);
     try {
       if (ch) { const tel = ch.eq.find(e => e.c.tele); if (tel && ch.telUsato !== S.turno) { ch.telUsato = S.turno; await esegui(p, [{ op: 'gira', max: tel.c.tele, k: 1 }], tel); } }
@@ -11790,7 +11796,7 @@ body.orizz #pesca-pan{left:auto;right:136px;bottom:16px}
         const r = (await scegli(d, { scopo: 'reazione', titolo: nomeA + ' ti attacca! Vuoi giocare una REAZIONE?', cand: reazioni, min: 0, max: 1, tipo: 'mano', att: ch, attP: ch ? potenza(p, ch) : 3000, attL: !ch }))[0];
         if (r) {
           paga(d, r.c.c); d.mano.splice(d.mano.indexOf(r), 1); d.bormida.push(r);
-          log((d.ia ? 'L\'avversario risponde con ' : 'Rispondi con ') + r.c.n, true); UI.mostra(d, r.c); UI.render(); await attesa(500);
+          log(V(d, 'Rispondi con ', 'L\'avversario risponde con ') + r.c.n, true); UI.mostra(d, r.c); UI.render(); await attesa(500);
           if (r.c.fx[0].op === 'annulla') { log('Attacco annullato'); return true; }
           blocco = (await scegli(d, { scopo: 'blocco', titolo: r.c.n + ': quale Character blocca senza girarsi (+2000)?', cand: d.campo.filter(x => !x.girato), min: 1, max: 1, tipo: 'campo', di: d, att: ch, attP: ch ? potenza(p, ch) : 3000, attL: !ch, libero: true }))[0] || null;
           if (blocco) { libero = true; blocco.comb += r.c.fx[0].v; }
@@ -11811,11 +11817,11 @@ body.orizz #pesca-pan{left:auto;right:136px;bottom:16px}
       }
       if (!libero && !ha(blocco, 'guardia')) blocco.girato = true;
       blocco.comb += blocco.eq.reduce((s, e) => s + (e.c.blocco || 0), 0);
-      log((d.ia ? 'L\'avversario blocca con ' : 'Blocchi con ') + blocco.c.n + ' (' + potenza(d, blocco) + ')', true);
+      log(V(d, 'Blocchi con ', 'L\'avversario blocca con ') + blocco.c.n + ' (' + potenza(d, blocco) + ')', true);
       UI.render(); await attesa(450);
       // effetto del Belinone del difensore dopo il blocco
       if (leaderAbilUsabile(d) && d.leader.c.abil.fx[0].op === 'bonus') {
-        const usa = d.ia ? IA.leaderInDifesa(d, p, ch, blocco) : await UI.chiedi('Usi l\'effetto di ' + d.leader.c.n + ' (' + d.leader.c.abil.costo + ' Tire) prima del combattimento?', ['Sì', 'No']) === 0;
+        const usa = d.remoto ? (await RETE.chiedi(d, 'Usi l\'effetto di ' + d.leader.c.n + ' (' + d.leader.c.abil.costo + ' Tire) prima del combattimento?', ['Sì', 'No'])) === 0 : d.ia ? IA.leaderInDifesa(d, p, ch, blocco) : await UI.chiedi('Usi l\'effetto di ' + d.leader.c.n + ' (' + d.leader.c.abil.costo + ' Tire) prima del combattimento?', ['Sì', 'No']) === 0;
         if (usa) await usaLeader(d);
       }
       // combattimento
@@ -11850,10 +11856,10 @@ body.orizz #pesca-pan{left:auto;right:136px;bottom:16px}
       log(S.primo === 0 ? 'Inizi tu! (5 carte)' : 'Inizia l\'avversario: tu parti con 6 carte', true);
       UI.render();
       for (const p of [a, b]) {                      // mulligan, una volta sola
-        const via = p.ia ? IA.mulligan(p) : await UI.scegli({ scopo: 'mulligan', titolo: 'Mulligan: tocca le carte che vuoi rimettere nel mazzo (una volta sola)', cand: p.mano.slice(), min: 0, max: p.mano.length, tipo: 'mano', okTesto: 'Tieni queste' });
+        const via = p.remoto ? await RETE.scegli(p, { scopo: 'mulligan', titolo: 'Mulligan: tocca le carte che vuoi rimettere nel mazzo (una volta sola)', cand: p.mano.slice(), min: 0, max: p.mano.length, tipo: 'mano', okTesto: 'Tieni queste' }) : p.ia ? IA.mulligan(p) : await UI.scegli({ scopo: 'mulligan', titolo: 'Mulligan: tocca le carte che vuoi rimettere nel mazzo (una volta sola)', cand: p.mano.slice(), min: 0, max: p.mano.length, tipo: 'mano', okTesto: 'Tieni queste' });
         if (via && via.length) {
           via.forEach(c => p.mano.splice(p.mano.indexOf(c), 1)); p.mazzo.push(...via); mescola(p.mazzo); pesca(p, via.length);
-          log((p.ia ? 'L\'avversario cambia ' : 'Cambi ') + via.length + ' carte');
+          log(V(p, 'Cambi ', 'L\'avversario cambia ') + via.length + ' carte');
         }
       }
       S.g.forEach(p => { p.belinate = p.mazzo.splice(0, 5); });
@@ -11864,13 +11870,14 @@ body.orizz #pesca-pan{left:auto;right:136px;bottom:16px}
         p.campo.forEach(ch => { ch.girato = false; }); p.leader.girato = false; p.tireGirate = 0;
         p.tire = Math.min(10, p.tire + (p.nTurni === 1 ? (S.att === S.primo ? 1 : 2) : 2));
         if (!(p.nTurni === 1 && S.att === S.primo)) {
-          if (!p.mazzo.length) perde(p, p.ia ? 'deve pescare con il mazzo vuoto' : 'devi pescare ma il mazzo è vuoto');
+          if (!p.mazzo.length) perde(p, V(p, 'devi pescare ma il mazzo è vuoto', 'deve pescare con il mazzo vuoto'));
           pesca(p, 1);
         }
         S.fase = 'main';
-        log(p.ia ? '— Turno dell\'avversario —' : '— Il tuo turno' + (p.nTurni === 1 ? ' (nel primo turno non si attacca)' : '') + ' —', true);
-        UI.render(); UI.banner(p.ia ? 'Turno avversario' : 'Il tuo turno');
-        if (p.ia) await IA.turno(p);
+        log(V(p, '— Il tuo turno' + (p.nTurni === 1 ? ' (nel primo turno non si attacca)' : '') + ' —', '— Turno dell\'avversario —'), true);
+        UI.render(); UI.banner(p.remoto ? 'Turno di ' + p.nome : p.ia ? 'Turno avversario' : 'Il tuo turno');
+        if (p.remoto) await RETE.turno(p);
+        else if (p.ia) await IA.turno(p);
         else await new Promise(r => { fineTurnoUmano = r; });
         fineTurnoUmano = null;
         if (via() || st.fine) return;
@@ -11889,6 +11896,7 @@ body.orizz #pesca-pan{left:auto;right:136px;bottom:16px}
     }
   }
   function fineDellaPartita() {
+    if (!S || S.finito) return; S.finito = true;
     const vinto = S.fine.vince === 0;
     if (vinto) SAV.vinte++; else SAV.perse++;
     let premio = 0;
@@ -12206,7 +12214,7 @@ body.bv-attivo #barra-alto,body.bv-attivo #controlli,body.bv-attivo #btn-contest
 #bv .ed .cella .hai{font-size:10.5px;color:var(--dim)}
 @media (prefers-reduced-motion:reduce){#bv .carta,#bv .tire .tt img{transition:none}}
 `;
-  let root = null, avviato = false, nuovi = new Set(), selez = null;
+  let root = null, avviato = false, nuovi = new Set(), selez = null, BV_rete = () => null, BV_amico = () => { };
   const $ = (s, r) => (r || root).querySelector(s);
   function nodo(tag, cls, html) { const n = document.createElement(tag); if (cls) n.className = cls; if (html !== undefined) n.innerHTML = html; return n; }
 
@@ -12304,7 +12312,8 @@ body.bv-attivo #barra-alto,body.bv-attivo #controlli,body.bv-attivo #btn-contest
     if (b === 'esci') { if (!S || S.fine || S.fase === 'inizio') { BV.chiudi(); return; } UI.chiedi('Vuoi lasciare la partita? Conta come sconfitta.', ['Esci', 'Continua']).then(r => { if (r === 0) { SAV.perse++; salva(); S.fine = { vince: 1, motivo: 'ritirato' }; BV.chiudi(); } }); return; }
     const io = S.g[0];
     if (S.att !== 0 || S.occupato || S.fine) return;
-    if (b === 'attacchi' && S.fase === 'main') { S.fase = 'attacchi'; selez = null; log(io.nTurni > 1 ? 'Fase attacchi: tocca un tuo Character pronto (o il Belinone) per attaccare' : 'Nel primo turno non puoi attaccare'); UI.render(); }
+    if (ospite()) { if (b === 'attacchi' && S.fase === 'main') RETE.manda('attacchi', 0); if (b === 'fine' && (S.fase === 'main' || S.fase === 'attacchi')) { selez = null; RETE.manda('fine', 0); } return; }
+    if (b === 'attacchi' && S.fase === 'main') { S.fase = 'attacchi'; selez = null; (S.online ? UI.log : log)(io.nTurni > 1 ? 'Fase attacchi: tocca un tuo Character pronto (o il Belinone) per attaccare' : 'Nel primo turno non puoi attaccare'); UI.render(); }
     if (b === 'fine' && (S.fase === 'main' || S.fase === 'attacchi') && fineTurnoUmano) { selez = null; fineTurnoUmano(); }
   }
 
@@ -12422,7 +12431,7 @@ body.bv-attivo #barra-alto,body.bv-attivo #controlli,body.bv-attivo #btn-contest
   }
   function mostraLog() {
     const o = $('[data-o="pick"]'); if (o.classList.contains('on') || !S) return;
-    chiediUI('<div style="max-height:60vh;overflow-y:auto;font-weight:400;font-size:12.5px;color:var(--ink)">' + S.log.slice().reverse().map(t => '<div style="padding:3px 0;border-bottom:1px solid rgba(255,255,255,.08)">' + esc(t) + '</div>').join('') + '</div>', ['Chiudi']);
+    chiediUI('<div style="max-height:60vh;overflow-y:auto;font-weight:400;font-size:12.5px;color:var(--ink)">' + S.log.slice().reverse().map(t => '<div style="padding:3px 0;border-bottom:1px solid rgba(255,255,255,.08)">' + esc(risolvi(t, 0)) + '</div>').join('') + '</div>', ['Chiudi']);
   }
   const esc = t => String(t).replace(/[&<>]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' })[c]);
 
@@ -12433,19 +12442,19 @@ body.bv-attivo #barra-alto,body.bv-attivo #controlli,body.bv-attivo #btn-contest
     scegli: scegliUI, chiedi: chiediUI,
     log(t, forte) { if (!root) return; const m = $('.rope span'); m.innerHTML = forte ? '<b>' + esc(t) + '</b>' : esc(t); },
     banner(t) { const b = $('.banner'); b.textContent = t; b.classList.add('on'); clearTimeout(timerBanner); timerBanner = setTimeout(() => b.classList.remove('on'), 1100); },
-    mostra(p, card) { if (!p.ia) return; const m = $('.mostra'); m.src = img(card.id); m.classList.add('on'); clearTimeout(timerMostra); timerMostra = setTimeout(() => m.classList.remove('on'), 1500); },
+    mostra(p, card) { if (ON && ON.ruolo === 'h' && !p.ia) { RETE.mostrato(card.id); } if (!p.ia) return; const m = $('.mostra'); m.src = img(card.id); m.classList.add('on'); clearTimeout(timerMostra); timerMostra = setTimeout(() => m.classList.remove('on'), 1500); },
     colpo(p) { const l = $('.side[data-s="' + p.i + '"] .lead'); if (l) { l.classList.remove('colpo'); void l.offsetWidth; l.classList.add('colpo'); } if (B.Audio && B.Audio.bip) try { B.Audio.bip(false); } catch (e) { /* ok */ } },
     attacco(p, ch) { if (B.Audio && B.Audio.bip) try { B.Audio.bip(true); } catch (e) { /* ok */ } },
     fine(vinto, motivo, premio) {
       selez = null; disegnaAzioni();
-      chiediUI('<div style="text-align:center"><div class="disp" style="font-size:28px;margin-bottom:6px">' + (vinto ? '🏆 Hai vinto!' : 'Hai perso') + '</div><div style="font-weight:400;font-size:13px;color:var(--ink)">' + esc(motivo) + (premio ? '<br>+' + premio + ' coins' : '') + '<br><small>Vittorie ' + SAV.vinte + ' · Sconfitte ' + SAV.perse + '</small></div></div>', ['Rivincita', 'Menu']).then(r => { if (r === 0) avviaPartita(); else menu(); });
+      chiediUI('<div style="text-align:center"><div class="disp" style="font-size:28px;margin-bottom:6px">' + (vinto ? '🏆 Hai vinto!' : 'Hai perso') + '</div><div style="font-weight:400;font-size:13px;color:var(--ink)">' + esc(risolvi(motivo, 0)) + (premio ? '<br>+' + premio + ' coins' : '') + '<br><small>Vittorie ' + SAV.vinte + ' · Sconfitte ' + SAV.perse + '</small></div></div>', ON ? ['Menu'] : ['Rivincita', 'Menu']).then(r => { if (ON) { ON = null; menu(); return; } if (r === 0) avviaPartita(); else menu(); });
     },
     render() {
       if (!root || !S) return;
       const io = S.g[0], ia = S.g[1], mio = S.att === 0 && !S.fine;
       [io, ia].forEach(p => {
         const s = $('.side[data-s="' + p.i + '"]');
-        $('.head', s).innerHTML = '<span class="pname disp' + (S.att === p.i && !S.fine ? ' on' : '') + '">' + (p.ia ? 'Avversario' : 'Tu') + '</span>' +
+        $('.head', s).innerHTML = '<span class="pname disp' + (S.att === p.i && !S.fine ? ' on' : '') + '">' + esc(p.ia ? (S.nomeAvv || 'Avversario') : 'Tu') + '</span>' +
           '<span class="chip vita">♥<b>' + p.belinate.length + '</b></span><span class="chip">Mano<b>' + p.mano.length + '</b></span><span class="chip">Mazzo<b>' + p.mazzo.length + '</b></span><span class="chip">Tire<b>' + pronte(p) + '/' + p.tire + '</b></span>';
         // Character
         const c = $('.zona.c', s); c.innerHTML = '';
@@ -12487,7 +12496,7 @@ body.bv-attivo #barra-alto,body.bv-attivo #controlli,body.bv-attivo #btn-contest
 
   /* ---------- menu: Belinone, mazzo, regole ---------- */
   function menu() {
-    S = null;
+    S = null; ON = null; sfida = null;
     const mn = $('.menu'); mn.style.display = 'block'; $('.ed').style.display = 'none';
     if (!leaderOk(SAV.leader)) SAV.leader = '101';
     const mio = mazzoValido(SAV.mazzo), tot = tuttePossedute();
@@ -12496,6 +12505,7 @@ body.bv-attivo #barra-alto,body.bv-attivo #controlli,body.bv-attivo #btn-contest
 <h2>Scegli il tuo Belinone</h2><div class="leaders"></div><p class="ldesc"></p>
 <h2>Mazzo</h2><p>${mio ? 'Userai il tuo mazzo personale (40 carte).' : tot >= 40 ? 'Hai ' + tot + ' carte: puoi costruire il tuo mazzo. Finché non lo fai giochi con un mazzo in prestito.' : 'Hai ' + tot + ' carte su 40 che servono per un mazzo tuo: intanto giochi con un mazzo in prestito. Le carte si trovano nei pacchetti.'}</p>
 <div class="riga-b"><button class="pri" data-m="gioca">▶ Gioca</button><button class="sec" data-m="mazzo">✎ ${mio ? 'Modifica il tuo mazzo' : 'Costruisci il tuo mazzo'}</button>${mio ? '<button class="sec" data-m="casuale">Gioca con mazzo in prestito</button>' : ''}<button class="sec" data-m="pacchetti">🎁 Pacchetti${gratisOggi() ? ' (1 gratis)' : ''}</button><button class="sec" data-m="regole">Regole</button></div>
+<div class="amici-bv"></div>
 <p style="margin-top:10px;opacity:.7;font-size:12px">Le tue carte: ${tot} (${carteDiverse()} diverse su ${CARTE.length}) · Vittorie ${SAV.vinte} · Sconfitte ${SAV.perse} · Ogni vittoria vale ${PREMIO} coins (fino a ${PREMI_GIORNO} al giorno)</p>`;
     const ls = $('.leaders', mn);
     LEADER.filter(l => leaderOk(l.id)).forEach(l => {
@@ -12612,6 +12622,183 @@ body.bv-attivo #barra-alto,body.bv-attivo #controlli,body.bv-attivo #btn-contest
     disegna();
   }
 
+
+  /* =====================================================================
+     ONLINE: partita tra due amici (vedi online.js). Chi sfida fa da tavolo: il motore gira
+     da lui e l'amico e' il giocatore 2. Il tavolo manda all'amico la foto della partita vista
+     dal suo lato (senza la mano e il mazzo dell'altro) e le domande da fare a lui (blocchi,
+     reazioni, scelte); l'amico risponde e manda le sue mosse. Tutto passa nella presenza.
+     ===================================================================== */
+  const mioId = Math.random().toString(36).slice(2, 8), amici = new Map();   // peer -> { nick, d, t }
+  let ON = null, sfida = null, accetto = 0, tAmici = 0, chiesta = 0;
+  const ospite = () => !!(ON && ON.ruolo === 'o');
+  const fresco = a => performance.now() - a.t < 8000;
+  const ist = x => x.uid + '.' + x.c.id;
+  const finta = () => ({ uid: -1, c: CARTE[0] });
+  const istDa = q => { const t = String(q).split('.'); return { uid: +t[0] || -1, c: PER_ID[t[1]] || CARTE[0] }; };
+  const num = (v, d) => (typeof v === 'number' && isFinite(v) ? v : d);
+  const lista = (v, n) => (Array.isArray(v) ? v.slice(0, n || 80) : []);
+  const escA = t => String(t).replace(/[&<>"']/g, c => '&#' + c.charCodeAt(0) + ';');
+  const RETE = {
+    // --- dal lato del tavolo ---
+    scegli(p, req) {
+      const r = { sc: req.scopo, ti: risolvi(req.titolo, 1), ca: req.cand.map(ist), mo: req.mostra ? req.mostra.map(ist) : null, mi: req.min, mx: req.max, tp: req.tipo, di: req.di ? 1 - req.di.i : null, ok: req.okTesto || null, ap: req.attP, al: req.attL ? 1 : 0, li: req.libero ? 1 : 0 };
+      return domanda('scegli', r).then(x => {
+        const u = lista(x && x.sel, 40); let out = req.cand.filter(c => u.includes(c.uid)).slice(0, req.max);
+        if (out.length < req.min) out = req.cand.slice(0, req.min);
+        return out;
+      });
+    },
+    chiedi(p, testo, opz) { return domanda('chiedi', { ti: testo, op: opz }).then(x => clampI(num(x && x.i, opz.length - 1), opz.length)); },
+    turno(p) { lista(ON.azAmico, 6).forEach(x => { if (x && num(x.n, 0) > ON.azF) ON.azF = x.n; }); return new Promise((res, rej) => { ON.turno = { p, res, rej }; ciclaAzioni(); }); },   // mosse vecchie (di prima del turno) non valgono
+    mostrato(id) { ON.mo = [(ON.mo ? ON.mo[0] : 0) + 1, id]; },
+    // --- dal lato dell'amico ---
+    manda(op, u) { ON.azN++; ON.az.push({ n: ON.azN, op, u }); if (ON.az.length > 6) ON.az.shift(); if (S) { S.occupato = true; UI.render(); } }
+  };
+  const clampI = (i, n) => Math.max(0, Math.min(n - 1, Math.round(i)));
+  function domanda(k, r) { ON.rqN++; ON.rq = { n: ON.rqN, k, r }; return new Promise((res, rej) => { ON.attesa = { n: ON.rqN, res, rej }; }); }
+  // le mosse dell'amico nel suo turno, una alla volta
+  async function ciclaAzioni() {
+    if (!ON || ON.ruolo !== 'h' || ON.lavora || !ON.turno) return;
+    const a = lista(ON.azAmico, 6).find(x => x && num(x.n, 0) > ON.azF); if (!a) return;
+    ON.azF = a.n; const p = ON.turno.p; ON.lavora = true; S.occupato = true; UI.render();
+    try {
+      if (a.op === 'fine') { const t = ON.turno; ON.turno = null; ON.lavora = false; S.occupato = false; t.res(); return; }
+      if (a.op === 'attacchi' && S.fase === 'main') S.fase = 'attacchi';
+      if (a.op === 'gioca') { const c = p.mano.find(x => x.uid === a.u); if (c) await gioca(p, c); }
+      if (a.op === 'attacca') { const ch = a.u ? p.campo.find(x => x.uid === a.u) : null; if (!a.u || ch) await attacca(p, ch); }
+      if (a.op === 'leader') await usaLeader(p);
+    } catch (e) {
+      if (!ON) return;
+      ON.lavora = false; S.occupato = false; const t = ON.turno; ON.turno = null;
+      if (e instanceof Fine) { if (t) t.rej(e); return; } console.error(e);
+    }
+    if (!ON) return;
+    ON.lavora = false; S.occupato = false; UI.render(); ciclaAzioni();
+  }
+  // la partita vista dall'amico: lui e' g[0]
+  function foto() {
+    const lato = i => 1 - i, P = (p, mio) => ({ n: p.nome, l: [p.leader.c.id, p.leader.girato ? 1 : 0, p.leader.usato, p.leader.morteUsata], mz: p.mazzo.length, ma: mio ? p.mano.map(ist) : p.mano.length, be: p.belinate.length, bo: p.bormida.map(ist),
+      ca: p.campo.map(ch => [ch.uid, ch.c.id, ch.girato ? 1 : 0, ch.entrato, ch.eq.map(ist), ch.bonusT, ch.malusT, ch.comb, ch.telUsato, ch.cascoUsato]), ti: p.tire, tg: p.tireGirate, nt: p.nTurni });
+    return { tu: S.turno, at: lato(S.att), pr: lato(S.primo), fa: S.fase, fi: S.fine ? { v: lato(S.fine.vince), m: risolvi(S.fine.motivo, 1) } : null, oc: S.occupato ? 1 : 0, lg: S.log.slice(-6).map(t => risolvi(t, 1).slice(0, 140)), g: [P(S.g[1], true), P(S.g[0], false)], mo: ON.mo || null, af: ON.azF };
+  }
+  function daFoto(f) {
+    const P = (q, i, mio) => ({ i, nome: String(q.n || ''), ia: !mio, leader: { c: PER_ID[lista(q.l)[0]] || LEADER[0], girato: !!lista(q.l)[1], usato: num(lista(q.l)[2], -1), morteUsata: num(lista(q.l)[3], -1) },
+      mazzo: Array.from({ length: Math.min(60, num(q.mz, 0)) }, finta), mano: Array.isArray(q.ma) ? lista(q.ma, 20).map(istDa) : Array.from({ length: Math.min(20, num(q.ma, 0)) }, finta),
+      belinate: Array.from({ length: Math.min(10, num(q.be, 0)) }, finta), bormida: lista(q.bo).map(istDa),
+      campo: lista(q.ca, 5).map(a => ({ uid: num(a[0], -1), c: PER_ID[a[1]] || CARTE[0], girato: !!a[2], entrato: num(a[3], 0), eq: lista(a[4], 2).map(istDa), bonusT: num(a[5], 0), malusT: num(a[6], 0), comb: num(a[7], 0), telUsato: num(a[8], -1), cascoUsato: num(a[9], -1) })),
+      tire: num(q.ti, 0), tireGirate: num(q.tg, 0), nTurni: num(q.nt, 0) });
+    const g = lista(f.g, 2);
+    return { g: [P(g[0] || {}, 0, true), P(g[1] || {}, 1, false)], turno: num(f.tu, 0), att: f.at ? 1 : 0, primo: f.pr ? 1 : 0, fase: String(f.fa || 'main'), fine: f.fi ? { vince: f.fi.v ? 1 : 0, motivo: String(f.fi.m || '') } : null,
+      log: lista(f.lg, 6).map(String), occupato: !!f.oc || ON.azN > num(f.af, 0), online: true, nomeAvv: ON.nick };
+  }
+  // l'amico riceve una nuova foto dal tavolo
+  function nuovaFoto(d) {
+    const f = d.f; if (!f || !f.s || f.v === ON.v) return; ON.v = f.v;
+    let nuovo; try { nuovo = daFoto(f.s); } catch (e) { return; }
+    const vecchio = S; S = nuovo;
+    if (vecchio && vecchio.g) {
+      const uid0 = new Set(); vecchio.g.forEach(q => q.campo.forEach(ch => uid0.add(ch.uid))); S.g.forEach(q => q.campo.forEach(ch => { if (!uid0.has(ch.uid)) nuovi.add(ch.uid); }));
+      [0, 1].forEach(i => { if (S.g[i].belinate.length < vecchio.g[i].belinate.length) UI.colpo(S.g[i]); });
+      if (vecchio.att !== S.att && !S.fine) UI.banner(S.att === 0 ? 'Il tuo turno' : 'Turno di ' + ON.nick);
+      if (selez) { const u = selez.c ? selez.c.uid : selez.ch ? selez.ch.uid : null, p = S.g[selez.p.i]; selez = selez.leader ? { p, leader: true } : selez.c ? ((c => c ? { p, c } : null)(p.mano.find(x => x.uid === u))) : ((ch => ch ? { p, ch } : null)(p.campo.find(x => x.uid === u))); }
+    } else UI.banner('Partita con ' + ON.nick);
+    if (S.log.length) UI.log(S.log[S.log.length - 1]);
+    const mo = lista(f.s.mo, 2); if (mo.length === 2 && mo[0] !== ON.moV) { ON.moV = mo[0]; if (vecchio && PER_ID[mo[1]]) UI.mostra(S.g[1], PER_ID[mo[1]]); }
+    UI.render();
+    if (S.fine && !ON.fineVista) { ON.fineVista = true; fineDellaPartita(); }
+  }
+  // l'amico risponde a una domanda del tavolo
+  async function rispondi(q) {
+    ON.rqIn = q.n; const r = q.r || {};
+    let out;
+    if (q.k === 'chiedi') out = { i: await UI.chiedi(escA(String(r.ti || '')), lista(r.op, 4).map(x => escA(String(x)))) };
+    else {
+      const mappa = new Map(); if (S) S.g.forEach(g => { g.mano.forEach(x => mappa.set(x.uid, x)); g.campo.forEach(x => mappa.set(x.uid, x)); g.bormida.forEach(x => mappa.set(x.uid, x)); });
+      const trova = t => { const u = +String(t).split('.')[0]; if (!mappa.has(u)) mappa.set(u, istDa(t)); return mappa.get(u); };
+      const mostra = r.mo ? lista(r.mo, 40).map(trova) : null, cand = lista(r.ca, 40).map(trova);
+      const req = { scopo: String(r.sc || ''), titolo: escA(String(r.ti || '')), cand, mostra: mostra || undefined, min: num(r.mi, 0), max: num(r.mx, 1), tipo: String(r.tp || 'carte'), di: r.di == null ? undefined : S.g[r.di ? 1 : 0], okTesto: r.ok ? escA(String(r.ok)) : undefined, attP: r.ap, attL: !!r.al, libero: !!r.li };
+      if (req.tipo === 'campo' && !req.di) req.di = S.g[0];
+      out = { sel: (await UI.scegli(req)).map(x => x.uid) };
+    }
+    if (ON && ON.rqIn === q.n) ON.rs = Object.assign({ n: q.n }, out);
+  }
+  // quello che metto nella presenza
+  BV_rete = function () {
+    if (!UI.aperto) return null;
+    if (ON && ON.ruolo === 'h') {
+      if (S) { const s = foto(), k = JSON.stringify(s); if (k !== ON.fk) { ON.fk = k; ON.fv++; } ON.fs = s; }
+      return { id: mioId, st: 'gioco', ru: 'h', con: ON.id, f: { v: ON.fv, s: ON.fs }, rq: ON.rq };
+    }
+    if (ON) return { id: mioId, st: 'gioco', ru: 'o', con: ON.id, az: ON.az, rs: ON.rs };
+    const m = mazzoValido(SAV.mazzo) ? SAV.mazzo : null;
+    return { id: mioId, st: S ? 'solo' : 'menu', md: m, ld: leaderOk(SAV.leader) ? SAV.leader : '101', sf: sfida, acc: accetto };
+  };
+  // quello che ricevo dagli amici
+  BV_amico = function (peer, nick, d) {
+    if (!d || typeof d !== 'object') { amici.delete(peer); return; }
+    const a = amici.get(peer) || {}; a.nick = String(nick || 'Amico').slice(0, 20); a.d = d; a.t = performance.now(); a.peer = peer; amici.set(peer, a);
+    if (!UI.aperto) return;
+    if (ON && ON.peer === peer) {
+      if (ON.ruolo === 'h') {
+        ON.azAmico = d.az;
+        if (ON.attesa && d.rs && d.rs.n === ON.attesa.n) { const w = ON.attesa; ON.attesa = null; ON.rq = null; w.res(d.rs); }
+        ciclaAzioni();
+      } else {
+        nuovaFoto(d);
+        if (d.rq && num(d.rq.n, 0) > (ON.rqIn || 0)) rispondi(d.rq);
+      }
+      return;
+    }
+    if (ON || S) return;
+    // nel menu: l'amico che ho sfidato ha accettato -> apro il tavolo
+    if (sfida && d.acc && d.acc === sfida.n && d.st === 'menu' && String(d.id) === sfida.a) { avviaOnline(a); return; }
+    // ho accettato e il tavolo dell'amico e' pronto -> entro
+    if (accetto && d.st === 'gioco' && d.ru === 'h' && d.con === mioId) { ON = { ruolo: 'o', peer, id: String(d.id), nick: a.nick, az: [], azN: 0, rs: null, v: -1 }; accetto = 0; $('.menu').style.display = 'none'; chiudiZoom(); $('[data-o="pick"]').classList.remove('on'); nuovaFoto(d); return; }
+    // mi sfidano
+    if (d.sf && d.sf.a === mioId && d.sf.n !== chiesta && !accetto) {
+      chiesta = d.sf.n; const n = d.sf.n;
+      UI.chiedi(escA(a.nick) + ' ti sfida a Belinverse 2!', ['Accetta', 'No']).then(r => { if (r === 0 && !ON && !S) accetto = n; });
+    }
+  };
+  function avviaOnline(a) {
+    const d = a.d, okM = Array.isArray(d.md) && d.md.length === 40 && d.md.every(id => PER_ID[id] && PER_ID[id].t !== 'L');
+    $('.menu').style.display = 'none'; $('.ed').style.display = 'none'; chiudiZoom(); selez = null; $('[data-o="pick"]').classList.remove('on');
+    const m = mazzoValido(SAV.mazzo) ? SAV.mazzo : mazzoCasuale();
+    ON = { ruolo: 'h', peer: a.peer, id: String(d.id), nick: a.nick, rqN: 0, rq: null, attesa: null, turno: null, azF: 0, azAmico: [], fv: 0, fk: '', fs: null, mo: null };
+    sfida = null;
+    nuovaPartita(m, leaderOk(SAV.leader) ? SAV.leader : '101', { nome: a.nick, mazzo: okM ? d.md : mazzoCasuale(), leader: PER_ID[d.ld] && PER_ID[d.ld].t === 'L' ? d.ld : '101' });
+    S.online = true; S.nomeAvv = a.nick; S.g[1].remoto = true;
+    UI.render(); UI.log('Partita con ' + a.nick + ': si mischia e si pesca…');
+    setTimeout(() => partita(), 400);
+  }
+  // l'amico non c'e' piu': la partita finisce (vince chi resta)
+  setInterval(() => {
+    if (!UI.aperto) return;
+    if (ON) {
+      const a = amici.get(ON.peer), ok = a && fresco(a) && a.d.st === 'gioco' && a.d.con === mioId;
+      ON.via = ok ? 0 : (ON.via || 0) + 1;
+      if (ON.via >= 6 && S && !S.fine) {
+        S.fine = { vince: 0, motivo: escA(ON.nick) + ' ha lasciato la partita' };
+        if (ON.ruolo === 'h') { const e = new Fine(); if (ON.attesa) { ON.attesa.rej(e); ON.attesa = null; } else if (ON.turno) { ON.turno.rej(e); ON.turno = null; } else { fineDellaPartita(); if (fineTurnoUmano) fineTurnoUmano(); } }
+        else { ON.fineVista = true; fineDellaPartita(); }
+      }
+      return;
+    }
+    if (S) return;
+    const box = root && $('.amici-bv'); if (!box) return;
+    const l = [...amici.values()].filter(a => fresco(a) && (a.d.st === 'menu' || a.d.st === 'solo' || a.d.st === 'gioco'));
+    const k = JSON.stringify(l.map(a => [a.peer, a.nick, a.d.st, sfida && sfida.a === String(a.d.id)]));
+    if (k === box._k) return; box._k = k;
+    box.innerHTML = l.length ? '<h2>Amici al tavolo</h2>' : '';
+    l.forEach(a => {
+      const r = nodo('div', 'riga-b'), mia = sfida && sfida.a === String(a.d.id);
+      r.appendChild(nodo('span', '', escA(a.nick) + (a.d.st === 'menu' ? '' : ' <small style="opacity:.7">(sta giocando)</small>')));
+      if (a.d.st === 'menu') { const b = nodo('button', mia ? 'sec' : 'pri', mia ? 'In attesa… (annulla)' : 'Sfida'); b.addEventListener('click', () => { sfida = mia ? null : { a: String(a.d.id), n: 1 + Math.floor(Math.random() * 1e9) }; box._k = ''; }); r.appendChild(b); }
+      box.appendChild(r);
+    });
+  }, 1000);
+
   /* ---------- apertura / chiusura ---------- */
   const BV = B.Belinverse = {
     get attivo() { return UI.aperto; },
@@ -12634,7 +12821,8 @@ body.bv-attivo #barra-alto,body.bv-attivo #controlli,body.bv-attivo #btn-contest
     get mazzo() { return mazzoValido(SAV.mazzo) ? SAV.mazzo.slice() : null; },
     get leader() { return leaderOk(SAV.leader) ? SAV.leader : '101'; },
     _sav: SAV,
-    _s: () => S, _ia: IA, _velocita: v => { velocita = v; }
+    _s: () => S, _ia: IA, _velocita: v => { velocita = v; },
+    rete: () => BV_rete(), amico: (peer, nick, d) => BV_amico(peer, nick, d), _on: () => ON
   };
 })();
 
@@ -13919,8 +14107,8 @@ body.orizz #pagina-zaino .zn-carte{grid-template-columns:repeat(auto-fill,minmax
    Fuori da claude.ai si gioca con un codice nel link (?amici=CODICE):
    i telefoni si collegano tra loro (PeerJS, lib/peerjs.min.js); il primo
    arrivato fa da padrone di casa e gira a tutti la presenza degli altri.
-   Nei minigiochi (kart, paintball, raid) la presenza porta anche lo stato di
-   gioco (k = B.Kart/B.Paintball/B.Raid.rete()): chi gioca nello stesso momento
+   Nei minigiochi (kart, paintball, raid, carte) la presenza porta anche lo stato di
+   gioco (k = B.Kart/Paintball/Raid/Belinverse.rete()): chi gioca nello stesso momento
    gioca con gli altri.
    Senza codice e fuori da claude.ai non cambia niente.
    ===================================================================== */
@@ -13936,7 +14124,7 @@ body.orizz #pagina-zaino .zn-carte{grid-template-columns:repeat(auto-fill,minmax
   const LOOK = ['pelle', 'stile', 'capelli', 'occhi', 'giacca', 'dettagli', 'abito', 'pantaloni', 'stivali', 'accessorio'];
   const lookDa = l => { const o = {}; LOOK.forEach(k => { o[k] = Math.max(0, Math.min(40, Math.round(num(l && l[k], 0)))); }); return o; };
   // minigiochi online: ognuno da' il suo stato (rete) e riceve quello degli amici (amico)
-  const GIOCHI = { kart: () => B.Kart, paintball: () => B.Paintball, raid: () => B.Raid };
+  const GIOCHI = { kart: () => B.Kart, paintball: () => B.Paintball, raid: () => B.Raid, carte: () => B.Belinverse };
   const aiGiochi = (peer, nick, pr) => Object.keys(GIOCHI).forEach(n => { const m = GIOCHI[n](); if (m && m.amico) m.amico(peer, nick, pr && pr.s === n ? pr.k : null, pr ? lookDa(pr.look) : null); });
   let room = null, nMsg = 0, nEm = 0, ultimo = '', tInvio = 0;
 
@@ -13944,7 +14132,7 @@ body.orizz #pagina-zaino .zn-carte{grid-template-columns:repeat(auto-fill,minmax
   function mia() {
     const io = app.io, st = app.stanza(), gioco = G.stato.giocatore;
     if (!gioco || !io.av) return null;
-    const dove = (B.Raid && B.Raid.attivo) ? 'raid' : (B.Paintball && B.Paintball.attivo) ? 'paintball' : (B.Kart && B.Kart.attivo) ? 'kart' : st.pubblica ? st.id : 'casa';
+    const dove = (B.Raid && B.Raid.attivo) ? 'raid' : (B.Paintball && B.Paintball.attivo) ? 'paintball' : (B.Kart && B.Kart.attivo) ? 'kart' : (B.Belinverse && B.Belinverse.attivo) ? 'carte' : st.pubblica ? st.id : 'casa';
     return { v: 1, nick: testo(gioco.nick, 20), look: lookDa(gioco.look), s: dove, x: +io.x.toFixed(2), z: +io.z.toFixed(2), y: +io.y.toFixed(2), r: +io.yaw.toFixed(2),
       vel: +Math.hypot(io.vx, io.vz).toFixed(2), sed: io.seduto ? (io.seduto.dorme ? 2 : 1) : 0, k: GIOCHI[dove] && GIOCHI[dove]().rete ? GIOCHI[dove]().rete() : null };
   }
