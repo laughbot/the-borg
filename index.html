@@ -13254,13 +13254,14 @@ body.bv-attivo #barra-alto,body.bv-attivo #controlli,body.bv-attivo #btn-contest
   }
 
   /* ---------- fumetti e nomi ---------- */
+  const viaBolla = (r, b) => { r.remove(b); if (b.material) { if (b.material.map) b.material.map.dispose(); b.material.dispose(); } };   // il fumetto ha texture e materiale suoi: vanno liberati
   function mostraBolla(ent, testo, sec) {
-    if (ent.bolla) ent.av.root.remove(ent.bolla);
+    if (ent.bolla) viaBolla(ent.av.root, ent.bolla);
     ent.bolla = B.fumetto(testo); ent.bolla.position.y = 3.05; ent.av.root.add(ent.bolla); ent.durBolla = sec || 4.5;
   }
   function aggBolla(ent, dt) {
     if (!ent.bolla) return; ent.durBolla -= dt;
-    if (ent.durBolla <= 0) { ent.av.root.remove(ent.bolla); ent.bolla = null; }
+    if (ent.durBolla <= 0) { viaBolla(ent.av.root, ent.bolla); ent.bolla = null; }
   }
 
   /* ---------- giocatore ---------- */
@@ -13395,7 +13396,7 @@ body.bv-attivo #barra-alto,body.bv-attivo #controlli,body.bv-attivo #btn-contest
     C.azT = C.az = stanza.az === undefined ? PI / 4 : stanza.az; impostaZoom(stanza.zoom); if (stanza.elev) { C.elev = stanza.elev; C.elevAuto = true; } else if (C.elevAuto) { C.elev = 28; C.elevAuto = false; } C.tx = io.x; C.tz = io.z; C.ty = 1.0 + io.y;
     { const fuori = id === 'piazza'; if (!fuori) setBici(false); const bb = $('#btn-bici'); if (bb) bb.style.display = fuori ? '' : 'none'; }
     assegnaLuci(); ultimaPorta = undefined;
-    if (io.bolla) { io.av.root.remove(io.bolla); io.bolla = null; }
+    if (io.bolla) { viaBolla(io.av.root, io.bolla); io.bolla = null; }
     if (B.Arredo) B.Arredo.stanzaCambiata(id);
     G.emetti('stanza', { id, def: { nome: stanza.nome, pubblica: stanza.pubblica } });
   }
@@ -14457,8 +14458,9 @@ body.orizz #pagina-zaino .zn-carte{grid-template-columns:repeat(auto-fill,minmax
 
   /* ---------- gli amici ---------- */
   function crea(peer, pr) {
-    const look = lookDa(pr.look), av = B.creaAvatar(look);
-    av.root.traverse(q => { if (q.isMesh) { q.castShadow = true; q.receiveShadow = false; } });
+    // come gli abitanti: pezzi uniti e niente ombra, se no ogni amico pesa sul telefono quanto mezza piazza
+    const look = lookDa(pr.look), av = B.unisciAvatar ? B.unisciAvatar(B.creaAvatar(look)) : B.creaAvatar(look);
+    av.root.traverse(q => { if (q.isMesh) { q.castShadow = false; q.receiveShadow = false; } });
     const nick = testo(pr.nick, 20) || 'Amico';
     const et = B.etichetta(nick, { sfondo: '#7fd6a4', colore: '#163322', altezza: 0.38 }); et.position.y = 2.52; av.root.add(et);
     app.scene.add(av.root);
@@ -14469,7 +14471,7 @@ body.orizz #pagina-zaino .zn-carte{grid-template-columns:repeat(auto-fill,minmax
   function aggiorna(peer, pr) {
     if (!pr || pr.v !== 1) return;
     let a = amici.get(peer);
-    if (a && (JSON.stringify(lookDa(pr.look)) !== a.lookK || testo(pr.nick, 20) !== a.nick)) { const vecchio = a; togli(peer); a = crea(peer, pr); a.nMsg = vecchio.nMsg; a.nEm = vecchio.nEm; }
+    if (a && (JSON.stringify(lookDa(pr.look)) !== a.lookK || (testo(pr.nick, 20) || 'Amico') !== a.nick)) { const vecchio = a; togli(peer); a = crea(peer, pr); a.nMsg = vecchio.nMsg; a.nEm = vecchio.nEm; }
     if (!a) {
       a = crea(peer, pr);
       if (G.stato.giocatore) G.emetti('toast', a.nick + ' è online');
@@ -14488,7 +14490,8 @@ body.orizz #pagina-zaino .zn-carte{grid-template-columns:repeat(auto-fill,minmax
     if (pr.em && pr.em.n !== a.nEm) { a.nEm = pr.em.n; const e = EMOTE[pr.em.t]; if (e) { a.av.faiEmote(pr.em.t, e[1]); bolla(a, e[0], e[1] + 0.4); } }
   }
   const EMOTE = { saluta: ['Ciao!', 3], balla: ['♪', 5], ridi: ['Ahah!', 3], applaudi: ['Bravo!', 4], evviva: ['Evviva!', 3] };
-  function bolla(a, t, sec) { if (a.bolla) a.av.root.remove(a.bolla); a.bolla = B.fumetto(t); a.bolla.position.y = 3.05; a.av.root.add(a.bolla); a.durBolla = sec; }
+  const viaBolla = (r, b) => { r.remove(b); if (b.material) { if (b.material.map) b.material.map.dispose(); b.material.dispose(); } };
+  function bolla(a, t, sec) { if (a.bolla) viaBolla(a.av.root, a.bolla); a.bolla = B.fumetto(t); a.bolla.position.y = 3.05; a.av.root.add(a.bolla); a.durBolla = sec; }
 
   /* ---------- ogni fotogramma: seguono la loro posizione, si vedono solo nella tua stessa stanza ---------- */
   let prima = performance.now(), tBadge = 0;
@@ -14507,7 +14510,7 @@ body.orizz #pagina-zaino .zn-carte{grid-template-columns:repeat(auto-fill,minmax
       a.av.sedT = pr.sed === 1 ? 1 : 0; a.av.sdrT = pr.sed === 2 ? 1 : 0; a.av.root.rotation.order = 'YXZ'; a.av.root.rotation.x = -PI / 2 * a.av.sdr;
       a.av.root.position.set(a.x, a.y, a.z); a.av.root.rotation.y = a.r;
       a.av.aggiorna(dt, pr.sed ? 0 : Math.min(8, num(pr.vel, 0)), ora / 1000);
-      if (a.bolla) { a.durBolla -= dt; if (a.durBolla <= 0) { a.av.root.remove(a.bolla); a.bolla = null; } }
+      if (a.bolla) { a.durBolla -= dt; if (a.durBolla <= 0) { viaBolla(a.av.root, a.bolla); a.bolla = null; } }
     });
     tBadge -= dt; if (tBadge <= 0) { tBadge = 0.5; badge(amici.size); }
   }
