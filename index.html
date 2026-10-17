@@ -5049,6 +5049,8 @@ body.pc .cf .cf-t,body.pc .cf .cf-base{display:none}
    Sinistra: muoviti. Destra: trascina per mirare e rilascia per sparare (tocca = mira automatica).
    Ogni giocatore ha 3 vite e 3 colpi che si ricaricano. Vince il round chi elimina gli avversari.
    Partita al meglio dei 3 round.
+   Online (vedi online.js): chi e' al paintball nello stesso momento gioca con gli
+   altri, squadre di sole persone; ognuno decide i colpi che prende lui.
    ===================================================================== */
 (function () {
   'use strict';
@@ -5208,7 +5210,7 @@ body.pc .cf .cf-t,body.pc .cf .cf-base{display:none}
     return g;
   }
   function creaSquadre() {
-    giocatori.forEach(g => { scena.remove(g.av.root); B.liberaAvatar(g.av); }); giocatori.length = 0;
+    giocatori.forEach(g => { scena.remove(g.av.root); B.liberaAvatar(g.av); }); giocatori.length = 0; remoti.forEach(r => { r.g = null; });
     const demo = window.CONFIG.utentiDemo.slice().sort(() => Math.random() - 0.5), lv = LIV[sel.liv][1], mio = B.app.io.av.look;
     io = nuovoGiocatore(0, 'Tu', mio, false); giocatori.push(io);
     for (let i = 1; i < sel.n; i++) giocatori.push(nuovoGiocatore(0, demo[i].nick, demo[i].look, true, lv));
@@ -5217,18 +5219,20 @@ body.pc .cf .cf-t,body.pc .cf .cf-base{display:none}
   function posiziona() {
     [0, 1].forEach(team => {
       const sq = giocatori.filter(g => g.team === team);
-      if (team === 0) { sq.splice(sq.indexOf(io), 1); sq.splice(sq.length >> 1, 0, io); }          // tu sei al centro della squadra
+      if (gara) sq.sort((a, b) => (a.id < b.id ? -1 : 1));                                            // online: stesso ordine su tutti i telefoni
+      else if (team === 0) { sq.splice(sq.indexOf(io), 1); sq.splice(sq.length >> 1, 0, io); }          // tu sei al centro della squadra
       sq.forEach((g, i) => { g.x = team ? AX - 2.6 : -AX + 2.6; g.z = (i - (sq.length - 1) / 2) * 4.6; g.yaw = team ? -PI / 2 : PI / 2; });
     });
     giocatori.forEach(g => { g.vivo = true; g.hp = VITE; g.mun = 3; g.cd = 0.3; g.flash = 0; g.hold = 0; g.bers = null; g.post = null; g.att = 0.2 + Math.random() * 0.5; g.av.sedT = 0; g.av.sed = 0; g.et.visible = true; g.bar.sp.visible = true; g.bar.k = ''; g.macchie.forEach(m => g.av.root.remove(m)); g.macchie.length = 0; g.av.root.position.set(g.x, 0, g.z); g.av.root.rotation.y = g.yaw; g.av.root.scale.setScalar(1); disegnaBarra(g); });
     bullets.forEach(b => { b.on = false; b.m.visible = false; }); azzeraMacchie();
-    camX = io.x + 4; camZ = io.z;
+    camX = io.x + (io.team ? -4 : 4); camZ = io.z; spari.length = 0; granOut.length = 0;
     pitch = 0; mirK = 0; saltoY = 0; vSalto = 0; granate = GRANATE; tGran = 0; granVolo.forEach(g => scena.remove(g.m)); granVolo.length = 0; if (armaPB) { armaPB.cur = MARCATORE.cap; armaPB.annulla(); } if (C) C.alzati();
   }
 
   /* ---------- sparo e colpi ---------- */
   function spara(p, ang) {
     const b = bullets.find(q => !q.on); if (!b) return; const s = Math.sin(ang), c = Math.cos(ang);
+    if (p === io && gara) { nSp++; spari.push([nSp, +io.x.toFixed(2), +io.z.toFixed(2), +ang.toFixed(3)]); if (spari.length > 6) spari.shift(); }
     b.on = true; b.mio = p === io; b.team = p.team; b.vx = s * VEL_PRO; b.vz = c * VEL_PRO; b.vita = GITTATA / VEL_PRO; b.m.material = b.mats[p.team]; b.m.position.set(p.x + s * 0.75, QUOTA, p.z + c * 0.75); b.m.visible = true;
     const now = performance.now(); if (now - ultimoPop > 70) { ultimoPop = now; B.Audio.sfx('pop', p === io ? 1 : 0.5); }
   }
@@ -5254,7 +5258,8 @@ body.pc .cf .cf-t,body.pc .cf .cf-base{display:none}
         b.m.position.x += sx; b.m.position.z += sz; const x = b.m.position.x, z = b.m.position.z;
         if (dentro(x, z) || Math.abs(x) > AX + 0.8 || Math.abs(z) > AZ + 0.8) { macchia(x - sx, QUOTA - 0.1 + (Math.random() - 0.5) * 0.4, z - sz, 0.32 + Math.random() * 0.18, b.team); b.on = false; b.m.visible = false; break; }
         let colp = null; for (const g of giocatori) if (g.vivo && g.team !== b.team && Math.hypot(g.x - x, g.z - z) < 0.62) { colp = g; break; }
-        if (colp) { if (b.mio) segnaColpo(); danno(colp, b.team); b.on = false; b.m.visible = false; break; }
+        // online: il colpo su un amico lo decide il suo telefono (qui solo la macchia); quelli su di me li decido io
+        if (colp) { if (b.mio) segnaColpo(); if (colp.remoto) macchia(x, QUOTA, z, 0.3, b.team); else danno(colp, b.team); b.on = false; b.m.visible = false; break; }
       }
       if (b.on && (b.vita -= dt) <= 0) { macchia(b.m.position.x, 0.05, b.m.position.z, 0.28, b.team); b.on = false; b.m.visible = false; }
     });
@@ -5317,9 +5322,14 @@ body.pc .cf .cf-t,body.pc .cf .cf-base{display:none}
   const mirinoSu = () => aiuto(io.yaw, 0.035) !== io.yaw;
   function lanciaGranata() {
     if (granate <= 0) return; granate--; if (granate === GRANATE - 1) tGran = 0;
-    const m = new T.Mesh(new T.SphereGeometry(0.14, 10, 8), new T.MeshBasicMaterial({ color: COL[0] })); const s = Math.sin(io.yaw), c = Math.cos(io.yaw), cp = Math.cos(pitch);
-    m.position.set(io.x + s * 0.5, 1.3 + saltoY, io.z + c * 0.5); scena.add(m);
-    granVolo.push({ m, vx: s * cp * 13, vy: 4 + Math.sin(pitch) * 13, vz: c * cp * 13, t: 0 }); B.Audio.sfx('pop', 0.8);
+    const s = Math.sin(io.yaw), c = Math.cos(io.yaw), cp = Math.cos(pitch), g = [io.x + s * 0.5, 1.3 + saltoY, io.z + c * 0.5, s * cp * 13, 4 + Math.sin(pitch) * 13, c * cp * 13].map(v => +v.toFixed(2));
+    granata(g, io.team, true);
+    if (gara) { nGr++; granOut.push([nGr].concat(g)); if (granOut.length > 3) granOut.shift(); }
+  }
+  function granata(g, team, mia) {
+    const m = new T.Mesh(new T.SphereGeometry(0.14, 10, 8), new T.MeshBasicMaterial({ color: COL[team] }));
+    m.position.set(g[0], g[1], g[2]); scena.add(m);
+    granVolo.push({ m, vx: g[3], vy: g[4], vz: g[5], t: 0, team, mia }); B.Audio.sfx('pop', mia ? 0.8 : 0.5);
   }
   function aggGranate(dt) {
     if (granate < GRANATE) { tGran += dt; if (tGran >= RIC_GRANATA) { granate++; tGran = 0; } }
@@ -5327,8 +5337,8 @@ body.pc .cf .cf-t,body.pc .cf .cf-base{display:none}
       const g = granVolo[i], p = g.m.position; g.t += dt; g.vy -= 16 * dt; p.x += g.vx * dt; p.y += g.vy * dt; p.z += g.vz * dt;
       if (p.y <= 0.15 || (p.y < 1.8 && dentro(p.x, p.z)) || Math.abs(p.x) > AX + 1 || Math.abs(p.z) > AZ + 1 || g.t > 1.6) {
         scena.remove(g.m); granVolo.splice(i, 1);
-        macchia(p.x, -0.72, p.z, 1.7, 0); for (let k = 0; k < 6; k++) macchia(p.x + (Math.random() - 0.5) * 3.4, -0.16, p.z + (Math.random() - 0.5) * 3.4, 0.45, 0);   // macchie quasi piatte: non devono coprire la visuale B.Audio.sfx('splat', 1);
-        giocatori.forEach(e => { if (e.vivo && e.team !== io.team && Math.hypot(e.x - p.x, e.z - p.z) < 2.8) { segnaColpo(); danno(e, 0); } });
+        macchia(p.x, -0.72, p.z, 1.7, g.team); for (let k = 0; k < 6; k++) macchia(p.x + (Math.random() - 0.5) * 3.4, -0.16, p.z + (Math.random() - 0.5) * 3.4, 0.45, g.team);   // macchie quasi piatte: non devono coprire la visuale B.Audio.sfx('splat', 1);
+        giocatori.forEach(e => { if (!e.vivo || e.team === g.team || Math.hypot(e.x - p.x, e.z - p.z) >= 2.8) return; if (g.mia) segnaColpo(); if (!e.remoto && (g.mia || e === io)) danno(e, g.team); });
       }
     }
   }
@@ -5374,32 +5384,32 @@ body.pc .cf .cf-t,body.pc .cf .cf-base{display:none}
 
   /* ---------- flusso della partita ---------- */
   function messaggio(t, sub) { ui.grande.innerHTML = t + (sub ? '<small>' + sub + '</small>' : ''); ui.grande.style.opacity = t ? 1 : 0; }
-  function nuovoRound() { posiziona(); stato = 'conto'; tStato = 3.4; tRound = DURATA; semOld = -1; hud.classList.remove('scelta'); ui.fine.style.display = 'none'; }
+  function nuovoRound() { nr++; posiziona(); stato = 'conto'; tStato = 3.4; tRound = DURATA; semOld = -1; hud.classList.remove('scelta'); ui.fine.style.display = 'none'; }
   let semOld = -1;
   function fineRound(vincitore) {
     if (vincitore >= 0) punti[vincitore]++; stato = 'fineRound'; tStato = 2.4;
-    messaggio(vincitore < 0 ? 'Pareggio!' : vincitore === 0 ? 'Round vinto!' : 'Round perso', vincitore < 0 ? 'tempo scaduto' : NOME_SQ[vincitore] + ' ' + punti[vincitore]);
-    B.Audio.sfx(vincitore === 0 ? 'vittoria' : 'sconfitta', 1);
+    messaggio(vincitore < 0 ? 'Pareggio!' : vincitore === io.team ? 'Round vinto!' : 'Round perso', vincitore < 0 ? 'tempo scaduto' : NOME_SQ[vincitore] + ' ' + punti[vincitore]);
+    B.Audio.sfx(vincitore === io.team ? 'vittoria' : 'sconfitta', 1); vintoRound = vincitore;
     if (punti[0] >= 2 || punti[1] >= 2) tStato = 2.6;
   }
   function fineMatch() {
     stato = 'fine'; messaggio('');
-    const vinto = punti[0] > punti[1];
-    ui.fine.innerHTML = '<h3>' + (vinto ? '&#x1F3C6; Hai vinto la partita!' : '&#x1F4A5; Partita persa') + '</h3><div style="font-size:26px;font-weight:900;margin:4px 0 8px">Blu ' + punti[0] + ' &ndash; ' + punti[1] + ' Rossi</div><button id="pb-ri">Rigioca</button><button class="s" id="pb-sc">Cambia squadre</button><button class="s" id="pb-ex">Esci</button>';
+    const vinto = punti[io.team] > punti[1 - io.team], segui = gara && !capo();
+    ui.fine.innerHTML = '<h3>' + (vinto ? '&#x1F3C6; Hai vinto la partita!' : '&#x1F4A5; Partita persa') + '</h3><div style="font-size:26px;font-weight:900;margin:4px 0 8px">Blu ' + punti[0] + ' &ndash; ' + punti[1] + ' Rossi</div>' + (segui ? '<div style="font-size:13px;margin-bottom:6px">Aspetta che ' + esc(nomeCapo()) + ' riparta, oppure esci.</div>' : '<button id="pb-ri">Rigioca</button>') + '<button class="s" id="pb-sc">' + (gara ? 'Torna al menu' : 'Cambia squadre') + '</button><button class="s" id="pb-ex">Esci</button>';
     ui.fine.style.display = 'block';
-    ui.fine.querySelector('#pb-ri').onclick = () => { punti = [0, 0]; nuovoRound(); };
+    if (!segui) ui.fine.querySelector('#pb-ri').onclick = () => { punti = [0, 0]; nuovoRound(); };
     ui.fine.querySelector('#pb-sc').onclick = () => menu();
     ui.fine.querySelector('#pb-ex').onclick = () => P.esci();
   }
   function menu() {
-    stato = 'scelta'; messaggio(''); ui.fine.style.display = 'none'; hud.classList.add('scelta'); punti = [0, 0];
+    stato = 'scelta'; gara = 0; messaggio(''); ui.fine.style.display = 'none'; hud.classList.add('scelta'); punti = [0, 0];
     ui.sq.querySelectorAll('button').forEach(b => b.classList.toggle('on', +b.dataset.n === sel.n)); ui.liv.querySelectorAll('button').forEach(b => b.classList.toggle('on', +b.dataset.l === sel.liv));
     creaSquadre(); posiziona();
   }
 
   /* ---------- schermata ---------- */
   function aggHud() {
-    const n = sel.n, v = [0, 1].map(t => giocatori.filter(g => g.team === t && g.vivo).length);
+    const n = gara ? Math.max(1, ...[0, 1].map(t => giocatori.filter(g => g.team === t).length)) : sel.n, v = [0, 1].map(t => giocatori.filter(g => g.team === t && g.vivo).length);
     const pallini = (t, k) => { let s = ''; for (let i = 0; i < n; i++) s += '<i style="background:' + (i < k ? COL[t] : 'rgba(255,255,255,.2)') + '"></i>'; return s; };
     const h = '<span class="pl">' + pallini(0, v[0]) + '</span><b>' + punti[0] + '</b><span class="tm">' + (stato === 'gara' ? Math.max(0, Math.ceil(tRound)) : '') + '</span><b>' + punti[1] + '</b><span class="pl">' + pallini(1, v[1]) + '</span>';
     if (h !== ui._h) { ui.top.innerHTML = h; ui._h = h; }
@@ -5408,7 +5418,7 @@ body.pc .cf .cf-t,body.pc .cf .cf-base{display:none}
     const X = x => W / 2 + x * s, Z = z => H / 2 + z * s; c.fillStyle = 'rgba(20,20,30,.55)';
     col.forEach(o => { if (o.t === 'b') c.fillRect(X(o.x0), Z(o.z0), (o.x1 - o.x0) * s, (o.z1 - o.z0) * s); else { c.beginPath(); c.arc(X(o.x), Z(o.z), o.r * s, 0, 7); c.fill(); } });
     giocatori.forEach(g => {
-      if (!g.vivo) return; if (g.team === 1 && !giocatori.some(a => a.vivo && a.team === 0 && Math.hypot(a.x - g.x, a.z - g.z) < GITTATA + 4 && vista(a, g))) return;
+      if (!g.vivo) return; if (g.team !== io.team && !giocatori.some(a => a.vivo && a.team === io.team && Math.hypot(a.x - g.x, a.z - g.z) < GITTATA + 4 && vista(a, g))) return;
       c.fillStyle = COL[g.team]; c.strokeStyle = g === io ? '#ffe28a' : '#101018'; c.lineWidth = g === io ? 2.5 : 1; c.beginPath(); c.arc(X(g.x), Z(g.z), g === io ? 4 : 3, 0, 7); c.fill(); c.stroke();
     });
   }
@@ -5428,18 +5438,20 @@ body.pc .cf .cf-t,body.pc .cf .cf-base{display:none}
   P.frame = function (dt, t, renderer) {
     dt = Math.min(dt, 0.05);
     const asp = renderer.domElement.width / renderer.domElement.height; if (Math.abs(cam.aspect - asp) > 0.001) { cam.aspect = asp; cam.updateProjectionMatrix(); }
+    rete(dt);
     if (stato === 'conto') {
       tStato -= dt; const n = Math.ceil(tStato - 0.4); messaggio(tStato > 0.4 ? String(n) : 'VIA!', tStato > 0.4 ? 'Pronti...' : '');
       const sv = tStato > 0.4 ? n : 0; if (sv !== semOld) { semOld = sv; B.Audio.bip(sv === 0); }
       if (tStato <= 0) { stato = 'gara'; messaggio(''); }
     } else if (stato === 'gara') {
-      tRound -= dt; if (io.vivo) aggGiocatore(dt); giocatori.forEach(g => { if (g.bot && g.vivo) aiBot(g, dt); });
+      tRound -= dt; if (io.vivo) aggGiocatore(dt); else if (gara) aggGranate(dt); giocatori.forEach(g => { if (g.bot && g.vivo) aiBot(g, dt); });
       for (let i = 0; i < giocatori.length; i++) for (let j = i + 1; j < giocatori.length; j++) { const a = giocatori[i], b = giocatori[j]; if (!a.vivo || !b.vivo) continue; const dx = b.x - a.x, dz = b.z - a.z, d = Math.hypot(dx, dz); if (d < 0.8 && d > 0.001) { const p = (0.8 - d) / 2; if (libero(a.x - dx / d * p, a.z - dz / d * p, RAGGIO)) { a.x -= dx / d * p; a.z -= dz / d * p; } if (libero(b.x + dx / d * p, b.z + dz / d * p, RAGGIO)) { b.x += dx / d * p; b.z += dz / d * p; } } }
       aggProiettili(dt);
       const v0 = giocatori.filter(g => g.team === 0 && g.vivo).length, v1 = giocatori.filter(g => g.team === 1 && g.vivo).length;
-      if (!v1) fineRound(0); else if (!v0) fineRound(1); else if (tRound <= 0) { const h0 = giocatori.reduce((s, g) => s + (g.team === 0 && g.vivo ? g.hp : 0), 0), h1 = giocatori.reduce((s, g) => s + (g.team === 1 && g.vivo ? g.hp : 0), 0); fineRound(v0 !== v1 ? (v0 > v1 ? 0 : 1) : h0 > h1 ? 0 : h1 > h0 ? 1 : -1); }
+      if (gara && (!capo() || !giocatori.some(g => g.team === 0) || !giocatori.some(g => g.team === 1))) { if (capo() && tRound <= 0) fineRound(-1); }   // online decide il padrone di casa
+      else if (!v1) fineRound(0); else if (!v0) fineRound(1); else if (tRound <= 0) { const h0 = giocatori.reduce((s, g) => s + (g.team === 0 && g.vivo ? g.hp : 0), 0), h1 = giocatori.reduce((s, g) => s + (g.team === 1 && g.vivo ? g.hp : 0), 0); fineRound(v0 !== v1 ? (v0 > v1 ? 0 : 1) : h0 > h1 ? 0 : h1 > h0 ? 1 : -1); }
     } else if (stato === 'fineRound') {
-      aggProiettili(dt); tStato -= dt; if (tStato <= 0) { messaggio(''); if (punti[0] >= 2 || punti[1] >= 2) fineMatch(); else nuovoRound(); }
+      aggProiettili(dt); if (!gara || capo()) tStato -= dt; if (tStato <= 0) { messaggio(''); if (punti[0] >= 2 || punti[1] >= 2) fineMatch(); else nuovoRound(); }
     }
     aggAvatar(dt, t);
     const fps = !!(C && io && io.vivo && stato !== 'scelta' && stato !== 'fine');
@@ -5448,12 +5460,101 @@ body.pc .cf .cf-t,body.pc .cf .cf-base{display:none}
     // camera inclinata (come nei giochi d'azione da telefono): segue te, o un compagno vivo; nel menu inquadra tutto il campo
     let tx = 0, tz = 0, h = 15.5, dz = 9.5;
     if (stato === 'scelta') { tx = 0; tz = 0; h = 33; dz = 19; }
-    else { const f = io.vivo ? io : (giocatori.find(g => g.vivo && g.team === 0) || giocatori.find(g => g.vivo) || io); tx = clamp(f.x, -AX + 11, AX - 11); tz = clamp(f.z, -AZ + 6, AZ - 6); }
+    else { const f = io.vivo ? io : (giocatori.find(g => g.vivo && g.team === io.team) || giocatori.find(g => g.vivo) || io); tx = clamp(f.x, -AX + 11, AX - 11); tz = clamp(f.z, -AZ + 6, AZ - 6); }
     const k = 1 - Math.exp(-dt * 6); camX += (tx - camX) * k; camZ += (tz - camZ) * k;
     cam.position.set(camX, h, camZ + dz); cam.lookAt(camX, 0, camZ - 0.8);
     if (stato !== 'scelta') aggHud();
     renderer.render(scena, cam);
   };
+
+
+  /* ---------- online con gli amici ---------- */
+  // online.js mette nella presenza il mio stato (P.rete) e mi passa quello degli amici (P.amico).
+  // Chi preme Via! con amici nel menu apre una partita: chi e' nel menu entra nella squadra piu' corta.
+  // Il padrone di casa (codice piu' basso) decide round e punti; ognuno decide i colpi che prende lui
+  // e manda i suoi spari, che gli altri rifanno sul loro campo.
+  const mioId = Math.random().toString(36).slice(2, 8), remoti = new Map();   // peer -> { nick, look, d, t, g, nSp, nGr }
+  let gara = 0, nr = 0, nSp = 0, nGr = 0, vintoRound = -1, tAmici = 0;
+  const spari = [], granOut = [];
+  const nn = (v, d) => (typeof v === 'number' && isFinite(v) ? v : d);
+  const esc = t => String(t).replace(/[&<>"']/g, c => '&#' + c.charCodeAt(0) + ';');
+  const fresco = r => performance.now() - r.t < 5000;
+  const inGara = r => gara && r.d.g === gara && fresco(r);
+  const amiciQui = () => [...remoti.values()].filter(fresco);
+  const capoR = () => { let m = null; remoti.forEach(r => { if (inGara(r) && String(r.d.id) < (m ? String(m.d.id) : mioId)) m = r; }); return m; };
+  const capo = () => !capoR();
+  const nomeCapo = () => { const r = capoR(); return r ? r.nick : 'tu'; };
+  P.rete = function () {
+    if (!P.attivo) return null;
+    return { id: mioId, st: stato, g: gara, r: nr, ts: +tStato.toFixed(2), pt: punti.slice(), t: io ? io.team : 0, x: io ? +io.x.toFixed(2) : 0, z: io ? +io.z.toFixed(2) : 0, y: io ? +io.yaw.toFixed(2) : 0, v: io ? +(io.vel || 0).toFixed(1) : 0, vi: io && io.vivo ? 1 : 0, hp: io ? io.hp : 0, sp: spari.slice(), gr: granOut.slice() };
+  };
+  P.amico = function (peer, nick, d, look) {
+    const r = remoti.get(peer);
+    if (!d || typeof d !== 'object') { if (r) { togliRemoto(r); remoti.delete(peer); } return; }
+    if (r) { r.nick = nick || r.nick; r.look = look || r.look; r.d = d; r.t = performance.now(); }
+    else remoti.set(peer, { nick: nick || 'Amico', look: look || {}, d, t: performance.now(), g: null, nSp: maxN(d.sp), nGr: maxN(d.gr) });
+  };
+  const maxN = l => Array.isArray(l) ? l.reduce((m, q) => Math.max(m, nn(q && q[0], 0)), 0) : 0;
+  function togliRemoto(r) { if (!r.g) return; const i = giocatori.indexOf(r.g); if (i >= 0) giocatori.splice(i, 1); scena.remove(r.g.av.root); B.liberaAvatar(r.g.av); r.g = null; }
+  function premiVia() {
+    const pronti = amiciQui().filter(r => r.d.st === 'scelta');
+    if (!pronti.length) { gara = 0; punti = [0, 0]; nuovoRound(); return; }
+    entra(1 + Math.floor(Math.random() * 1e9), 0, null);
+  }
+  // entro in una partita online: niente bot, solo io (gli amici arrivano dalla rete)
+  function entra(g, team, h) {
+    gara = g; giocatori.forEach(q => { scena.remove(q.av.root); B.liberaAvatar(q.av); }); giocatori.length = 0; remoti.forEach(r => { r.g = null; });
+    io = nuovoGiocatore(team, 'Tu', B.app.io.av.look, false); io.id = mioId; giocatori.push(io);
+    sincronizza(); punti = h ? h.pt.slice(0, 2).map(v => nn(v, 0)) : [0, 0]; nuovoRound();
+    if (h) { nr = Math.round(nn(h.r, 1)); tStato = clamp(nn(h.ts, 3.4) - 0.15, 0.5, 3.4); }
+  }
+  function squadraCorta() { const c = [0, 0]; remoti.forEach(r => { if (inGara(r)) c[r.d.t ? 1 : 0]++; }); return c[1] < c[0] ? 1 : 0; }
+  // gli amici della mia partita diventano giocatori in campo (e spariscono se escono)
+  function sincronizza() {
+    remoti.forEach(r => {
+      const dentro = inGara(r), team = r.d.t ? 1 : 0;
+      if (r.g && (!dentro || r.g.team !== team)) togliRemoto(r);
+      if (!dentro || r.g) return;
+      r.g = nuovoGiocatore(team, String(r.nick).slice(0, 20), r.look, false); r.g.remoto = true; r.g.id = String(r.d.id); r.g.x = nn(r.d.x, 0); r.g.z = nn(r.d.z, 0); giocatori.push(r.g);
+      r.g.av.root.position.set(r.g.x, 0, r.g.z);
+    });
+  }
+  function rete(dt) {
+    if (!scena) return;
+    // nel menu: un amico ha appena dato il via, entro anch'io
+    if (stato === 'scelta') {
+      const h = amiciQui().find(r => r.d.st === 'conto' && r.d.g && nn(r.d.ts, 0) > 0.6);
+      if (h) { gara = h.d.g; entra(h.d.g, squadraCorta(), h.d); return; }
+      tAmici -= dt; if (tAmici <= 0) { tAmici = 0.5; scriviAmici(); }
+      return;
+    }
+    if (!gara) return;
+    sincronizza();
+    const ora = performance.now();
+    remoti.forEach(r => {
+      const g = r.g, d = r.d; if (!g) return;
+      // spari e granate nuovi dell'amico: li rifaccio qui (possono colpire me)
+      if (Array.isArray(d.sp)) d.sp.forEach(q => { if (Array.isArray(q) && nn(q[0], 0) > r.nSp) { r.nSp = q[0]; if (stato === 'gara' || stato === 'fineRound') spara({ x: nn(q[1], g.x), z: nn(q[2], g.z), team: g.team }, nn(q[3], 0)); } });
+      if (Array.isArray(d.gr)) d.gr.forEach(q => { if (Array.isArray(q) && nn(q[0], 0) > r.nGr) { r.nGr = q[0]; if (stato === 'gara') granata(q.slice(1, 7).map(v => nn(v, 0)), g.team, false); } });
+      if (nn(d.r, -1) !== nr) return;          // e' ancora nel round prima: aspetto
+      const k = Math.min(1, dt * 12), tx = nn(d.x, g.x), tz = nn(d.z, g.z);
+      if (Math.hypot(tx - g.x, tz - g.z) > 5) { g.x = tx; g.z = tz; } else { g.x += (tx - g.x) * k; g.z += (tz - g.z) * k; }
+      g.yaw += angDiff(g.yaw, nn(d.y, g.yaw)) * k; g.vel = clamp(nn(d.v, 0), 0, 12);
+      const hp = clamp(Math.round(nn(d.hp, VITE)), 0, VITE);
+      while (g.vivo && g.hp > hp) danno(g, 1 - g.team);
+      if (g.vivo && !d.vi) colpito(g, 1 - g.team);
+    });
+    // chi non e' padrone di casa segue i suoi round
+    const h = capoR(); if (!h) return; const hd = h.d, hr = Math.round(nn(hd.r, 0));
+    if (hr > nr && (hd.st === 'conto' || hd.st === 'gara')) { punti = [nn(hd.pt && hd.pt[0], 0), nn(hd.pt && hd.pt[1], 0)]; nuovoRound(); nr = hr; tStato = hd.st === 'conto' ? clamp(nn(hd.ts, 3.4), 0.01, 3.4) : 0.01; }
+    else if (hr === nr && hd.st === 'fineRound' && stato === 'gara') { const p0 = punti.slice(); punti = [nn(hd.pt[0], 0), nn(hd.pt[1], 0)]; const w = punti[0] > p0[0] ? 0 : punti[1] > p0[1] ? 1 : -1; if (w >= 0) punti[w]--; fineRound(w); tStato = 2.4; }
+    else if (hd.st === 'fine' && stato !== 'fine' && hr === nr) { punti = [nn(hd.pt[0], 0), nn(hd.pt[1], 0)]; fineMatch(); }
+  }
+  function scriviAmici() {
+    const l = amiciQui(); ui.amici.style.display = l.length ? 'block' : 'none'; if (!l.length) return;
+    const dove = r => r.d.st === 'scelta' ? 'pronto' : r.d.st === 'conto' ? 'parte ora' : 'in partita';
+    ui.amici.innerHTML = 'Al paintball con te: ' + l.map(r => esc(r.nick) + ' (' + dove(r) + ')').join(', ') + '<br>' + (l.some(r => r.d.st === 'scelta') ? 'Premi Via! e giocate insieme, squadre di sole persone' : 'Quando uno preme Via! giocate insieme');
+  }
 
   const orienta = () => B.orienta(P.attivo);
   const loc = e => B.ptE(e);   // coordinate del dito dentro l'app (anche se ruotata)
@@ -5492,6 +5593,7 @@ body.pb-attivo #pb-hud{display:block}
 #pb-hud #pb-fine{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:min(86%,360px);background:rgba(30,18,50,.92);border:2px solid #ffd36a;border-radius:22px;padding:14px;pointer-events:auto;display:none;text-align:center}
 #pb-hud #pb-fine h3{margin:0 0 6px;font-size:21px;color:#ffe9a8}
 #pb-hud #pb-fine button{border:0;border-radius:14px;padding:10px 16px;margin:3px;font:inherit;font-weight:800;font-size:15px;cursor:pointer;background:#ffd36a;color:#3b2a14}
+#pb-hud #pb-amici{font-size:12.5px;font-weight:700;color:#c9f5da;margin:0 0 8px;display:none}
 #pb-hud #pb-fine button.s{background:#5a4a7a;color:#fff8e8}
 #pb-hud.fps .zona,#pb-hud.fps .base{display:none!important}
 #pb-hud #pb-mir{position:absolute;left:50%;top:50%;width:20px;height:20px;margin:-10px 0 0 -10px;border:2px solid rgba(255,248,232,.85);border-radius:50%;display:none;pointer-events:none;transition:transform .06s}
@@ -5504,13 +5606,13 @@ body.pb-attivo #pb-hud{display:block}
     hud = document.createElement('div'); hud.id = 'pb-hud';
     hud.innerHTML = '<div class="zona" id="pb-zl"></div><div class="zona" id="pb-zr"></div><div class="base" id="pb-lb"><small>MUOVITI</small><i></i></div><div class="base" id="pb-rb"><small>MIRA E SPARA</small><i></i></div>' +
       '<div id="pb-top"></div><button id="pb-esci">&#x2715; Esci</button><canvas id="pb-radar" width="118" height="70"></canvas><div id="pb-grande"></div><div id="pb-fine"></div>' +
-      '<div id="pb-scelta"><h3>&#x1F3AF; Paintball <small style="font-size:12px;opacity:.8">DEMO</small></h3><p id="pb-guida"></p><div class="riga" id="pb-sq">Squadre:</div><div class="riga" id="pb-liv">Avversari:</div><button id="pb-via">Via!</button></div>';
+      '<div id="pb-scelta"><h3>&#x1F3AF; Paintball <small style="font-size:12px;opacity:.8">DEMO</small></h3><p id="pb-guida"></p><div class="riga" id="pb-sq">Squadre:</div><div class="riga" id="pb-liv">Avversari:</div><div id="pb-amici"></div><button id="pb-via">Via!</button></div>';
     document.getElementById('hud').appendChild(hud);
-    ['top', 'esci', 'radar', 'grande', 'fine', 'scelta', 'via', 'sq', 'liv', 'zl', 'zr', 'lb', 'rb'].forEach(k => { ui[k] = hud.querySelector('#pb-' + k); });
+    ['top', 'esci', 'radar', 'grande', 'fine', 'scelta', 'via', 'sq', 'liv', 'zl', 'zr', 'lb', 'rb', 'amici'].forEach(k => { ui[k] = hud.querySelector('#pb-' + k); });
     [2, 3, 4, 5].forEach(n => { const b = document.createElement('button'); b.textContent = n + 'v' + n; b.dataset.n = n; b.addEventListener('click', () => { sel.n = n; salva(); menu(); }); ui.sq.appendChild(b); });
     LIV.forEach((l, i) => { const b = document.createElement('button'); b.textContent = l[0]; b.dataset.l = i; b.addEventListener('click', () => { sel.liv = i; salva(); menu(); }); ui.liv.appendChild(b); });
     ui.guida = hud.querySelector('#pb-guida'); ui.guida.innerHTML = (B.touch ? 'Sinistra: muoviti. Destra: trascina per mirare e <b>rilascia per sparare</b> (un tocco = mira automatica).' : '<b>WASD</b> o frecce per muoverti, <b>mouse</b> per mirare, <b>clic</b> (anche tenuto premuto) per sparare.') + ' Hai 3 vite e 3 colpi che si ricaricano. Vince chi fa 2 round.';
-    ui.via.addEventListener('click', () => { punti = [0, 0]; nuovoRound(); });
+    ui.via.addEventListener('click', () => premiVia());
     ui.esci.addEventListener('click', () => P.esci());
     if (CF) {
       // comandi condivisi: sotto i pannelli (menu, fine partita), sopra il campo
@@ -5567,11 +5669,12 @@ body.pb-attivo #pb-hud{display:block}
     orienta(); P._riposo(); if (C) C.riposo(); menu();
   };
   P.esci = function () {
-    P.attivo = false; document.body.classList.remove('pb-attivo'); ui.fine.style.display = 'none'; messaggio(''); stato = 'scelta'; mv.x = mv.y = 0; mv.id = null; mi.id = null; mi.mira = false; bt.fuoco = false;
+    P.attivo = false; gara = 0; document.body.classList.remove('pb-attivo'); ui.fine.style.display = 'none'; messaggio(''); stato = 'scelta'; mv.x = mv.y = 0; mv.id = null; mi.id = null; mi.mira = false; bt.fuoco = false;
     try { screen.orientation.unlock(); } catch (e) { } orienta();
   };
   P._s = () => ({ stato, punti, giocatori, io, col, bullets, sel, cam, mi, mv });
   P._set = o => Object.assign(sel, o);
+  P._spara = a => spara(io, a);
 })();
 
 </script>
@@ -13816,8 +13919,9 @@ body.orizz #pagina-zaino .zn-carte{grid-template-columns:repeat(auto-fill,minmax
    Fuori da claude.ai si gioca con un codice nel link (?amici=CODICE):
    i telefoni si collegano tra loro (PeerJS, lib/peerjs.min.js); il primo
    arrivato fa da padrone di casa e gira a tutti la presenza degli altri.
-   Ai kart la presenza porta anche la posizione in pista (B.Kart.rete):
-   chi e' ai kart nello stesso momento corre contro gli altri.
+   Nei minigiochi (kart, paintball, raid) la presenza porta anche lo stato di
+   gioco (k = B.Kart/B.Paintball/B.Raid.rete()): chi gioca nello stesso momento
+   gioca con gli altri.
    Senza codice e fuori da claude.ai non cambia niente.
    ===================================================================== */
 (function () {
@@ -13831,6 +13935,9 @@ body.orizz #pagina-zaino .zn-carte{grid-template-columns:repeat(auto-fill,minmax
   const num = (v, d) => (typeof v === 'number' && isFinite(v) ? v : d);
   const LOOK = ['pelle', 'stile', 'capelli', 'occhi', 'giacca', 'dettagli', 'abito', 'pantaloni', 'stivali', 'accessorio'];
   const lookDa = l => { const o = {}; LOOK.forEach(k => { o[k] = Math.max(0, Math.min(40, Math.round(num(l && l[k], 0)))); }); return o; };
+  // minigiochi online: ognuno da' il suo stato (rete) e riceve quello degli amici (amico)
+  const GIOCHI = { kart: () => B.Kart, paintball: () => B.Paintball, raid: () => B.Raid };
+  const aiGiochi = (peer, nick, pr) => Object.keys(GIOCHI).forEach(n => { const m = GIOCHI[n](); if (m && m.amico) m.amico(peer, nick, pr && pr.s === n ? pr.k : null, pr ? lookDa(pr.look) : null); });
   let room = null, nMsg = 0, nEm = 0, ultimo = '', tInvio = 0;
 
   /* ---------- quello che mando io ---------- */
@@ -13839,7 +13946,7 @@ body.orizz #pagina-zaino .zn-carte{grid-template-columns:repeat(auto-fill,minmax
     if (!gioco || !io.av) return null;
     const dove = (B.Raid && B.Raid.attivo) ? 'raid' : (B.Paintball && B.Paintball.attivo) ? 'paintball' : (B.Kart && B.Kart.attivo) ? 'kart' : st.pubblica ? st.id : 'casa';
     return { v: 1, nick: testo(gioco.nick, 20), look: lookDa(gioco.look), s: dove, x: +io.x.toFixed(2), z: +io.z.toFixed(2), y: +io.y.toFixed(2), r: +io.yaw.toFixed(2),
-      vel: +Math.hypot(io.vx, io.vz).toFixed(2), sed: io.seduto ? (io.seduto.dorme ? 2 : 1) : 0, k: dove === 'kart' && B.Kart.rete ? B.Kart.rete() : null };
+      vel: +Math.hypot(io.vx, io.vz).toFixed(2), sed: io.seduto ? (io.seduto.dorme ? 2 : 1) : 0, k: GIOCHI[dove] && GIOCHI[dove]().rete ? GIOCHI[dove]().rete() : null };
   }
   function invia(extra) {
     if (!room) return; const p = mia(); if (!p) return;
@@ -13858,7 +13965,7 @@ body.orizz #pagina-zaino .zn-carte{grid-template-columns:repeat(auto-fill,minmax
     const a = { peer, av, nick, lookK: JSON.stringify(look), x: num(pr.x, 0), z: num(pr.z, 0), y: num(pr.y, 0), r: num(pr.r, 0), vel: 0, bolla: null, durBolla: 0, nMsg: pr.msg ? pr.msg.n : 0, nEm: pr.em ? pr.em.n : 0, pr };
     amici.set(peer, a); return a;
   }
-  function togli(peer) { if (B.Kart && B.Kart.amico) B.Kart.amico(peer, null, null); const a = amici.get(peer); if (!a) return; app.scene.remove(a.av.root); B.liberaAvatar(a.av); amici.delete(peer); }
+  function togli(peer) { aiGiochi(peer, null, null); const a = amici.get(peer); if (!a) return; app.scene.remove(a.av.root); B.liberaAvatar(a.av); amici.delete(peer); }
   function aggiorna(peer, pr) {
     if (!pr || pr.v !== 1) return;
     let a = amici.get(peer);
@@ -13868,7 +13975,7 @@ body.orizz #pagina-zaino .zn-carte{grid-template-columns:repeat(auto-fill,minmax
       if (G.stato.giocatore) G.emetti('toast', a.nick + ' è online');
     }
     a.pr = pr;
-    if (B.Kart && B.Kart.amico) B.Kart.amico(peer, a.nick, pr.s === 'kart' ? pr.k : null);   // ai kart: la sua posizione in pista
+    aiGiochi(peer, a.nick, pr);   // nei minigiochi: il suo stato di gioco
     // messaggio nuovo in chat: entra nella chat pubblica e appare nel fumetto
     if (pr.msg && pr.msg.n !== a.nMsg) {
       a.nMsg = pr.msg.n; const t = testo(pr.msg.t, 120);
@@ -13889,7 +13996,7 @@ body.orizz #pagina-zaino .zn-carte{grid-template-columns:repeat(auto-fill,minmax
     requestAnimationFrame(ciclo);
     const ora = performance.now(), dt = Math.min(0.05, (ora - prima) / 1000); prima = ora;
     if (!app.gioco()) return;
-    tInvio -= dt; if (tInvio <= 0) { tInvio = (B.Kart && B.Kart.attivo) ? 0.066 : 0.1; invia(); }
+    tInvio -= dt; if (tInvio <= 0) { tInvio = Object.keys(GIOCHI).some(n => GIOCHI[n]() && GIOCHI[n]().attivo) ? 0.066 : 0.1; invia(); }
     const qui = app.stanza(), libero = !(B.Raid && B.Raid.attivo) && !(B.Paintball && B.Paintball.attivo) && !(B.Kart && B.Kart.attivo);
     amici.forEach(a => {
       const pr = a.pr, vis = libero && qui.pubblica && pr.s === qui.id;
