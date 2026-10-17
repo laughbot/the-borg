@@ -540,6 +540,10 @@ body.orizz #inizio-anteprima { width: 120px; height: 140px; }
       <p id="foglio-bio"></p>
       <div class="azioni">
         <button id="foglio-dm" class="btn-primario">Messaggio privato</button>
+        <div class="azioni-riga" id="foglio-amico" hidden>
+          <button id="foglio-visita" class="btn-secondario">Visita casa</button>
+          <button id="foglio-raggiungi" class="btn-secondario">Raggiungi</button>
+        </div>
         <div class="azioni-riga">
           <button id="foglio-segnala" class="btn-secondario">Segnala</button>
           <button id="foglio-blocca" class="btn-secondario">Blocca</button>
@@ -10498,15 +10502,42 @@ body.arredando #joy,body.arredando #controlli,body.arredando #btn-contesto,body.
 
   function ingombro(id, r) { const a = mobili.find(x => x.id === id), q = Math.abs(Math.sin(r)) > 0.5; return { hx: (q ? a.d : a.w) / 2, hz: (q ? a.w : a.d) / 2, a }; }
   // altezza del pavimento in un punto (pedane e scale)
-  Arredo.alt = function (x, z) {
+  Arredo.alt = (x, z) => altDi(messi, x, z);
+  function altDi(lista, x, z) {
     let y = 0;
-    for (const m of messi) {
+    for (const m of lista) {
       const a = m.a; if (!a.alza && !a.rampa) continue;
       const c = Math.cos(m.rot), s = Math.sin(m.rot), dx = x - m.x, dz = z - m.z, lx = dx * c - dz * s, lz = dx * s + dz * c;
       if (Math.abs(lx) > a.w / 2 || Math.abs(lz) > a.d / 2) continue;
       const h = a.alza ? m.y + a.alza : m.y + a.rampa * (0.5 - lz / a.d); if (h > y) y = h;
     }
     return y;
+  }
+  // casa di un amico in visita: i suoi mobili [id, x, z, rot, y] nella stanza st, senza toccare i miei salvataggi
+  Arredo.arredaOspite = function (st, g, lista) {
+    const pezzi = [];
+    (lista || []).slice(0, 80).forEach(p => {
+      if (!Array.isArray(p)) return;
+      const id = String(p[0]), a = mobili.find(q => q.id === id); if (!a) return;
+      const n = v => (typeof v === 'number' && isFinite(v) ? Math.max(-40, Math.min(40, v)) : 0);
+      const x = n(p[1]), z = n(p[2]), r = n(p[3]), y = Math.max(0, Math.min(3, n(p[4])));
+      const mg = B.creaMobile(id); mg.position.set(x, y, z); mg.rotation.y = r; g.add(mg);
+      pezzi.push({ a, x, y, z, rot: r, g: mg });
+      const { hx, hz } = ingombro(id, r);
+      if (!camm(a)) st.ostacoli.push({ t: 'b', x0: x - hx, x1: x + hx, z0: z - hz, z1: z + hz });
+      if (a.sedute) {
+        const c = Math.cos(r), s = Math.sin(r);
+        a.sedute.forEach(q => {
+          const tz = q.tz === undefined ? q.z : q.tz, o = { x: x + q.x * c + q.z * s, z: z - q.x * s + q.z * c, y: y + q.y, yt: y, yaw: r };
+          if (q.dorme) { o.dorme = true; o.r = q.r || 1.9; o.tx = x + q.x * c + tz * s; o.tz = z - q.x * s + tz * c; }
+          o.azione = { sedile: o, nome: o.dorme ? 'Vai a dormire' : 'Siediti', testo: o.dorme ? 'Vai a dormire' : 'Siediti' };
+          st.sedili.push(o);
+        });
+      }
+      if (a.luce) st.m.lampade.push({ x, y: y + 2.0, z });
+    });
+    st.alt = (x, z) => altDi(pezzi, x, z);
+    st.anim = t => pezzi.forEach(m => { const f = m.g.userData.anim; if (f) f(t); });
   };
   function libero(id, x, z, r, ignora) {
     const { hx, hz, a } = ingombro(id, r), L = lim();
@@ -10680,6 +10711,7 @@ body.arredando #joy,body.arredando #controlli,body.arredando #btn-contesto,body.
   };
   Arredo.muovi = function (ray) { if (!ghost) return; const q = dalRaggio(ray); gx = Math.round(q[0] * 4) / 4; gz = Math.round(q[1] * 4) / 4; };
   Arredo.frame = function (dt, t) {
+    if (app && app.stanza().anim) app.stanza().anim(t);
     if (app && app.stanza().id === 'casa') { for (const m of messi) { const f = m.g.userData.anim; if (f) f(t); } if (ghost && ghost.userData.anim) ghost.userData.anim(t); }
     if (!Arredo.attivo || !ghost) return;
     { const L = lim(), { hx, hz } = ingombro(ghostId, rot); gx = Math.max(L.x0 + hx, Math.min(L.x1 - hx, gx)); gz = Math.max(L.z0 + hz, Math.min(L.z1 - hz, gz)); }
@@ -13379,6 +13411,18 @@ body.bv-attivo #barra-alto,body.bv-attivo #controlli,body.bv-attivo #btn-contest
     }
   }
 
+  /* ---------- casa di un amico (visita con il campanello) ---------- */
+  const gO = new T.Group(); gO.visible = false; scene.add(gO);
+  function casaOspite(d) {
+    while (gO.children.length) { const c = gO.children[0]; gO.remove(c); c.traverse(o => { if (o.geometry) o.geometry.dispose(); }); }
+    const m = B.costruisciCasa(gO, d.liv | 0, d.stili || null);
+    const st = stanze.ospite = { id: 'ospite', nome: 'Casa di ' + d.nick, pubblica: true, ospite: d.nick, gruppo: gO, m, ostacoli: m.ostacoli, porte: m.porte, sedili: m.sedili, toccabili: m.toccabili,
+      area: m.area, alt: () => 0, zoom: 0.8 * Math.pow(10 / m.w, 0.8), spawn: m.spawn, rect: { x0: -m.w / 2, x1: m.w / 2, z0: m.zN, z1: 6.1 }, edifici: [], sfondo: '#3a2c4d' };
+    if (B.Arredo && B.Arredo.arredaOspite) B.Arredo.arredaOspite(st, gO, d.p);
+    m.atm(G.stato.atmosfera);
+    return st;
+  }
+
   /* ---------- ampliamento della casa: si ricostruisce la stanza piu' grande ---------- */
   function ricostruisciCasa(liv) {
     while (gC.children.length) { const c = gC.children[0]; gC.remove(c); c.traverse(o => { if (o.geometry) o.geometry.dispose(); }); }
@@ -13401,7 +13445,7 @@ body.bv-attivo #barra-alto,body.bv-attivo #controlli,body.bv-attivo #btn-contest
     B.finestreMat.forEach(m => { m.emissiveIntensity = a.finestre; });
     const k = clamp(a.lampioni / 1.6, 0, 1) * 0.95;
     piazza.aloni.forEach(s => { s.material.opacity = k; });
-    casa.atm(nome); negozio.atm(nome); sala.atm(nome); coll.atm(nome); tcgR.atm(nome); bib.atm(nome); assegnaLuci();
+    casa.atm(nome); if (stanze.ospite) stanze.ospite.m.atm(nome); negozio.atm(nome); sala.atm(nome); coll.atm(nome); tcgR.atm(nome); bib.atm(nome); assegnaLuci();
   }
 
   /* ---------- collisioni ---------- */
@@ -13564,7 +13608,7 @@ body.bv-attivo #barra-alto,body.bv-attivo #controlli,body.bv-attivo #btn-contest
   /* ---------- cambio stanza ---------- */
   function entraStanza(id, arrivo) {
     stanza = stanze[id]; io.st = stanza; io.seduto = null; G.stato.stanzaId = id;
-    gP.visible = id === 'piazza'; gC.visible = id === 'casa'; gN.visible = id === 'negozio'; gS.visible = id === 'sala'; gL.visible = id === 'collectibles'; gT.visible = id === 'tcg'; gB.visible = id === 'biblioteca';
+    gP.visible = id === 'piazza'; gC.visible = id === 'casa'; gN.visible = id === 'negozio'; gS.visible = id === 'sala'; gL.visible = id === 'collectibles'; gT.visible = id === 'tcg'; gB.visible = id === 'biblioteca'; gO.visible = id === 'ospite';
     const sp = arrivo || stanza.spawn;
     io.x = sp.x; io.z = sp.z; io.vx = io.vz = 0; io.yaw = sp.yaw === undefined ? 0 : sp.yaw; io.y = stanza.alt(io.x, io.z);
     C.azT = C.az = stanza.az === undefined ? PI / 4 : stanza.az; impostaZoom(stanza.zoom); if (stanza.elev) { C.elev = stanza.elev; C.elevAuto = true; } else if (C.elevAuto) { C.elev = 28; C.elevAuto = false; } C.tx = io.x; C.tz = io.z; C.ty = 1.0 + io.y;
@@ -13779,7 +13823,7 @@ body.bv-attivo #barra-alto,body.bv-attivo #controlli,body.bv-attivo #btn-contest
   { const bc = $('#btn-cam'); if (bc) bc.addEventListener('click', () => setSegui(!C.segui)); }
   { const bb = $('#btn-bici'); if (bb) bb.addEventListener('click', () => setBici(!io.bici)); }
   B.app = {
-    io, gC, vistaAlto, assegnaLuci, ricostruisciCasa, setBici, npc, C, cam, scene, renderer, stanze, G, joy, entraStanza, usaPorta, portaVicina, misura, atmosfera, impostaZoom,
+    io, gC, vistaAlto, assegnaLuci, ricostruisciCasa, casaOspite, setBici, npc, C, cam, scene, renderer, stanze, G, joy, entraStanza, usaPorta, portaVicina, misura, atmosfera, impostaZoom,
     inclina, emote, mostraBolla, ruota: d => { C.azT += d * PI / 2; setSegui(false); },
     stanza: () => stanza, gioco: () => giocoAttivo
   };
@@ -13922,7 +13966,7 @@ body.bv-attivo #barra-alto,body.bv-attivo #controlli,body.bv-attivo #btn-contest
   function aggiornaStanza(info) {
     $('#nome-stanza').textContent = info.def.nome;
     const b = $('#badge-stanza'); b.textContent = info.def.pubblica ? 'Pubblica' : 'Privata'; b.className = 'badge' + (info.def.pubblica ? ' pubblica' : '');
-    $('#chat').hidden = !info.def.pubblica;
+    $('#chat').hidden = !info.def.pubblica && info.id !== 'casa';   // in casa: per chiacchierare con gli amici in visita
     $('#btn-casa').setAttribute('aria-label', info.id === 'casa' ? 'Vai in piazza' : 'Vai a casa');
     $('#btn-casa').title = info.id === 'casa' ? 'Vai in piazza' : 'Vai a casa';
     $('#btn-contesto').hidden = true;
@@ -14018,6 +14062,7 @@ body.bv-attivo #barra-alto,body.bv-attivo #controlli,body.bv-attivo #btn-contest
     $('#foglio-nick').textContent = u.nick; $('#foglio-bio').textContent = u.bio;
     $('#foglio-dove').textContent = u.dove || (u.online ? 'In piazza' : 'Non in linea');
     $('#foglio-tipo').textContent = u.amico ? 'Amico vero' : 'Utente dimostrativo';
+    $('#foglio-amico').hidden = !u.amico;
     aggiornaBottoneBlocco();
     $('#foglio').hidden = false;
   }
@@ -14183,6 +14228,8 @@ body.bv-attivo #barra-alto,body.bv-attivo #controlli,body.bv-attivo #btn-contest
       apriPagina('messaggi'); apriThread(id);
     });
     $('#foglio-segnala').addEventListener('click', () => G.segnala(idFoglio));
+    $('#foglio-visita').addEventListener('click', () => { const id = idFoglio; chiudiFoglio(); if (B.Online && B.Online.visita) B.Online.visita(id); });
+    $('#foglio-raggiungi').addEventListener('click', () => { const id = idFoglio; chiudiFoglio(); if (B.Online && B.Online.raggiungi) B.Online.raggiungi(id); });
     $('#foglio-blocca').addEventListener('click', () => {
       if (G.stato.bloccati.has(idFoglio)) { G.sblocca(idFoglio); UI.toast('Utente sbloccato (dimostrativo)'); }
       else { G.blocca(idFoglio); UI.toast('Utente bloccato: non vedrai piu\' i suoi messaggi (dimostrativo)'); }
@@ -14630,11 +14677,21 @@ body.orizz #pagina-zaino .zn-carte{grid-template-columns:repeat(auto-fill,minmax
   const aiGiochi = (peer, nick, pr) => Object.keys(GIOCHI).forEach(n => { const m = GIOCHI[n](); if (m && m.amico) m.amico(peer, nick, pr && pr.s === n ? pr.k : null, pr ? lookDa(pr.look) : null); });
   let room = null, nMsg = 0, nEm = 0, ultimo = '', tInvio = 0;
 
+  /* ---------- dove sono: le stanze pubbliche per nome, le case come "casa:<proprietario>" ---------- */
+  const mioNick = () => (G.stato.giocatore && G.stato.giocatore.nick) || '';
+  function luogo() {
+    const st = app.stanza();
+    if (st.id === 'casa') return 'casa:' + mioNick();
+    if (st.id === 'ospite') return 'casa:' + st.ospite;
+    return st.pubblica ? st.id : 'casa';
+  }
+  const stessoLuogo = (a, b) => String(a).toLowerCase() === String(b).toLowerCase();
+
   /* ---------- quello che mando io ---------- */
   function mia() {
     const io = app.io, st = app.stanza(), gioco = G.stato.giocatore;
     if (!gioco || !io.av) return null;
-    const dove = (B.Raid && B.Raid.attivo) ? 'raid' : (B.Paintball && B.Paintball.attivo) ? 'paintball' : (B.Kart && B.Kart.attivo) ? 'kart' : (B.Belinverse && B.Belinverse.attivo) ? 'carte' : st.pubblica ? st.id : 'casa';
+    const dove = (B.Raid && B.Raid.attivo) ? 'raid' : (B.Paintball && B.Paintball.attivo) ? 'paintball' : (B.Kart && B.Kart.attivo) ? 'kart' : (B.Belinverse && B.Belinverse.attivo) ? 'carte' : luogo();
     return { v: 1, nick: testo(gioco.nick, 20), look: lookDa(gioco.look), s: dove, x: +io.x.toFixed(2), z: +io.z.toFixed(2), y: +io.y.toFixed(2), r: +io.yaw.toFixed(2),
       vel: +Math.hypot(io.vx, io.vz).toFixed(2), sed: io.seduto ? (io.seduto.dorme ? 2 : 1) : 0, k: GIOCHI[dove] && GIOCHI[dove]().rete ? GIOCHI[dove]().rete() : null };
   }
@@ -14653,7 +14710,7 @@ body.orizz #pagina-zaino .zn-carte{grid-template-columns:repeat(auto-fill,minmax
     const nick = testo(pr.nick, 20) || 'Amico';
     const et = B.etichetta(nick, { sfondo: '#7fd6a4', colore: '#163322', altezza: 0.38 }); et.position.y = 2.52; av.root.add(et);
     app.scene.add(av.root);
-    const a = { peer, av, nick, lookK: JSON.stringify(look), x: num(pr.x, 0), z: num(pr.z, 0), y: num(pr.y, 0), r: num(pr.r, 0), vel: 0, bolla: null, durBolla: 0, nMsg: pr.msg ? pr.msg.n : 0, nEm: pr.em ? pr.em.n : 0, nDm: maxDm(pr), pr };
+    const a = { peer, av, nick, lookK: JSON.stringify(look), x: num(pr.x, 0), z: num(pr.z, 0), y: num(pr.y, 0), r: num(pr.r, 0), vel: 0, bolla: null, durBolla: 0, nMsg: pr.msg ? pr.msg.n : 0, nEm: pr.em ? pr.em.n : 0, nDm: maxDm(pr), nEv: maxN(pr.ev), pr };
     noti.set(nick.toLowerCase(), { nick, look });
     amici.set(peer, a); return a;
   }
@@ -14661,7 +14718,7 @@ body.orizz #pagina-zaino .zn-carte{grid-template-columns:repeat(auto-fill,minmax
   function aggiorna(peer, pr) {
     if (!pr || pr.v !== 1) return;
     let a = amici.get(peer);
-    if (a && (JSON.stringify(lookDa(pr.look)) !== a.lookK || (testo(pr.nick, 20) || 'Amico') !== a.nick)) { const vecchio = a; togli(peer); a = crea(peer, pr); a.nMsg = vecchio.nMsg; a.nEm = vecchio.nEm; a.nDm = vecchio.nDm; }
+    if (a && (JSON.stringify(lookDa(pr.look)) !== a.lookK || (testo(pr.nick, 20) || 'Amico') !== a.nick)) { const vecchio = a; togli(peer); a = crea(peer, pr); a.nMsg = vecchio.nMsg; a.nEm = vecchio.nEm; a.nDm = vecchio.nDm; a.nEv = vecchio.nEv; }
     if (!a) {
       a = crea(peer, pr);
       if (G.stato.giocatore) G.emetti('toast', a.nick + ' è online');
@@ -14671,13 +14728,13 @@ body.orizz #pagina-zaino .zn-carte{grid-template-columns:repeat(auto-fill,minmax
     // messaggio nuovo in chat: entra nella chat pubblica e appare nel fumetto
     if (pr.msg && pr.msg.n !== a.nMsg) {
       a.nMsg = pr.msg.n; const t = testo(pr.msg.t, 120);
-      if (t && pr.s === app.stanza().id) {
+      if (t && stessoLuogo(pr.s, luogo())) {
         const d = new Date(), voce = { id: idAmico(a.nick), nick: a.nick, testo: t, ora: String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0'), io: false, amico: true };
         G.stato.chat.push(voce); if (G.stato.chat.length > 80) G.stato.chat.shift(); G.emetti('chat', voce);
         bolla(a, t, 4.5);
       }
     }
-    riceviDm(a, pr);
+    riceviDm(a, pr); riceviEv(a, pr);
     if (pr.em && pr.em.n !== a.nEm) { a.nEm = pr.em.n; const e = EMOTE[pr.em.t]; if (e) { a.av.faiEmote(pr.em.t, e[1]); bolla(a, e[0], e[1] + 0.4); } }
   }
   const EMOTE = { saluta: ['Ciao!', 3], balla: ['♪', 5], ridi: ['Ahah!', 3], applaudi: ['Bravo!', 4], evviva: ['Evviva!', 3] };
@@ -14691,9 +14748,9 @@ body.orizz #pagina-zaino .zn-carte{grid-template-columns:repeat(auto-fill,minmax
     const ora = performance.now(), dt = Math.min(0.05, (ora - prima) / 1000); prima = ora;
     if (!app.gioco()) return;
     tInvio -= dt; if (tInvio <= 0) { tInvio = Object.keys(GIOCHI).some(n => GIOCHI[n]() && GIOCHI[n]().attivo) ? 0.066 : 0.1; invia(); }
-    const qui = app.stanza(), libero = !(B.Raid && B.Raid.attivo) && !(B.Paintball && B.Paintball.attivo) && !(B.Kart && B.Kart.attivo);
+    const libero = !(B.Raid && B.Raid.attivo) && !(B.Paintball && B.Paintball.attivo) && !(B.Kart && B.Kart.attivo), qui = luogo();
     amici.forEach(a => {
-      const pr = a.pr, vis = libero && qui.pubblica && pr.s === qui.id;
+      const pr = a.pr, vis = libero && qui !== 'casa' && stessoLuogo(pr.s, qui);
       a.av.root.visible = vis;
       if (!vis) return;
       const tx = num(pr.x, a.x), tz = num(pr.z, a.z), k = Math.min(1, dt * 10), salto = Math.hypot(tx - a.x, tz - a.z) > 6;
@@ -14724,7 +14781,8 @@ body.orizz #pagina-zaino .zn-carte{grid-template-columns:repeat(auto-fill,minmax
      li vedono passare tutti i telefoni della stanza, ma li mostra solo chi ha quel nick. */
   const noti = new Map();   // nick minuscolo -> { nick, look }: la scheda resta anche se l'amico esce
   let nDm = 0, mieiDm = [];
-  const maxDm = pr => (pr && pr.dm && Array.isArray(pr.dm.l) ? pr.dm.l.reduce((m, e) => Math.max(m, num(e && e.n, 0)), 0) : 0);
+  const maxN = x => (x && Array.isArray(x.l) ? x.l.reduce((m, e) => Math.max(m, num(e && e.n, 0)), 0) : 0);
+  const maxDm = pr => maxN(pr && pr.dm);
   const idAmico = nick => 'amico:' + nick;
   const amicoDa = id => { if (typeof id !== 'string' || id.indexOf('amico:') !== 0) return null; const k = id.slice(6).toLowerCase(); for (const a of amici.values()) if (a.nick.toLowerCase() === k) return a; return null; };
   function riceviDm(a, pr) {
@@ -14746,9 +14804,10 @@ body.orizz #pagina-zaino .zn-carte{grid-template-columns:repeat(auto-fill,minmax
   G.utente = function (id) {
     if (typeof id !== 'string' || id.indexOf('amico:') !== 0) return utenteOrig(id);
     const a = amicoDa(id), n = noti.get(id.slice(6).toLowerCase()) || { nick: id.slice(6), look: {} };
-    const st = a && B.app.stanze && B.app.stanze[a.pr.s];
+    const s = a ? String(a.pr.s || '') : '', st = a && B.app.stanze && B.app.stanze[s];
+    const casaDi = s.indexOf('casa:') === 0 ? s.slice(5) : null;
     return { id, nick: a ? a.nick : n.nick, look: a ? lookDa(a.pr.look) : n.look, online: !!a, amico: true,
-      dove: a ? (NOMI[a.pr.s] || (st && st.nome ? 'In ' + st.nome : 'Nel borgo')) : 'Non in linea', bio: 'Collegato con il vostro codice amici: i messaggi privati arrivano davvero.' };
+      dove: !a ? 'Non in linea' : casaDi ? (stessoLuogo(casaDi, a.nick) ? 'A casa sua' : stessoLuogo(casaDi, mioNick()) ? 'A casa tua' : 'A casa di ' + testo(casaDi, 20)) : (NOMI[s] || (st && st.nome ? 'In ' + st.nome : 'Nel borgo')), bio: 'Collegato con il vostro codice amici: i messaggi privati arrivano davvero.' };
   };
   G.inviaDM = function (id, t) {
     if (typeof id !== 'string' || id.indexOf('amico:') !== 0) return inviaOrig(id, t);
@@ -14764,6 +14823,82 @@ body.orizz #pagina-zaino .zn-carte{grid-template-columns:repeat(auto-fill,minmax
     invia({ dm: { l: mieiDm } });
     return true;
   };
+  /* ---------- visite in casa con il campanello (come Habbo) e "Raggiungi" ----------
+     Eventi nella presenza (ultimi 3): bussa -> il padrone vede "Apri / Non ora";
+     apri porta con se' la casa (livello, stili e mobili) e sparisce dopo qualche secondo. */
+  let nEv = 0, mieiEv = [], bussato = null, tBussa = 0;
+  function evento(e) {
+    nEv++; mieiEv = mieiEv.concat(Object.assign({ n: nEv }, e)).slice(-3);
+    invia({ ev: { l: mieiEv } });
+    if (e.c) setTimeout(() => { mieiEv = mieiEv.map(x => (x.c ? { n: x.n, k: x.k, a: x.a } : x)); invia({ ev: { l: mieiEv } }); }, 8000);
+  }
+  function datiCasa() {
+    const E = B.Eco && B.Eco.stato, r = v => Math.round(v * 100) / 100;
+    if (!E) return { liv: 0, stili: null, p: [] };
+    let p = (E.piazzati || []).slice(0, 80).map(q => [q.id, r(q.x), r(q.z), r(q.rot || 0), r(q.y || 0)]);
+    while (p.length && JSON.stringify(p).length > 2200) p = p.slice(0, -1);   // la presenza deve restare piccola
+    return { liv: E.liv | 0, stili: { pav: E.stili.pav, par: E.stili.par }, p };
+  }
+  let elPorta = null;
+  function campanello(a) {
+    if (elPorta) elPorta.remove();
+    const d = elPorta = document.createElement('div');
+    d.style.cssText = 'position:absolute;left:50%;top:calc(env(safe-area-inset-top, 0px) + 92px);transform:translateX(-50%);z-index:60;width:min(330px,calc(100% - 32px));padding:14px 16px;border-radius:18px;background:#2f2342;color:#fbf3dc;box-shadow:0 10px 30px rgba(0,0,0,.45);font:600 15px system-ui,sans-serif;text-align:center';
+    d.innerHTML = '<div style="font-size:26px">🔔</div><div style="margin:4px 0 12px"></div><div style="display:flex;gap:10px"><button type="button" style="flex:1;padding:11px;border-radius:14px;background:#f2c76e;color:#241a33;font-weight:800">Apri</button><button type="button" style="flex:1;padding:11px;border-radius:14px;background:rgba(255,255,255,.12);color:#fbf3dc;font-weight:700">Non ora</button></div>';
+    d.children[1].textContent = a.nick + ' bussa alla porta di casa tua';
+    const [si, no] = d.querySelectorAll('button'), chiudi = () => { clearTimeout(tt); if (elPorta === d) elPorta = null; d.remove(); };
+    const nick = a.nick, tt = setTimeout(() => { chiudi(); evento({ k: 'no', a: nick }); }, 25000);
+    si.addEventListener('click', () => { chiudi(); evento({ k: 'apri', a: nick, c: datiCasa() }); G.emetti('toast', 'Hai aperto la porta a ' + nick); });
+    no.addEventListener('click', () => { chiudi(); evento({ k: 'no', a: nick }); });
+    (document.getElementById('app') || document.body).appendChild(d);
+  }
+  function entraDa(a, c) {
+    const st = app.casaOspite({ nick: a.nick, liv: num(c.liv, 0), stili: c.stili && typeof c.stili === 'object' ? { pav: testo(c.stili.pav, 30), par: testo(c.stili.par, 30) } : null, p: Array.isArray(c.p) ? c.p : [] });
+    G.emetti('transizione', () => { app.entraStanza('ospite'); G.emetti('toast', 'Sei a casa di ' + a.nick + '. Per uscire usa la porta in fondo.'); });
+    return st;
+  }
+  function riceviEv(a, pr) {
+    if (!pr.ev || !Array.isArray(pr.ev.l)) return;
+    const mio = mioNick().toLowerCase();
+    pr.ev.l.slice(-3).forEach(e => {
+      if (!e || num(e.n, 0) <= a.nEv) return;
+      a.nEv = num(e.n, 0);
+      if (!mio || testo(e.a, 20).toLowerCase() !== mio || G.stato.bloccati.has(idAmico(a.nick))) return;
+      if (e.k === 'bussa') campanello(a);
+      else if (bussato && stessoLuogo(bussato, a.nick) && e.k === 'apri' && e.c && typeof e.c === 'object') { bussato = null; entraDa(a, e.c); }
+      else if (bussato && stessoLuogo(bussato, a.nick) && e.k === 'no') { bussato = null; G.emetti('toast', a.nick + ' non ha aperto la porta'); }
+    });
+  }
+  function bussa(a) {
+    if (bussato && stessoLuogo(bussato, a.nick) && performance.now() - tBussa < 8000) { G.emetti('toast', 'Hai già bussato, aspetta che ' + a.nick + ' apra'); return; }
+    bussato = a.nick; tBussa = performance.now();
+    evento({ k: 'bussa', a: a.nick });
+    G.emetti('toast', 'Hai bussato a casa di ' + a.nick + '. Aspetta che ti apra…');
+  }
+  const GIOCO_NOME = { raid: 'nel raid', paintball: 'a paintball', kart: 'sui kart', carte: 'a Belinverse' };
+  function visita(id) {
+    const a = amicoDa(id);
+    if (!a) { G.emetti('toast', (G.utente(id) || {}).nick + ' non è online: per visitare la sua casa deve esserci anche lui'); return; }
+    if (app.stanza().id === 'ospite' && stessoLuogo(app.stanza().ospite, a.nick)) { G.emetti('toast', 'Sei già a casa di ' + a.nick); return; }
+    bussa(a);
+  }
+  function raggiungi(id) {
+    const a = amicoDa(id);
+    if (!a) { G.emetti('toast', (G.utente(id) || {}).nick + ' non è online'); return; }
+    const s = String(a.pr.s || '');
+    if (GIOCO_NOME[s]) { G.emetti('toast', a.nick + ' sta giocando ' + GIOCO_NOME[s] + ': lo trovi nella Sala Giochi'); return; }
+    if (stessoLuogo(s, luogo())) { G.emetti('toast', a.nick + ' è qui con te'); return; }
+    if (s.indexOf('casa:') === 0) {
+      const prop = s.slice(5);
+      if (stessoLuogo(prop, mioNick())) { G.emetti('transizione', () => app.entraStanza('casa')); return; }
+      let p = null; amici.forEach(x => { if (stessoLuogo(x.nick, prop)) p = x; });
+      if (p) bussa(p); else G.emetti('toast', a.nick + ' è a casa di ' + testo(prop, 20));
+      return;
+    }
+    if (s === 'casa' || !app.stanze[s] || s === 'ospite') { G.emetti('toast', a.nick + ' è in un posto dove non puoi seguirlo'); return; }
+    G.emetti('transizione', () => app.entraStanza(s, { x: num(a.pr.x, a.x), z: num(a.pr.z, a.z), yaw: num(a.pr.r, a.r) }));
+  }
+
   // in piazza (e nelle stanze pubbliche) gli amici si toccano come gli abitanti: si apre la loro scheda
   B.amiciToccabili = () => [...amici.values()].filter(a => a.av.root.visible).map(a => ({ obj: a.av.proxy, tipo: 'npc', id: idAmico(a.nick) }));
 
@@ -14847,7 +14982,7 @@ body.orizz #pagina-zaino .zn-carte{grid-template-columns:repeat(auto-fill,minmax
     }, () => { amici.forEach((a, k) => togli(k)); room = null; });
     ultimo = ''; invia();
   }).catch(() => { });
-  B.Online = { stato: () => room && room.stato ? room.stato() : null, amici: () => [...amici.values()].map(a => ({ nick: a.nick, s: a.pr.s, x: a.x, z: a.z })) };
+  B.Online = { visita, raggiungi, stato: () => room && room.stato ? room.stato() : null, amici: () => [...amici.values()].map(a => ({ nick: a.nick, s: a.pr.s, x: a.x, z: a.z })) };
   ciclo();
 })();
 
