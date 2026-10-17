@@ -8,6 +8,20 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="The Borg">
   <meta name="theme-color" content="#241a33">
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="apple-touch-icon" href="apple-touch-icon.png">
+  <link rel="icon" type="image/png" sizes="192x192" href="icona-192.png">
+  <script>
+  // App dalla schermata Home: ricorda il codice ?amici= e lo rimette se l'app si apre senza
+  (function () {
+    try {
+      var app = (window.matchMedia && (matchMedia('(display-mode: fullscreen)').matches || matchMedia('(display-mode: standalone)').matches)) || navigator.standalone;
+      var q = new URLSearchParams(location.search), c = q.get('amici') || (location.hash.match(/amici=([^&]+)/) || [])[1];
+      if (c) localStorage.setItem('borg_amici', c);
+      else if (app && (c = localStorage.getItem('borg_amici'))) { q.set('amici', c); history.replaceState(null, '', location.pathname + '?' + q.toString() + location.hash); }
+    } catch (e) {}
+  })();
+  </script>
   <title>The Borg 3D</title>
   <style>
 /* =====================================================================
