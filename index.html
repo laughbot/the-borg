@@ -536,7 +536,7 @@ body.orizz #inizio-anteprima { width: 120px; height: 140px; }
       <button id="foglio-chiudi" class="btn-tondo" aria-label="Chiudi"><svg viewBox="0 0 24 24" class="ico"><path d="m6 6 12 12M18 6 6 18"/></svg></button>
       <canvas id="foglio-avatar" width="200" height="236"></canvas>
       <h2 id="foglio-nick"></h2>
-      <div class="badge-riga"><span class="badge alt">Utente dimostrativo</span><span class="badge" id="foglio-dove">In piazza</span></div>
+      <div class="badge-riga"><span class="badge alt" id="foglio-tipo">Utente dimostrativo</span><span class="badge" id="foglio-dove">In piazza</span></div>
       <p id="foglio-bio"></p>
       <div class="azioni">
         <button id="foglio-dm" class="btn-primario">Messaggio privato</button>
@@ -13672,6 +13672,7 @@ body.bv-attivo #barra-alto,body.bv-attivo #controlli,body.bv-attivo #btn-contest
     const cand = [];
     npc.forEach(n => { if (stanza.id === 'piazza' && n.av.root.visible) cand.push({ obj: n.av.proxy, tipo: 'npc', id: n.id }); });
     cand.push({ obj: io.av.proxy, tipo: 'io' });
+    if (B.amiciToccabili) B.amiciToccabili().forEach(c => cand.push(c));
     stanza.toccabili.forEach(t => cand.push(t));
     let best = null, bd = 1e9;
     cand.forEach(c => { c.obj.updateWorldMatrix(true, false); const h = ray.intersectObject(c.obj, false); if (h.length && h[0].distance < bd) { bd = h[0].distance; best = c; } });
@@ -14015,7 +14016,8 @@ body.bv-attivo #barra-alto,body.bv-attivo #controlli,body.bv-attivo #btn-contest
     const u = G.utente(id); if (!u) return;
     idFoglio = id; lookFoglio = u.look;
     $('#foglio-nick').textContent = u.nick; $('#foglio-bio').textContent = u.bio;
-    $('#foglio-dove').textContent = u.online ? 'In piazza' : 'Non in linea';
+    $('#foglio-dove').textContent = u.dove || (u.online ? 'In piazza' : 'Non in linea');
+    $('#foglio-tipo').textContent = u.amico ? 'Amico vero' : 'Utente dimostrativo';
     aggiornaBottoneBlocco();
     $('#foglio').hidden = false;
   }
@@ -14651,14 +14653,15 @@ body.orizz #pagina-zaino .zn-carte{grid-template-columns:repeat(auto-fill,minmax
     const nick = testo(pr.nick, 20) || 'Amico';
     const et = B.etichetta(nick, { sfondo: '#7fd6a4', colore: '#163322', altezza: 0.38 }); et.position.y = 2.52; av.root.add(et);
     app.scene.add(av.root);
-    const a = { peer, av, nick, lookK: JSON.stringify(look), x: num(pr.x, 0), z: num(pr.z, 0), y: num(pr.y, 0), r: num(pr.r, 0), vel: 0, bolla: null, durBolla: 0, nMsg: pr.msg ? pr.msg.n : 0, nEm: pr.em ? pr.em.n : 0, pr };
+    const a = { peer, av, nick, lookK: JSON.stringify(look), x: num(pr.x, 0), z: num(pr.z, 0), y: num(pr.y, 0), r: num(pr.r, 0), vel: 0, bolla: null, durBolla: 0, nMsg: pr.msg ? pr.msg.n : 0, nEm: pr.em ? pr.em.n : 0, nDm: maxDm(pr), pr };
+    noti.set(nick.toLowerCase(), { nick, look });
     amici.set(peer, a); return a;
   }
   function togli(peer) { aiGiochi(peer, null, null); const a = amici.get(peer); if (!a) return; app.scene.remove(a.av.root); B.liberaAvatar(a.av); amici.delete(peer); }
   function aggiorna(peer, pr) {
     if (!pr || pr.v !== 1) return;
     let a = amici.get(peer);
-    if (a && (JSON.stringify(lookDa(pr.look)) !== a.lookK || (testo(pr.nick, 20) || 'Amico') !== a.nick)) { const vecchio = a; togli(peer); a = crea(peer, pr); a.nMsg = vecchio.nMsg; a.nEm = vecchio.nEm; }
+    if (a && (JSON.stringify(lookDa(pr.look)) !== a.lookK || (testo(pr.nick, 20) || 'Amico') !== a.nick)) { const vecchio = a; togli(peer); a = crea(peer, pr); a.nMsg = vecchio.nMsg; a.nEm = vecchio.nEm; a.nDm = vecchio.nDm; }
     if (!a) {
       a = crea(peer, pr);
       if (G.stato.giocatore) G.emetti('toast', a.nick + ' è online');
@@ -14669,11 +14672,12 @@ body.orizz #pagina-zaino .zn-carte{grid-template-columns:repeat(auto-fill,minmax
     if (pr.msg && pr.msg.n !== a.nMsg) {
       a.nMsg = pr.msg.n; const t = testo(pr.msg.t, 120);
       if (t && pr.s === app.stanza().id) {
-        const d = new Date(), voce = { id: 'amico', nick: a.nick, testo: t, ora: String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0'), io: false, amico: true };
+        const d = new Date(), voce = { id: idAmico(a.nick), nick: a.nick, testo: t, ora: String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0'), io: false, amico: true };
         G.stato.chat.push(voce); if (G.stato.chat.length > 80) G.stato.chat.shift(); G.emetti('chat', voce);
         bolla(a, t, 4.5);
       }
     }
+    riceviDm(a, pr);
     if (pr.em && pr.em.n !== a.nEm) { a.nEm = pr.em.n; const e = EMOTE[pr.em.t]; if (e) { a.av.faiEmote(pr.em.t, e[1]); bolla(a, e[0], e[1] + 0.4); } }
   }
   const EMOTE = { saluta: ['Ciao!', 3], balla: ['♪', 5], ridi: ['Ahah!', 3], applaudi: ['Bravo!', 4], evviva: ['Evviva!', 3] };
@@ -14714,6 +14718,54 @@ body.orizz #pagina-zaino .zn-carte{grid-template-columns:repeat(auto-fill,minmax
     elB.style.display = mostra ? '' : 'none';
     if (mostra) elB.textContent = '● ' + (n === 1 ? '1 amico online' : n + ' amici online');
   }
+
+  /* ---------- messaggi privati tra amici veri ----------
+     Viaggiano nella presenza come la chat (ultimi 3, con il nick del destinatario):
+     li vedono passare tutti i telefoni della stanza, ma li mostra solo chi ha quel nick. */
+  const noti = new Map();   // nick minuscolo -> { nick, look }: la scheda resta anche se l'amico esce
+  let nDm = 0, mieiDm = [];
+  const maxDm = pr => (pr && pr.dm && Array.isArray(pr.dm.l) ? pr.dm.l.reduce((m, e) => Math.max(m, num(e && e.n, 0)), 0) : 0);
+  const idAmico = nick => 'amico:' + nick;
+  const amicoDa = id => { if (typeof id !== 'string' || id.indexOf('amico:') !== 0) return null; const k = id.slice(6).toLowerCase(); for (const a of amici.values()) if (a.nick.toLowerCase() === k) return a; return null; };
+  function riceviDm(a, pr) {
+    if (!pr.dm || !Array.isArray(pr.dm.l)) return;
+    const mio = ((G.stato.giocatore && G.stato.giocatore.nick) || '').toLowerCase();
+    pr.dm.l.slice(-3).forEach(e => {
+      if (!e || num(e.n, 0) <= a.nDm) return;
+      a.nDm = num(e.n, 0);
+      const t = testo(e.t, 200), id = idAmico(a.nick);
+      if (!t || !mio || testo(e.a, 20).toLowerCase() !== mio || G.stato.bloccati.has(id)) return;
+      const d = new Date(), c = G.conversazione(id);
+      c.msgs.push({ da: id, testo: t, ora: String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0') });
+      if (G.stato.dmAperto !== id) { c.nonLetti++; G.emetti('toast', 'Nuovo messaggio da ' + a.nick); }
+      G.emetti('dm', { id });
+    });
+  }
+  const NOMI = { piazza: 'In piazza', raid: 'Nel raid', paintball: 'A paintball', kart: 'Sui kart', carte: 'A Belinverse', casa: 'A casa sua' };
+  const utenteOrig = G.utente, inviaOrig = G.inviaDM;
+  G.utente = function (id) {
+    if (typeof id !== 'string' || id.indexOf('amico:') !== 0) return utenteOrig(id);
+    const a = amicoDa(id), n = noti.get(id.slice(6).toLowerCase()) || { nick: id.slice(6), look: {} };
+    const st = a && B.app.stanze && B.app.stanze[a.pr.s];
+    return { id, nick: a ? a.nick : n.nick, look: a ? lookDa(a.pr.look) : n.look, online: !!a, amico: true,
+      dove: a ? (NOMI[a.pr.s] || (st && st.nome ? 'In ' + st.nome : 'Nel borgo')) : 'Non in linea', bio: 'Collegato con il vostro codice amici: i messaggi privati arrivano davvero.' };
+  };
+  G.inviaDM = function (id, t) {
+    if (typeof id !== 'string' || id.indexOf('amico:') !== 0) return inviaOrig(id, t);
+    t = (t || '').trim().slice(0, 200);
+    if (!t) return false;
+    if (G.stato.bloccati.has(id)) { G.emetti('toast', 'Hai bloccato questo utente'); return false; }
+    const a = amicoDa(id);
+    if (!a) { G.emetti('toast', G.utente(id).nick + ' non è online: il messaggio non può arrivare'); return false; }
+    const d = new Date();
+    G.conversazione(id).msgs.push({ da: 'io', testo: t, ora: String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0') });
+    G.emetti('dm', { id });
+    nDm++; mieiDm = mieiDm.concat({ n: nDm, a: a.nick, t }).slice(-3);
+    invia({ dm: { l: mieiDm } });
+    return true;
+  };
+  // in piazza (e nelle stanze pubbliche) gli amici si toccano come gli abitanti: si apre la loro scheda
+  B.amiciToccabili = () => [...amici.values()].filter(a => a.av.root.visible).map(a => ({ obj: a.av.proxy, tipo: 'npc', id: idAmico(a.nick) }));
 
   /* ---------- i miei messaggi e le mie emote partono per tutti ---------- */
   G.su('chat', v => { if (v.io && !v.amico) { nMsg++; invia({ msg: { n: nMsg, t: testo(v.testo, 120) } }); } });
