@@ -603,6 +603,7 @@ window.CONFIG = {
   },
 
   /* ---------- Utenti dimostrativi (NON sono utenti reali) ---------- */
+  maxBotPiazza: 24,          // abitanti dimostrativi che girano in piazza (erano 39: meno abitanti = telefono piu' fluido)
   utentiDemo: [
     { id: 'u1', nick: 'Luna',     online: true,  bio: 'Passo le serate in piazza a guardare le lanterne.', look: { pelle: 0, stile: 5, capelli: 9,  occhi: 4, giacca: 3,  dettagli: 4, abito: 0, pantaloni: 1, stivali: 3, accessorio: 6 } },
     { id: 'u2', nick: 'Tobia',    online: true,  bio: 'Colleziono carte e storie assurde.',                look: { pelle: 3, stile: 1, capelli: 1,  occhi: 1, giacca: 4,  dettagli: 5, abito: 1, pantaloni: 2, stivali: 0, accessorio: 3 } },
@@ -1625,6 +1626,147 @@ window.CONFIG = {
 </script>
 <script>
 /* =====================================================================
+   THE BORG - OTTIMIZZA: unisce i pezzi FERMI di una stanza in poche mesh grandi (una per materiale e per zona).
+   La piazza e' fatta di migliaia di pezzetti (ognuno col suo contorno): il telefono li disegnava uno per uno,
+   due volte (anche per le ombre). Uniti, la piazza resta identica ma costa molto meno.
+   Cosa resta fuori: tutto cio' che si muove o cambia (si scopre facendo girare le animazioni qualche volta),
+   cio' che e' segnato userData.vivo, gli oggetti da toccare, le cose trasparenti, nascoste o speciali.
+   ===================================================================== */
+(function () {
+  'use strict';
+  const T = window.THREE, B = window.B3;
+  const CELLA = 12;                       // le mesh unite sono divise in zone di 12 m: cosi' quelle fuori schermo non si disegnano
+  const OUT = {};                         // materiali contorno condivisi (lo spessore viene messo dentro la geometria)
+  function matContorno(c) {
+    const k = c.getHex(); if (OUT[k]) return OUT[k];
+    return (OUT[k] = new T.ShaderMaterial({
+      uniforms: { t: { value: 0 }, c: { value: c.clone() } },
+      vertexShader: 'uniform float t; void main(){ gl_Position = projectionMatrix * modelViewMatrix * vec4(position + normal * t, 1.0); }',
+      fragmentShader: 'uniform vec3 c; void main(){ gl_FragColor = vec4(c, 1.0); }',
+      side: T.BackSide
+    }));
+  }
+  const tocca = T.Object3D.prototype.onBeforeRender;
+
+  B.unisciStatici = function (root, o) {
+    o = o || {};
+    root.updateMatrixWorld(true);
+    // 1) cosa si muove: fotografo posizione/rotazione/scala/visibilita', faccio girare le animazioni e confronto
+    const foto = new Map();
+    const scatta = ob => [ob.position.x, ob.position.y, ob.position.z, ob.quaternion.x, ob.quaternion.y, ob.quaternion.z, ob.quaternion.w, ob.scale.x, ob.scale.y, ob.scale.z, ob.visible ? 1 : 0, ob.parent ? ob.parent.id : -1];
+    root.traverse(ob => foto.set(ob, scatta(ob)));
+    [0.53, 2.31, 7.17, 15.9, 31.4].forEach(t => (o.anim || []).forEach(f => { try { f(t, 0.05); } catch (e) { /* alcune animazioni vogliono il gioco gia' avviato */ } }));
+    const vivo = new Set(), segna = ob => ob.traverse(q => vivo.add(q));
+    const nMesh = ob => { let n = 0; ob.traverse(q => { if (q.isMesh) n++; }); return n; };
+    root.traverse(ob => {
+      if (ob.userData.vivo) { segna(ob); return; }
+      const a = foto.get(ob), b = scatta(ob);
+      if (!a || a.some((v, i) => Math.abs(v - b[i]) > 1e-6)) {
+        segna(ob);
+        // il pezzo che si muove fa spesso parte di un oggetto piccolo (es. la testa di un piccione): lascio fuori tutto l'oggetto
+        const p = ob.parent; if (p && p !== root && nMesh(p) <= 12) segna(p);
+      }
+    });
+    root.updateMatrixWorld(true);
+
+    // 2) a quale oggetto "che sbiadisce" appartiene ogni mesh (gli edifici davanti alla camera diventano trasparenti)
+    const fid = new Map(), linee = new Set();
+    (o.fade || []).forEach((it, i) => { if (it.g) it.g.traverse(q => { if (q.isMesh) fid.set(q, i); }); (it.lines || []).forEach(l => linee.add(l)); });
+    const protetti = new Set(o.protetti || []);
+
+    // 3) quali mesh si possono unire
+    const ok = new Map();
+    const inv = new T.Matrix4().copy(root.matrixWorld).invert();
+    const perche = B.perche = {};
+    const no = r => { perche[r] = (perche[r] || 0) + 1; return null; };
+    function idoneo(m, visibile) {
+      if (!m.isMesh) return null;
+      if (m.isInstancedMesh || m.isSkinnedMesh) return no('inst'); if (!visibile) return no('nascosta'); if (vivo.has(m)) return no('vivo'); if (protetti.has(m)) return no('prot');
+      if (!m.frustumCulled) return no('fc'); if (m.onBeforeRender !== tocca) return no('obr'); if (Object.keys(m.userData).length) return no('ud');
+      const g = m.geometry, mt = m.material;
+      if (!g || !g.isBufferGeometry || Array.isArray(mt) || !mt) return no('mat'); if (mt.transparent || mt.opacity < 1) return no('trasp');
+      if (!g.attributes.position || !g.attributes.normal || Object.keys(g.morphAttributes).length) return no('geo');
+      const f = fid.has(m) ? fid.get(m) : -1;
+      let id, mat, sp = 0, linea = linee.has(m), attr;
+      if (mt.isShaderMaterial) {
+        if (!mt.uniforms || !mt.uniforms.t || !mt.uniforms.c || mt.side !== T.BackSide) return no('shader');
+        sp = mt.uniforms.t.value; mat = matContorno(mt.uniforms.c.value); id = 'OUT' + mt.uniforms.c.value.getHex(); attr = 'pn';
+      } else if (mt.isMeshBasicMaterial && mt.side === T.BackSide && !mt.map) {
+        id = 'B' + mt.color.getHex(); mat = mt; attr = 'pn';     // contorno delle scatole: stesso colore = stesso materiale
+      } else {
+        if (mt.isShaderMaterial || mt.isRawShaderMaterial) return null;
+        id = mt.uuid; mat = mt;
+        attr = 'pn' + (g.attributes.uv ? 'u' : '') + (mt.vertexColors && g.attributes.color ? 'c' + g.attributes.color.itemSize : '');
+        if (mt.map && !g.attributes.uv) return null;
+      }
+      const mm = new T.Matrix4().multiplyMatrices(inv, m.matrixWorld);
+      if (!g.boundingSphere) g.computeBoundingSphere();
+      const c = g.boundingSphere.center.clone().applyMatrix4(mm);
+      const k = [id, m.castShadow ? 1 : 0, m.receiveShadow ? 1 : 0, m.renderOrder, attr, f, linea ? 1 : 0, Math.floor(c.x / CELLA), Math.floor(c.z / CELLA)].join('|');
+      return { m, mm, k, mat, sp, attr, f, linea };
+    }
+    (function giro(ob, vis) {
+      ob.children.forEach(c => giro(c, vis && c.visible));
+      if (ob === root) return;
+      const d = idoneo(ob, vis);
+      // una mesh si toglie solo se anche tutte le sue figlie si tolgono (di solito: il suo contorno)
+      if (d && ob.children.every(c => ok.has(c))) ok.set(ob, d); else if (d) no('figli');
+    })(root, root.visible);
+
+    // 4) raggruppo e unisco
+    const gruppi = {};
+    ok.forEach(d => { (gruppi[d.k] = gruppi[d.k] || []).push(d); });
+    const nuoveLinee = {}; let tolte = 0, nuove = 0;
+    Object.keys(gruppi).forEach(k => {
+      const lista = gruppi[k]; if (lista.length < 2) { lista.forEach(d => ok.delete(d.m)); return; }
+      const a0 = lista[0].attr, nomi = ['position', 'normal'].concat(a0.indexOf('u') >= 0 ? ['uv'] : []).concat(a0.indexOf('c') >= 0 ? ['color'] : []);
+      const tuttiIdx = lista.every(d => d.m.geometry.index);
+      const parti = lista.map(d => {
+        const src = d.m.geometry, ge = new T.BufferGeometry();
+        nomi.forEach(n => ge.setAttribute(n, src.attributes[n].clone()));
+        if (src.index) ge.setIndex(src.index.clone());
+        if (d.sp) { const p = ge.attributes.position, nn = ge.attributes.normal; for (let i = 0; i < p.count; i++) p.setXYZ(i, p.getX(i) + nn.getX(i) * d.sp, p.getY(i) + nn.getY(i) * d.sp, p.getZ(i) + nn.getZ(i) * d.sp); }
+        ge.applyMatrix4(d.mm);
+        const out = tuttiIdx ? ge : (ge.index ? ge.toNonIndexed() : ge);
+        if (d.mm.determinant() < 0) {   // specchiata: giro i triangoli, se no si vedrebbe l'interno
+          if (out.index) { const ix = out.index.array; for (let i = 0; i + 2 < ix.length; i += 3) { const t = ix[i + 1]; ix[i + 1] = ix[i + 2]; ix[i + 2] = t; } }
+          else nomi.forEach(n => { const at = out.attributes[n], s = at.itemSize, ar = at.array; for (let i = 0; i + 2 < at.count; i += 3) for (let c = 0; c < s; c++) { const t = ar[(i + 1) * s + c]; ar[(i + 1) * s + c] = ar[(i + 2) * s + c]; ar[(i + 2) * s + c] = t; } });
+        }
+        return out;
+      });
+      let nv = 0, ni = 0; parti.forEach(p => { nv += p.attributes.position.count; if (tuttiIdx) ni += p.index.count; });
+      const ge = new T.BufferGeometry();
+      nomi.forEach(n => {
+        const s = parti[0].attributes[n].itemSize, ar = new Float32Array(nv * s); let off = 0;
+        parti.forEach(p => {
+          const at = p.attributes[n];
+          if (at.array instanceof Float32Array && !at.isInterleavedBufferAttribute && at.itemSize === s) ar.set(at.array.subarray(0, at.count * s), off * s);
+          else for (let i = 0; i < at.count; i++) { const v = [at.getX(i), at.getY(i), at.getZ(i), at.getW(i)]; for (let c = 0; c < s; c++) ar[(off + i) * s + c] = v[c] || 0; }
+          off += at.count;
+        });
+        ge.setAttribute(n, new T.BufferAttribute(ar, s));
+      });
+      if (tuttiIdx) {
+        const ix = nv > 65535 ? new Uint32Array(ni) : new Uint16Array(ni); let o2 = 0, base = 0;
+        parti.forEach(p => { const a = p.index.array; for (let i = 0; i < a.length; i++) ix[o2 + i] = a[i] + base; o2 += a.length; base += p.attributes.position.count; });
+        ge.setIndex(new T.BufferAttribute(ix, 1));
+      }
+      ge.computeBoundingSphere(); ge.computeBoundingBox();
+      const d0 = lista[0], m = new T.Mesh(ge, d0.mat);
+      m.castShadow = d0.m.castShadow; m.receiveShadow = d0.m.receiveShadow; m.renderOrder = d0.m.renderOrder;
+      m.matrixAutoUpdate = false; m.matrixWorldNeedsUpdate = true; m.userData.unita = lista.length;
+      root.add(m); nuove++;
+      if (d0.linea && d0.f >= 0) (nuoveLinee[d0.f] = nuoveLinee[d0.f] || []).push(m);
+    });
+    ok.forEach(d => { if (d.m.parent) d.m.parent.remove(d.m); tolte++; });
+    (o.fade || []).forEach((it, i) => { if (!it.lines) return; it.lines = it.lines.filter(l => !ok.has(l)).concat(nuoveLinee[i] || []); });
+    return { tolte, nuove };
+  };
+})();
+
+</script>
+<script>
+/* =====================================================================
    BORGO LUME 3D - IL MONDO: la piazza (edifici, fontana, alberi, lampioni,
    belvedere con scale, dettagli). Tutto e' costruito da codice con forme 3D,
    materiali "cartone animato" e contorni scuri.
@@ -2206,14 +2348,17 @@ window.CONFIG = {
 
     /* ---------- trasparenza di edifici e tetti che coprono la vista ---------- */
     const fadeItems = edifici.map(e => ({ g: e.g, x: e.x, z: e.z, w: e.w, d: e.d, tipo: 'edificio' })).concat(fadeVoci.map(v => Object.assign({ w: 0, d: 0 }, v)));
+    const finestre0 = new Set(B.finestreMat);
     fadeItems.forEach(it => {
       it.mats = []; it.lines = []; it.q = 1; it.ap = 1;
+      const copie = new Map();     // una copia per materiale (non per pezzo): cosi' i pezzi uguali dell'edificio si possono unire
       it.g.traverse(c => {
         if (!c.isMesh) return;
         const m = c.material;
         if (m.isShaderMaterial || (m.isMeshBasicMaterial && m.side === T.BackSide)) { it.lines.push(c); return; }
-        const nuovo = m.clone(), i = B.finestreMat.indexOf(m); if (i >= 0) B.finestreMat[i] = nuovo;
-        c.material = nuovo; it.mats.push(nuovo);
+        let nuovo = copie.get(m);
+        if (!nuovo) { nuovo = m.clone(); copie.set(m, nuovo); it.mats.push(nuovo); if (finestre0.has(m)) B.finestreMat.push(nuovo); }
+        c.material = nuovo;
       });
     });
     function dissolvi(px, pz, cdx, cdz, dt) {
@@ -2241,6 +2386,9 @@ window.CONFIG = {
 
     /* ---------- laghetto, ruota panoramica e mercatino (js/piazza-attivita.js) ---------- */
     if (B.costruisciAttivita) B.costruisciAttivita({ scene, edifici, ostacoli, porte, sedili, anim, toccabili, lampione, panchina });
+
+    /* ---------- i pezzi fermi uniti in poche mesh: stessa piazza, molto meno lavoro per il telefono (js/ottimizza.js) ---------- */
+    if (B.unisciStatici) { const r = B.unisciStatici(scene, { anim, fade: fadeItems, protetti: toccabili.map(t => t.obj) }); B.statPiazza = r; }
 
     return { sedili, luci, anim, ostacoli, dissolvi, edifici, porte, toccabili, aloni, altezza, bel: BEL };
   }
@@ -3638,7 +3786,14 @@ window.B3_LOGO = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAyAAAAC3CAIAAABl
     if (B.app) B.app.misura();
     if (window.UI && window.UI.aggiornaArea) window.UI.aggiornaArea();
   };
-  window.addEventListener('resize', () => B.orienta());
+  // la tastiera che si apre cambia la finestra ma non l'orientamento: mentre si scrive non giro niente
+  const tipoOr = () => (screen.orientation && screen.orientation.type) || (window.matchMedia('(orientation: landscape)').matches ? 'l' : 'p');
+  let ultimoOr = tipoOr();
+  window.addEventListener('resize', () => {
+    const a = document.activeElement, scrive = a && (a.tagName === 'INPUT' || a.tagName === 'TEXTAREA'), o = tipoOr();
+    if (scrive && o === ultimoOr) return;
+    ultimoOr = o; B.orienta();
+  });
   window.addEventListener('orientationchange', () => setTimeout(() => B.orienta(), 150));
   if (screen.orientation && screen.orientation.addEventListener) screen.orientation.addEventListener('change', () => setTimeout(() => B.orienta(), 100));
   B.orienta();
@@ -9924,7 +10079,9 @@ body.pc #rd-hud .tasto,body.pc #rd-hud .base{display:none}
   const rnd = (a, b) => a + Math.random() * (b - a);
   const pick = arr => arr[Math.floor(Math.random() * arr.length)];
   const utente = id => CFG.utentiDemo.find(u => u.id === id);
-  const inPiazza = () => CFG.utentiDemo.filter(u => u.online && !stato.bloccati.has(u.id));
+  // gli abitanti dimostrativi in piazza: al massimo CFG.maxBotPiazza (ogni abitante costa al telefono come un pezzo di piazza)
+  const botPiazza = () => CFG.utentiDemo.filter(u => u.online).slice(0, CFG.maxBotPiazza || 99);
+  const inPiazza = () => botPiazza().filter(u => !stato.bloccati.has(u.id));
 
   /* ---------- chat pubblica (simulata) ---------- */
   function aggiungiChat(id, nick, testo, io) {
@@ -10009,7 +10166,7 @@ body.pc #rd-hud .tasto,body.pc #rd-hud .base{display:none}
   function cambiaLook(look) { stato.giocatore.look = Object.assign({}, look); salva(); emetti('look', stato.giocatore.look); }
 
   window.Gioco = { stato, su, emetti, avvia, tick, inviaChat, inviaDM, conversazione, totNonLetti, segnaLetti, blocca, sblocca, segnala,
-    carica, salva, utente, nickValido, impostaAtmosfera, impostaGrafica, cambiaLook, inPiazza };
+    carica, salva, utente, nickValido, impostaAtmosfera, impostaGrafica, cambiaLook, inPiazza, botPiazza };
 })();
 
 </script>
@@ -11059,7 +11216,7 @@ body.arredando #joy,body.arredando #controlli,body.arredando #btn-contesto,body.
       // casse ai lati
       g.add(mesh(new T.BoxGeometry(0.6, 0.45, 0.6), M('#8a5a35'), { x: 1.95, y: 0.225, z: 0.2, lb: 0.012 }));
       if (i % 2) g.add(mesh(new T.BoxGeometry(0.5, 0.38, 0.5), M('#9a6a42'), { x: -1.9, y: 0.19, z: -0.2, lb: 0.012 }));
-      const merce = new T.Group(); merce.position.set(0, 0.96, 0.4); g.add(merce);
+      const merce = new T.Group(); merce.userData.vivo = true; merce.position.set(0, 0.96, 0.4); g.add(merce);
       ctx.ostacoli.push({ t: 'b', x0: x - 1.75, x1: x + 1.75, z0: MZ - 0.75, z1: MZ + 0.95 });
       if (i % 2) ctx.ostacoli.push({ t: 'c', x: x - 1.9, z: MZ - 0.2, r: 0.3 }); ctx.ostacoli.push({ t: 'c', x: x + 1.95, z: MZ + 0.2, r: 0.35 });
       const porta = { id: 'banco-' + i, nome: d.nome, testo: (d.tema === 'tuo' ? '🧺 ' : d.tema === 'pesce' ? '🐟 ' : '🛒 ') + d.nome, x, z: MZ + 1.95, r: 1.35, fn: () => Mercato.apri(i) };
@@ -13174,6 +13331,9 @@ body.bv-attivo #barra-alto,body.bv-attivo #controlli,body.bv-attivo #btn-contest
   let casa = B.costruisciCasa(gC, B.Eco ? B.Eco.stato.liv : 0, B.Eco ? B.Eco.stato.stili : null);
   const negozio = B.costruisciNegozio(gN, { vuota: true }), sala = B.costruisciSala(gS), coll = B.costruisciCollectibles(gL, 'negozio'), tcgR = B.costruisciCollectibles(gT, 'tcg'), bib = B.costruisciBiblioteca(gB);
   const PZ = CFG.plaza;
+  // la scena e le stanze non si muovono mai: cosi' three.js puo' saltare i pezzi fermi e le stanze nascoste
+  const gruppiStanze = [gP, gC, gN, gS, gL, gT, gB];
+  [scene].concat(gruppiStanze).forEach(g => { g.updateMatrix(); g.matrixAutoUpdate = false; g.matrixWorldNeedsUpdate = true; });
   const stanze = {
     piazza: { id: 'piazza', nome: 'Piazza del Borgo', pubblica: true, gruppo: gP, m: piazza, ostacoli: piazza.ostacoli, porte: piazza.porte, sedili: piazza.sedili, toccabili: piazza.toccabili,
       area: (x, z) => x > PZ.x0 + 1 && x < PZ.x1 - 1 && z > PZ.z0 + 1 && z < PZ.z1 - 1, alt: piazza.altezza, zoom: 1, spawn: { x: 0, z: 38.6, yaw: PI },
@@ -13271,7 +13431,7 @@ body.bv-attivo #barra-alto,body.bv-attivo #controlli,body.bv-attivo #btn-contest
   function costruisciIo(look, nick) {
     if (io.av) { scene.remove(io.av.root); B.liberaAvatar(io.av); }
     io.nick = nick || io.nick; io.bolla = null;
-    io.av = B.creaAvatar(look); scene.add(io.av.root);
+    io.av = B.unisciAvatar(B.creaAvatar(look)); scene.add(io.av.root);     // pezzi uniti come per gli abitanti: da ~110 a ~25 disegni
     const et = B.etichetta(io.nick, { sfondo: '#f2c76e', altezza: 0.4 }); et.position.y = 2.55; io.av.root.add(et);
     io.av.root.userData.io = true;
     io.bk = null; if (io.bici) { montaBici(); io.av.bicT = io.av.bic = 1; }
@@ -13318,7 +13478,7 @@ body.bv-attivo #barra-alto,body.bv-attivo #controlli,body.bv-attivo #btn-contest
   function creaNpc() {
     npc.forEach(o => { gP.remove(o.av.root); B.liberaAvatar(o.av); });
     npc.length = 0;
-    G.inPiazza().concat(window.CONFIG.utentiDemo.filter(u => u.online && G.stato.bloccati.has(u.id))).forEach(u => {
+    G.botPiazza().forEach(u => {
       const av = B.unisciAvatar(B.creaAvatar(u.look));
       // gli abitanti non fanno ombra: molto lavoro in meno per il telefono, la sagoma resta uguale
       av.root.traverse(q => { if (q.isMesh) { q.castShadow = false; q.receiveShadow = false; } });
@@ -13337,7 +13497,7 @@ body.bv-attivo #barra-alto,body.bv-attivo #controlli,body.bv-attivo #btn-contest
     // sul telefono gli abitanti passano prima alla versione semplice
     const dc = Math.hypot(o.x - C.tx, o.z - C.tz), sOn = mob ? 15 : 23, sOff = mob ? 19 : 27;
     if (o.lontano ? dc < sOn : dc > sOff) o.lontano = !o.lontano;
-    o.av.root.visible = !bloccato && !o.lontano; if (bloccato) return;
+    o.av.root.visible = o.av.root.matrixWorldAutoUpdate = !bloccato && !o.lontano; if (bloccato) return;
     if (!o.lontano) aggBolla(o, dt);
     let vel = 0;
     if (o.att > 0) { o.att -= dt; const freno = Math.exp(-dt * 8); o.vx *= freno; o.vz *= freno; }
@@ -13577,6 +13737,8 @@ body.bv-attivo #barra-alto,body.bv-attivo #controlli,body.bv-attivo #btn-contest
     // porta vicina: avvisa l'interfaccia solo quando cambia
     const p = copre ? null : portaVicina();
     if (p !== ultimaPorta) { ultimaPorta = p; G.emetti('porta', p); }
+    // le stanze nascoste non ricalcolano le posizioni dei loro pezzi (prima lo facevano a ogni fotogramma)
+    for (const g of gruppiStanze) g.matrixWorldAutoUpdate = g.visible;
     if (!copre) renderer.render(scene, cam);
     // se il telefono e' lento, passa da solo alla grafica leggera
     tf += dt; cnt++; if (tf > 1) {
@@ -14041,7 +14203,17 @@ body.bv-attivo #barra-alto,body.bv-attivo #controlli,body.bv-attivo #btn-contest
     setInterval(UI.disegnaMinimappa, 70);
 
     // tastiera sul telefono: nasconde la barra in basso e adatta l'altezza
-    app.addEventListener('focusin', e => { if (e.target.tagName === 'INPUT') { app.classList.add('tastiera'); setTimeout(UI.aggiornaArea, 50); } });
+    // schermata iniziale: la pagina resta ferma (niente cambi di altezza), scorre solo la scheda per portare il nickname in alto, sopra la tastiera
+    const inInizio = () => !$('#inizio').hidden;
+    function nickInAlto(inp) {
+      const box = $('#inizio'), y = inp.getBoundingClientRect().top - box.getBoundingClientRect().top + box.scrollTop - 90;
+      window.scrollTo(0, 0); box.scrollTop = Math.max(0, y);
+    }
+    app.addEventListener('focusin', e => {
+      if (e.target.tagName !== 'INPUT') return;
+      if (inInizio()) { const inp = e.target; app.style.height = ''; [0, 120, 400].forEach(ms => setTimeout(() => { if (document.activeElement === inp) nickInAlto(inp); }, ms)); return; }
+      app.classList.add('tastiera'); setTimeout(UI.aggiornaArea, 50);
+    });
     app.addEventListener('focusout', e => {
       if (e.target.tagName !== 'INPUT') return;
       setTimeout(() => {
@@ -14053,6 +14225,7 @@ body.bv-attivo #barra-alto,body.bv-attivo #controlli,body.bv-attivo #btn-contest
     if (window.visualViewport) {
       const adatta = () => {
         if (window.B3_ORIZZ || document.body.classList.contains('kart-attivo') || document.body.classList.contains('pb-attivo') || document.body.classList.contains('raid-attivo')) { window.scrollTo(0, 0); return; }
+        if (inInizio()) { if (app.style.height) { app.style.height = ''; UI.aggiornaArea(); } window.scrollTo(0, 0); return; }
         if (window.innerWidth < 560 && !window.B3_ORIZZ) app.style.height = window.visualViewport.height + 'px'; else app.style.height = '';
         window.scrollTo(0, 0); UI.aggiornaArea();
       };
