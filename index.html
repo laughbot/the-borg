@@ -55,6 +55,8 @@ button { cursor: pointer; border: 0; background: none; touch-action: manipulatio
 /* Cornice: su PC appare come un telefono, su telefono occupa tutto lo schermo */
 #app { position: relative; width: 100%; height: 100%; overflow: hidden; background: var(--prugna);
   -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; }
+/* su telefono la cornice sta in alto: quando la tastiera la accorcia, il fondo (con la casella di testo) resta appena sopra la tastiera */
+@media (max-width: 559px) { body { align-items: flex-start; } }
 @media (min-width: 560px) {
   #app { width: 410px; height: min(880px, 96vh); border-radius: 34px; box-shadow: 0 0 0 10px #0d0814, 0 30px 80px rgba(0,0,0,.6); }
 }
@@ -14291,6 +14293,7 @@ body.bv-attivo #barra-alto,body.bv-attivo #controlli,body.bv-attivo #btn-contest
         if (inInizio()) { if (app.style.height) { app.style.height = ''; UI.aggiornaArea(); } window.scrollTo(0, 0); return; }
         if (window.innerWidth < 560 && !window.B3_ORIZZ) app.style.height = window.visualViewport.height + 'px'; else app.style.height = '';
         window.scrollTo(0, 0); UI.aggiornaArea();
+        const box = $('#dm-messaggi'); if (box && !$('#dm-thread').hidden) box.scrollTop = box.scrollHeight;   // ultimi messaggi sopra la tastiera
       };
       window.visualViewport.addEventListener('resize', adatta); window.visualViewport.addEventListener('scroll', adatta); adatta();
     }
