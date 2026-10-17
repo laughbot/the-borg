@@ -4199,7 +4199,8 @@ window.B3_LOGO = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAyAAAAC3CAIAAABl
 <script>
 /* =====================================================================
    THE BORG 3D - MINIGIOCO GO-KART (DEMO)
-   Una gara a 5 giri contro 3 avversari simulati. Si guida con il joystick:
+   Una gara a 5 giri contro avversari simulati, oppure online contro gli amici
+   (vedi online.js) che sono ai kart nello stesso momento. Si guida con il joystick:
    sinistra/destra sterzano, in basso frena (l'acceleratore e' automatico).
    Ha una scena 3D tutta sua; il resto del gioco resta fermo e si riprende
    quando si esce. Nessun server: tutto avviene nel browser.
@@ -4369,18 +4370,19 @@ body.kart-attivo #kart-hud #k-fine ol{max-height:30vh}
 #kart-hud #k-fine li{padding:6px 10px;border-radius:10px;font-weight:700;display:flex;justify-content:space-between}
 #kart-hud #k-fine li.io{background:rgba(255,211,106,.25)}
 #kart-hud #k-fine button{border:0;border-radius:14px;padding:11px 18px;margin:4px;font:inherit;font-weight:800;font-size:15px;cursor:pointer;background:#ffd36a;color:#3b2a14}
+#kart-hud #k-amici{font-size:13px;font-weight:700;color:#c9f5da;text-shadow:0 1px 3px #000;margin:0 16px 10px;display:none}
 #kart-hud #k-fine button.s{background:#5a4a7a;color:#fff8e8}`;
     document.head.appendChild(st);
     hud = document.createElement('div'); hud.id = 'kart-hud';
-    hud.innerHTML = '<div class="kb" id="k-pos">1°/4</div><div class="kb" id="k-giro">Giro 1/5</div><div class="kb" id="k-tempo">0:00.00</div><button class="kb" id="k-esci">✕ Esci</button><canvas id="k-mini" width="224" height="224"></canvas><div id="k-grande"></div><div id="k-aiuto"></div><div id="k-vel"><b>0</b><small>km/h</small><div class="bar"><i></i></div></div><div id="k-fine"></div><div id="k-scelta"><h3>Personalizza il tuo pilota</h3><div id="k-tabs"><button data-t="pista">Pista</button><button data-t="kart">Kart</button><button data-t="tuta">Tuta</button><button data-t="casco">Casco</button></div><div id="k-pat"></div><div id="k-num"></div><div id="k-liv"></div><div id="k-cols"></div><button id="k-via">Via!</button></div><div id="k-bt"><button data-b="fr" class="f">STOP</button><button data-b="gas" class="g">GAS</button></div><div id="k-sterzo"><button data-b="sx">&#x25C0;</button><button data-b="dx">&#x25B6;</button></div>';
+    hud.innerHTML = '<div class="kb" id="k-pos">1°/4</div><div class="kb" id="k-giro">Giro 1/5</div><div class="kb" id="k-tempo">0:00.00</div><button class="kb" id="k-esci">✕ Esci</button><canvas id="k-mini" width="224" height="224"></canvas><div id="k-grande"></div><div id="k-aiuto"></div><div id="k-vel"><b>0</b><small>km/h</small><div class="bar"><i></i></div></div><div id="k-fine"></div><div id="k-scelta"><h3>Personalizza il tuo pilota</h3><div id="k-tabs"><button data-t="pista">Pista</button><button data-t="kart">Kart</button><button data-t="tuta">Tuta</button><button data-t="casco">Casco</button></div><div id="k-pat"></div><div id="k-num"></div><div id="k-liv"></div><div id="k-cols"></div><div id="k-amici"></div><button id="k-via">Via!</button></div><div id="k-bt"><button data-b="fr" class="f">STOP</button><button data-b="gas" class="g">GAS</button></div><div id="k-sterzo"><button data-b="sx">&#x25C0;</button><button data-b="dx">&#x25B6;</button></div>';
     document.getElementById('hud').appendChild(hud);
-    ['pos', 'giro', 'tempo', 'esci', 'mini', 'grande', 'aiuto', 'vel', 'fine', 'scelta', 'cols', 'via', 'tabs', 'pat', 'num', 'liv'].forEach(k => { ui[k] = hud.querySelector('#k-' + k); });
+    ['pos', 'giro', 'tempo', 'esci', 'mini', 'grande', 'aiuto', 'vel', 'fine', 'scelta', 'cols', 'via', 'tabs', 'pat', 'num', 'liv', 'amici'].forEach(k => { ui[k] = hud.querySelector('#k-' + k); });
     ui.esci.addEventListener('click', () => K.esci());
     ui.tabs.querySelectorAll('button').forEach(b => b.addEventListener('click', () => { tab = b.dataset.t; menu(); }));
     ui.num.appendChild(document.createTextNode('Kart in gara:')); [4, 6, 8, 10].forEach(n => { const b = document.createElement('button'); b.textContent = n; b.dataset.n = n; b.addEventListener('click', () => { sel.n = n; salva(); cambiaPista(sel.pista | 0); }); ui.num.appendChild(b); });
     ui.liv.appendChild(document.createTextNode('Avversari:')); LIV.forEach((l, i) => { const b = document.createElement('button'); b.textContent = l[0]; b.dataset.l = i; b.addEventListener('click', () => { sel.liv = i; salva(); menu(); nuovo(); }); ui.liv.appendChild(b); });
     PATT.forEach((n, i) => { const b = document.createElement('button'); b.textContent = n; b.dataset.p = i; b.addEventListener('click', () => { sel.patt = i; applica(); }); ui.pat.appendChild(b); });
-    ui.via.addEventListener('click', () => via());
+    ui.via.addEventListener('click', () => premiVia());
     hud.querySelectorAll('button[data-b]').forEach(b => { const n = b.dataset.b; const on = e => { bt[n] = true; b.classList.add('on'); try { b.setPointerCapture(e.pointerId); } catch (x) { } e.preventDefault(); }, off = e => { bt[n] = false; b.classList.remove('on'); }; b.addEventListener('pointerdown', on); ['pointerup', 'pointercancel', 'lostpointercapture'].forEach(ev => b.addEventListener(ev, off)); });
     window.addEventListener('keydown', e => { tasti[e.key.toLowerCase()] = true; if (K.attivo && ['arrowleft', 'arrowright', 'arrowup', 'arrowdown'].includes(e.key.toLowerCase())) e.preventDefault(); });
     window.addEventListener('keyup', e => { tasti[e.key.toLowerCase()] = false; });
@@ -4414,7 +4416,7 @@ body.kart-attivo #kart-hud #k-fine ol{max-height:30vh}
       const k = { g: o.g, casco: o.casco, ruote: o.ruote, fiamme: o.fiamme, volante: o.volante, num: nums[n], nome: d.io ? 'Tu' : d.u.nick, colore: opts[n].colore, x: c.x + nn.x * slots[n][1], z: c.z + nn.z * slots[n][1], h: Math.atan2(P.tan[i].x, P.tan[i].z), v: 0, idx: i, giri: -1, cp: true, steer: 0, boost: 0, fine: null, ai: !d.io, vmax: d.vmax, lvl: d.lvl || 1, glatMul: (d.lvl || 1) ** 2, yawMul: d.lvl || 1, off: d.off || 0, lat: 0, tGiro: 0, migliorGiro: null, gdt: 0 };
       ombre(k.g); scena.add(k.g); return k;
     });
-    player = karts[2]; stato = 'scelta'; cd = 3.4; tCorsa = 0; camH = camA = player.h; camPX = player.x; camPZ = player.z; camV = 0; angScelta = 0.6;
+    player = karts[2]; gara = 0; sl = 2; stato = 'scelta'; cd = 3.4; tCorsa = 0; camH = camA = player.h; camPX = player.x; camPZ = player.z; camV = 0; angScelta = 0.6;
     ui.fine.style.display = 'none'; ui.grande.style.opacity = 0; hud.classList.add('scelta'); ui.aiuto.innerHTML = B.touch ? 'Frecce a sinistra = sterza &middot; GAS a destra = accelera<br>STOP = frena' : 'Frecce o A/D = sterza &middot; W o &uarr; = accelera<br>S o &darr; o Spazio = frena';
     menu();
   }
@@ -4448,7 +4450,7 @@ body.kart-attivo #kart-hud #k-fine ol{max-height:30vh}
     const c = P.sp[best], n = P.nor[best]; k.lat = (k.x - c.x) * n.x + (k.z - c.z) * n.z;
   }
   const punti = k => k.giri * N + k.idx;
-  const classifica = () => karts.slice().sort((a, b) => (a.fine != null && b.fine != null) ? a.fine - b.fine : a.fine != null ? -1 : b.fine != null ? 1 : punti(b) - punti(a));
+  const classifica = () => corridori().sort((a, b) => (a.fine != null && b.fine != null) ? a.fine - b.fine : a.fine != null ? -1 : b.fine != null ? 1 : punti(b) - punti(a));
 
   function passo(k, dt, sterza, frena, gas) {
     const P = pista, fuori = Math.abs(k.lat) > MEZZA + 0.9;
@@ -4488,7 +4490,7 @@ body.kart-attivo #kart-hud #k-fine ol{max-height:30vh}
     const fy = bt.fr || tasti['arrowdown'] || tasti['s'] || tasti[' '], gas = bt.gas || tasti['arrowup'] || tasti['w'];
     passo(k, dt, -bt.val, fy, gas);                                    // la camera guarda verso +z: destra dello schermo = -x
   }
-  function collisioni(dt) {
+  function collisioni(karts, dt) {
     const f = Math.min(1, dt * 10);
     for (let a = 0; a < karts.length; a++) for (let b = a + 1; b < karts.length; b++) {
       const A = karts[a], Bk = karts[b], dx = Bk.x - A.x, dz = Bk.z - A.z, r = 2.1;
@@ -4508,9 +4510,103 @@ body.kart-attivo #kart-hud #k-fine ol{max-height:30vh}
     const gt = player.fine; let rec = '';
     const m = migliore(); if (player.migliorGiro != null && (m == null || player.migliorGiro < m)) { salvaMigliore(player.migliorGiro); rec = ' &#x1F3C6; nuovo record!'; }
     setTimeout(() => { if (!K.attivo) return; const cl = classifica(), pos = cl.indexOf(player) + 1; ui.grande.style.opacity = 0;
-      ui.fine.innerHTML = '<h3>' + (pos === 1 ? '&#x1F947; Hai vinto!' : pos === 2 ? '&#x1F948; Secondo posto' : pos === 3 ? '&#x1F949; Terzo posto' : 'Quarto posto') + '</h3><div style="font-size:14px;opacity:.9">Tempo ' + tempo(gt) + ' &middot; miglior giro ' + tempo(player.migliorGiro) + rec + '</div><ol>' +
-        cl.map((k, i) => '<li class="' + (k === player ? 'io' : '') + '"><span>' + (i + 1) + '. ' + k.nome + '</span><span>' + (k.fine != null ? tempo(k.fine) : 'in gara') + '</span></li>').join('') + '</ol><div style="font-size:12px;opacity:.75;margin-bottom:6px">DEMO: gara contro avversari simulati, nessun premio reale.</div><button id="k-ancora">Rigioca</button><button class="s" id="k-via">Esci</button>';
-      ui.fine.style.display = 'block'; ui.fine.querySelector('#k-ancora').onclick = () => nuovo(); ui.fine.querySelector('#k-via').onclick = () => K.esci(); }, 1400);
+      ui.fine.innerHTML = '<h3>' + (pos === 1 ? '&#x1F947; Hai vinto!' : pos === 2 ? '&#x1F948; Secondo posto' : pos === 3 ? '&#x1F949; Terzo posto' : pos + '° posto') + '</h3><div style="font-size:14px;opacity:.9">Tempo ' + tempo(gt) + ' &middot; miglior giro ' + tempo(player.migliorGiro) + rec + '</div><ol id="k-ol"></ol><div style="font-size:12px;opacity:.75;margin-bottom:6px">' + (gara ? 'Gara online con gli amici.' : 'DEMO: gara contro avversari simulati, nessun premio reale.') + '</div><button id="k-ancora">Rigioca</button><button class="s" id="k-via">Esci</button>';
+      scriviFine(); ui.fine.style.display = 'block'; ui.fine.querySelector('#k-ancora').onclick = () => nuovo(); ui.fine.querySelector('#k-via').onclick = () => K.esci(); }, 1400);
+  }
+  // la classifica finale si aggiorna mentre gli amici arrivano al traguardo
+  function scriviFine() {
+    const ol = ui.fine.querySelector('#k-ol'); if (!ol) return; const cl = classifica();
+    ol.innerHTML = cl.map((k, i) => '<li class="' + (k === player ? 'io' : '') + '"><span>' + (i + 1) + '. ' + esc(k.nome) + '</span><span>' + (k.fine != null ? tempo(k.fine) : 'in gara') + '</span></li>').join('');
+  }
+  const esc = t => String(t).replace(/[&<>"']/g, c => '&#' + c.charCodeAt(0) + ';');
+
+  /* ---------- gara online con gli amici ---------- */
+  // online.js mette nella presenza di ognuno la sua posizione in pista (K.rete) e passa qui quella
+  // degli amici (K.amico). Chi preme Via! apre una gara: chi e' nel menu dei kart parte con lui sulla
+  // sua pista. Nella gara online non ci sono avversari simulati: ognuno guida il suo kart e vede gli altri.
+  const mioK = Math.random().toString(36).slice(2, 8), remoti = new Map();   // peer -> { nick, d, t, k }
+  let gara = 0, sl = 2, tAmici = 0;
+  const nn = (v, d) => (typeof v === 'number' && isFinite(v) ? v : d);
+  const fresco = r => performance.now() - r.t < 5000;
+  const inGara = r => gara && r.d.g === gara && r.d.p === tp && fresco(r);
+  function corridori() { const l = karts.slice(); remoti.forEach(r => { if (r.k && r.k.g.visible) l.push(r.k); }); return l; }
+  K.rete = function () {
+    if (!K.attivo || !player) return null;
+    const r2 = v => Math.round(v * 100) / 100;
+    return { id: mioK, p: tp, st: stato, g: gara, sl, cd: r2(cd), x: r2(player.x), z: r2(player.z), h: r2(player.h), v: r2(player.v), s: r2(player.steer), gi: player.giri, i: player.idx, f: player.fine == null ? null : r2(player.fine), b: player.boost > 0 ? 1 : 0, o: [sel.kart, sel.tuta, sel.casco, sel.patt] };
+  };
+  K.amico = function (peer, nick, d) {
+    const r = remoti.get(peer);
+    if (!d || typeof d !== 'object') { if (r) { togliRemoto(r); remoti.delete(peer); } return; }
+    if (r) { r.nick = nick || r.nick; r.d = d; r.t = performance.now(); } else remoti.set(peer, { nick: nick || 'Amico', d, t: performance.now(), k: null });
+  };
+  function togliRemoto(r) { if (r.k) { if (r.k.scena) r.k.scena.remove(r.k.g); libera(r.k.g); r.k = null; } }
+  function kartRemoto(r) {
+    const o = Array.isArray(r.d.o) ? r.d.o : [], ix = (v, n) => clamp(Math.round(nn(v, 0)), 0, n - 1);
+    const kk = ix(o[0], PALETTE.length), tu = ix(o[1], TUTE.length), ca = ix(o[2], CASCHI.length), pa = ix(o[3], PATT.length), chiave = [kk, tu, ca, pa].join();
+    if (r.k && r.k.chiave === chiave) return r.k;
+    togliRemoto(r);
+    const m = B.creaKartModello({ colore: PALETTE[kk], numero: ix(r.d.sl, 10) + 1, tuta: TUTE[tu], casco: { c1: CASCHI[ca], c2: TUTE[tu][0], p: pa } });
+    r.k = { g: m.g, casco: m.casco, ruote: m.ruote, fiamme: m.fiamme, volante: m.volante, nome: r.nick, colore: PALETTE[kk], x: nn(r.d.x, 0), z: nn(r.d.z, 0), h: nn(r.d.h, 0), v: 0, steer: 0, idx: 0, giri: -1, fine: null, boost: 0, lat: 0, remoto: true, chiave, scena: null };
+    if (B.etichetta) { const et = B.etichetta(String(r.nick).slice(0, 20), { sfondo: '#7fd6a4', colore: '#163322', altezza: 0.5 }); et.position.y = 2.6; r.k.g.add(et); }   // il nome sopra il kart dell'amico
+    ombre(r.k.g); return r.k;
+  }
+  // i kart degli amici seguono l'ultima posizione ricevuta, spinta in avanti per il ritardo della rete
+  function aggiornaRemoti(dt) {
+    const ora = performance.now(), f = 1 - Math.exp(-dt * 12);
+    remoti.forEach(r => {
+      const d = r.d;
+      if (!inGara(r) || stato === 'scelta') { if (r.k) r.k.g.visible = false; return; }
+      const k = kartRemoto(r);
+      if (k.scena !== scena) { if (k.scena) k.scena.remove(k.g); scena.add(k.g); k.scena = scena; k.x = nn(d.x, 0); k.z = nn(d.z, 0); k.h = nn(d.h, 0); }
+      k.g.visible = true;
+      const age = Math.min(0.35, (ora - r.t) / 1000), h = nn(d.h, k.h), v = clamp(nn(d.v, 0), 0, VT * 1.5);
+      const tx = nn(d.x, k.x) + Math.sin(h) * v * age, tz = nn(d.z, k.z) + Math.cos(h) * v * age;
+      if (Math.hypot(tx - k.x, tz - k.z) > 12) { k.x = tx; k.z = tz; } else { k.x += (tx - k.x) * f; k.z += (tz - k.z) * f; }
+      k.h += angDiff(k.h, h) * f; k.v = v; k.steer += (clamp(nn(d.s, 0), -1, 1) - k.steer) * f; k.boost = d.b ? 1 : 0; k.nome = r.nick;
+      k.giri = Math.round(nn(d.gi, -1)); k.idx = clamp(Math.round(nn(d.i, 0)), 0, N - 1); k.fine = d.f == null ? null : nn(d.f, null);
+      const c = pista.sp[k.idx], n2 = pista.nor[k.idx]; k.lat = (k.x - c.x) * n2.x + (k.z - c.z) * n2.z;
+    });
+  }
+  const amiciQui = () => [...remoti.values()].filter(fresco);
+  function premiVia() {
+    const pronti = amiciQui().filter(r => r.d.p === tp && (r.d.st === 'scelta' || r.d.st === 'attesa'));
+    if (!pronti.length) { gara = 0; via(); return; }
+    const gia = pronti.find(r => r.d.st === 'attesa' && r.d.g);
+    apriGara(gia ? gia.d.g : 1 + Math.floor(Math.random() * 1e9), gia ? nn(gia.d.cd, 3.4) : null);
+  }
+  function apriGara(g, cdAmico) {
+    gara = g;
+    karts.filter(k => k !== player).forEach(k => { scena.remove(k.g); libera(k.g); }); karts = [player];
+    sl = postoLibero(); piazza(); via();
+    if (cdAmico != null) cd = clamp(cdAmico - 0.15, 0.5, 3.4);
+    const nomi = amiciQui().filter(r => r.d.g === gara).map(r => esc(r.nick));
+    ui.aiuto.innerHTML = '<b>Gara online' + (nomi.length ? ' con ' + nomi.join(', ') : '') + '</b><br>' + ui.aiuto.innerHTML;
+  }
+  function postoLibero() { const presi = new Set(); remoti.forEach(r => { if (inGara(r)) presi.add(r.d.sl); }); let s = 0; while (presi.has(s) && s < 9) s++; return s; }
+  function piazza() {
+    const g = pista.griglia[sl % pista.griglia.length], i = (N + g[0]) % N, c = pista.sp[i], n2 = pista.nor[i];
+    player.x = c.x + n2.x * g[1]; player.z = c.z + n2.z * g[1]; player.h = Math.atan2(pista.tan[i].x, pista.tan[i].z); player.idx = i; player.v = 0;
+    camH = camA = player.h; camPX = player.x; camPZ = player.z; cam.position.set(player.x - Math.sin(player.h) * 9.5, 5.4, player.z - Math.cos(player.h) * 9.5);
+  }
+  function retePerFrame(dt) {
+    // nel menu: se un amico ha appena dato il via, parto con lui (anche se ha scelto un'altra pista)
+    if (stato === 'scelta') {
+      const r = amiciQui().find(r => r.d.st === 'attesa' && r.d.g && nn(r.d.cd, 0) > 0.6);
+      if (r) { const p = clamp(Math.round(nn(r.d.p, 0)), 0, TRACCE.length - 1); if (p !== tp) cambiaPista(p); apriGara(r.d.g, nn(r.d.cd, 3.4)); return; }
+      tAmici -= dt; if (tAmici <= 0) { tAmici = 0.5; scriviAmici(); }
+    }
+    // due che scelgono lo stesso posto in griglia: si sposta chi ha il codice piu' alto
+    // due che premono Via! insieme: vale la gara col numero piu' basso, l'altro passa in quella
+    if (stato === 'attesa' && gara) { const alt = amiciQui().find(r => r.d.st === 'attesa' && r.d.p === tp && r.d.g && r.d.g < gara); if (alt) { gara = alt.d.g; sl = postoLibero(); piazza(); cd = clamp(nn(alt.d.cd, cd) - 0.15, 0.5, 3.4); } }
+    if (stato === 'attesa' && gara) remoti.forEach(r => { if (inGara(r) && r.d.sl === sl && String(r.d.id) < mioK) { sl = postoLibero(); piazza(); } });
+    if (stato === 'fine' && gara) { tAmici -= dt; if (tAmici <= 0) { tAmici = 1; scriviFine(); } }
+  }
+  function scriviAmici() {
+    const l = amiciQui(); ui.amici.style.display = l.length ? 'block' : 'none'; if (!l.length) return;
+    const dove = r => r.d.st === 'scelta' ? (r.d.p === tp ? 'pronto' : 'su ' + (TRACCE[r.d.p] || TRACCE[0]).nome) : r.d.st === 'attesa' ? 'parte ora' : 'in gara';
+    const pronti = l.some(r => r.d.st === 'scelta' && r.d.p === tp);
+    ui.amici.innerHTML = 'Ai kart con te: ' + l.map(r => esc(r.nick) + ' (' + dove(r) + ')').join(', ') + '<br>' + (pronti ? 'Premi Via! e partite insieme' : 'Quando uno preme Via! partite insieme');
   }
 
   /* ---------- ciclo ---------- */
@@ -4533,12 +4629,13 @@ body.kart-attivo #kart-hud #k-fine ol{max-height:30vh}
     const copre = window.UI && window.UI.paginaPiena();
     const asp = renderer.domElement.width / renderer.domElement.height; if (Math.abs(cam.aspect - asp) > 0.001) { cam.aspect = asp; }
     if (!copre) {
+      retePerFrame(dt); aggiornaRemoti(dt);
       if (stato === 'attesa') { cd -= dt; const n = Math.ceil(cd - 0.4); ui.grande.style.opacity = 1; ui.grande.textContent = cd > 0.4 ? String(n) : 'VIA!'; { const sv = cd > 0.4 ? 4 - n : 4; if (sv !== semOld) { semOld = sv; B.Audio.bip(sv === 4); } deco.semaforo(sv); } if (cd <= 0.4 && stato === 'attesa') { stato = 'corsa'; tCorsa = 0; ui.aiuto.textContent = ''; setTimeout(() => { if (stato === 'corsa') ui.grande.style.opacity = 0; }, 800); } }
       else if (stato === 'corsa' || stato === 'fine') { tCorsa += dt; }
       karts.forEach(k => { if (k.ai) guidaAI(k, dt); else guidaGiocatore(k, dt); });
-      collisioni(dt);
+      const tutti = corridori(); collisioni(tutti, dt);
       B.Audio.motore(stato === 'attesa' ? 0.05 : stato === 'fine' ? 0.1 : clamp(player.v / VT, 0, 1), stato === 'corsa' && !!(bt.gas || tasti['arrowup'] || tasti['w']));
-      karts.forEach(k => { aggiornaModello(k, dt, t); if (stato === 'corsa' || stato === 'fine') emissioni(k); });
+      tutti.forEach(k => { aggiornaModello(k, dt, t); if (stato === 'corsa' || stato === 'fine') emissioni(k); });
       parti.aggiorna(dt); deco.anim.forEach(f => f(t, dt));
       if (stato === 'scelta') {
         angScelta += dt * 0.7; if (K.angFisso !== undefined) angScelta = K.angFisso; const p0 = player, R = 10.8; karts.forEach(k => { k.g.visible = k === p0; }); cam.position.set(p0.x + Math.sin(p0.h + angScelta) * R, 3.8, p0.z + Math.cos(p0.h + angScelta) * R); cam.fov = 50; cam.updateProjectionMatrix(); cam.lookAt(p0.x, -1.5, p0.z);
@@ -4556,10 +4653,10 @@ body.kart-attivo #kart-hud #k-fine ol{max-height:30vh}
       cam.lookAt(p.x + fx * 5 + (camPX - p.x) * 0.22, 1.1, p.z + fz * 5 + (camPZ - p.z) * 0.22);
       if (K.dbg) K.dbg(cam);
       // schermata
-      const cl = classifica(); ui.pos.textContent = (cl.indexOf(p) + 1) + '°/' + karts.length; ui.giro.textContent = 'Giro ' + clamp(p.giri + 1, 1, GIRI) + '/' + GIRI;
+      const cl = classifica(); ui.pos.textContent = (cl.indexOf(p) + 1) + '°/' + cl.length; ui.giro.textContent = 'Giro ' + clamp(p.giri + 1, 1, GIRI) + '/' + GIRI;
       ui.tempo.textContent = tempo(stato === 'attesa' ? 0 : stato === 'fine' ? p.fine : tCorsa); ui.vel.querySelector('i').style.width = clamp(p.v / VT, 0, 1) * 100 + '%'; ui.vel.querySelector('b').textContent = Math.round(p.v * 1.6);
       const c = ui.mini.getContext('2d'); c.clearRect(0, 0, 224, 224); c.drawImage(miniBase, 0, 0);
-      karts.forEach(k => { const q = mappa(k.x, k.z); c.fillStyle = k.colore; c.strokeStyle = k === p ? '#fff' : '#1b1530'; c.lineWidth = k === p ? 3 : 2; c.beginPath(); c.arc(q[0], q[1], k === p ? 6 : 4.5, 0, 7); c.fill(); c.stroke(); });
+      cl.forEach(k => { const q = mappa(k.x, k.z); c.fillStyle = k.colore; c.strokeStyle = k === p ? '#fff' : '#1b1530'; c.lineWidth = k === p ? 3 : 2; c.beginPath(); c.arc(q[0], q[1], k === p ? 6 : 4.5, 0, 7); c.fill(); c.stroke(); });
       renderer.render(scena, cam);
     }
   };
@@ -4584,14 +4681,14 @@ body.kart-attivo #kart-hud #k-fine ol{max-height:30vh}
     carica(); tab = 'pista'; usaPista(sel.pista | 0); nuovo(); try { screen.orientation.lock('landscape').catch(() => { }); } catch (e) { } orienta(); cam.position.set(player.x - Math.sin(player.h) * 9.5, 5.4, player.z - Math.cos(player.h) * 9.5);
   };
   K.esci = function () {
-    K.attivo = false; B.Audio.motore(-1); document.body.classList.remove('kart-attivo'); ui.fine.style.display = 'none'; ui.grande.style.opacity = 0; B.app.joy.x = B.app.joy.y = 0; bt.sx = bt.dx = bt.fr = bt.gas = false; bt.val = 0;
+    K.attivo = false; gara = 0; B.Audio.motore(-1); document.body.classList.remove('kart-attivo'); ui.fine.style.display = 'none'; ui.grande.style.opacity = 0; B.app.joy.x = B.app.joy.y = 0; bt.sx = bt.dx = bt.fr = bt.gas = false; bt.val = 0;
     try { screen.orientation.unlock(); } catch (e) { } orienta();
   };
   K.estado = () => ({ stato, giri: player && player.giri, v: player && player.v, idx: player && player.idx, lat: player && player.lat, pos: player && classifica().indexOf(player) + 1 });
   K._LIV = LIV; K._camp = (ti, c) => { TRACCE[ti].camp = c; };
   K._p = ti => costruisciPista(ti);
   K._usa = usaPista;
-  K._k = () => ({ karts, player, pista, cam, deco });
+  K._k = () => ({ karts, player, pista, cam, deco, remoti });
   B.Kart = K;
 })();
 
@@ -13719,6 +13816,8 @@ body.orizz #pagina-zaino .zn-carte{grid-template-columns:repeat(auto-fill,minmax
    Fuori da claude.ai si gioca con un codice nel link (?amici=CODICE):
    i telefoni si collegano tra loro (PeerJS, lib/peerjs.min.js); il primo
    arrivato fa da padrone di casa e gira a tutti la presenza degli altri.
+   Ai kart la presenza porta anche la posizione in pista (B.Kart.rete):
+   chi e' ai kart nello stesso momento corre contro gli altri.
    Senza codice e fuori da claude.ai non cambia niente.
    ===================================================================== */
 (function () {
@@ -13740,7 +13839,7 @@ body.orizz #pagina-zaino .zn-carte{grid-template-columns:repeat(auto-fill,minmax
     if (!gioco || !io.av) return null;
     const dove = (B.Raid && B.Raid.attivo) ? 'raid' : (B.Paintball && B.Paintball.attivo) ? 'paintball' : (B.Kart && B.Kart.attivo) ? 'kart' : st.pubblica ? st.id : 'casa';
     return { v: 1, nick: testo(gioco.nick, 20), look: lookDa(gioco.look), s: dove, x: +io.x.toFixed(2), z: +io.z.toFixed(2), y: +io.y.toFixed(2), r: +io.yaw.toFixed(2),
-      vel: +Math.hypot(io.vx, io.vz).toFixed(2), sed: io.seduto ? (io.seduto.dorme ? 2 : 1) : 0 };
+      vel: +Math.hypot(io.vx, io.vz).toFixed(2), sed: io.seduto ? (io.seduto.dorme ? 2 : 1) : 0, k: dove === 'kart' && B.Kart.rete ? B.Kart.rete() : null };
   }
   function invia(extra) {
     if (!room) return; const p = mia(); if (!p) return;
@@ -13759,7 +13858,7 @@ body.orizz #pagina-zaino .zn-carte{grid-template-columns:repeat(auto-fill,minmax
     const a = { peer, av, nick, lookK: JSON.stringify(look), x: num(pr.x, 0), z: num(pr.z, 0), y: num(pr.y, 0), r: num(pr.r, 0), vel: 0, bolla: null, durBolla: 0, nMsg: pr.msg ? pr.msg.n : 0, nEm: pr.em ? pr.em.n : 0, pr };
     amici.set(peer, a); return a;
   }
-  function togli(peer) { const a = amici.get(peer); if (!a) return; app.scene.remove(a.av.root); B.liberaAvatar(a.av); amici.delete(peer); }
+  function togli(peer) { if (B.Kart && B.Kart.amico) B.Kart.amico(peer, null, null); const a = amici.get(peer); if (!a) return; app.scene.remove(a.av.root); B.liberaAvatar(a.av); amici.delete(peer); }
   function aggiorna(peer, pr) {
     if (!pr || pr.v !== 1) return;
     let a = amici.get(peer);
@@ -13769,6 +13868,7 @@ body.orizz #pagina-zaino .zn-carte{grid-template-columns:repeat(auto-fill,minmax
       if (G.stato.giocatore) G.emetti('toast', a.nick + ' è online');
     }
     a.pr = pr;
+    if (B.Kart && B.Kart.amico) B.Kart.amico(peer, a.nick, pr.s === 'kart' ? pr.k : null);   // ai kart: la sua posizione in pista
     // messaggio nuovo in chat: entra nella chat pubblica e appare nel fumetto
     if (pr.msg && pr.msg.n !== a.nMsg) {
       a.nMsg = pr.msg.n; const t = testo(pr.msg.t, 120);
@@ -13789,7 +13889,7 @@ body.orizz #pagina-zaino .zn-carte{grid-template-columns:repeat(auto-fill,minmax
     requestAnimationFrame(ciclo);
     const ora = performance.now(), dt = Math.min(0.05, (ora - prima) / 1000); prima = ora;
     if (!app.gioco()) return;
-    tInvio -= dt; if (tInvio <= 0) { tInvio = 0.1; invia(); }
+    tInvio -= dt; if (tInvio <= 0) { tInvio = (B.Kart && B.Kart.attivo) ? 0.066 : 0.1; invia(); }
     const qui = app.stanza(), libero = !(B.Raid && B.Raid.attivo) && !(B.Paintball && B.Paintball.attivo) && !(B.Kart && B.Kart.attivo);
     amici.forEach(a => {
       const pr = a.pr, vis = libero && qui.pubblica && pr.s === qui.id;
