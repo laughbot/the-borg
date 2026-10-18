@@ -52,6 +52,7 @@ export const BLOCCHI = [
   ['La Cripta del Re Senza Luce: ambienti scolpiti', 'src/minigiochi/cripta/ambienti.js'],
   ['La Cripta del Re Senza Luce: creature scolpite', 'src/minigiochi/cripta/creature.js'],
   ['LA CRIPTA DEL RE SENZA LUCE (DEMO)', 'src/minigiochi/cripta/gioco.js'],
+  ['THE BORG - FILTRO DELLA CHAT', 'src/chat/filtro.js'],
   ['BORGO LUME 3D - LOGICA DEL GIOCO', 'src/borgo/logica.js'],
   ['THE BORG 3D - COINS, NEGOZIO DI ARREDI', 'src/borgo/coins-arredi.js'],
   ['THE BORG 3D - MOBILI INTERATTIVI', 'src/borgo/mobili-interattivi.js'],

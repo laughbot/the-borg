@@ -158,7 +158,8 @@
 
   function rendiChat() {
     const lista = $('#chat-lista'); lista.innerHTML = '';
-    lista.append(el('div', 'riga sistema', 'Benvenuto in piazza. DEMO: gli altri abitanti e i loro messaggi sono simulati.'));
+    const benv = el('div', 'riga sistema', 'Benvenuto! Rispetta tutti e non scrivere mai dati personali.'), lr = el('button', 'link', 'Regole');
+    lr.type = 'button'; lr.addEventListener('click', () => mostraRegole()); benv.append(lr); lista.append(benv);
     const visibili = G.stato.chat.filter(m => !G.stato.bloccati.has(m.id));
     visibili.forEach(m => {
       const r = el('div', 'riga' + (m.io ? ' io' : ''));
@@ -190,7 +191,7 @@
       const b = el('button', 'dm-voce' + (c.nonLetti && !bloccato ? ' nonletto' : '')); b.type = 'button';
       const cv = el('canvas', 'mini-avatar'); cv.width = 88; cv.height = 104; disegnaMini(cv, u.look);
       const t = el('div', 'dm-testo'), nome = el('div', 'dm-nome', u.nick); nome.append(el('small', null, ultimo.ora));
-      t.append(nome, el('div', 'dm-anteprima', bloccato ? 'Utente bloccato (demo)' : ((ultimo.da === 'io' ? 'Tu: ' : '') + ultimo.testo)));
+      t.append(nome, el('div', 'dm-anteprima', bloccato ? 'Utente bloccato' : ((ultimo.da === 'io' ? 'Tu: ' : '') + ultimo.testo)));
       b.append(cv, t);
       if (c.nonLetti && !bloccato) b.append(el('span', 'pallino', String(c.nonLetti)));
       b.addEventListener('click', () => apriThread(id));
@@ -226,7 +227,7 @@
     box.scrollTop = box.scrollHeight;
     const cest = $('#dm-elimina'); cest.classList.remove('conferma'); cest.textContent = 'Elimina chat';
     $('#dm-input').disabled = bloccato;
-    $('#dm-input').placeholder = bloccato ? 'Utente bloccato (demo)' : 'Scrivi un messaggio privato…';
+    $('#dm-input').placeholder = bloccato ? 'Utente bloccato' : 'Scrivi un messaggio privato…';
   }
   function aggiornaBadgeDM() {
     const n = G.totNonLetti(), b = $('#badge-dm'); b.hidden = n === 0; b.textContent = n > 9 ? '9+' : String(n);
@@ -247,6 +248,57 @@
   function chiudiFoglio() { $('#foglio').hidden = true; idFoglio = null; lookFoglio = null; }
   function aggiornaBottoneBlocco() { $('#foglio-blocca').textContent = G.stato.bloccati.has(idFoglio) ? 'Sblocca' : 'Blocca'; }
 
+  /* ---------- segnalazione con motivo ---------- */
+  let idSegnala = null, motivoSegnala = null;
+  function apriSegnala(id) {
+    const u = G.utente(id); if (!u) return;
+    idSegnala = id; motivoSegnala = null;
+    $('#segnala-nick').textContent = u.nick; $('#segnala-nota').value = '';
+    $('#segnala-blocca').checked = !G.stato.bloccati.has(id); $('#segnala-blocca').parentNode.hidden = G.stato.bloccati.has(id);
+    const box = $('#segnala-motivi'); box.innerHTML = '';
+    G.MOTIVI.forEach(m => {
+      const b = el('button', null, m[1]); b.type = 'button'; b.setAttribute('role', 'radio'); b.setAttribute('aria-checked', 'false');
+      b.addEventListener('click', () => {
+        motivoSegnala = m[0]; $('#segnala-invia').disabled = false;
+        box.querySelectorAll('button').forEach(x => { const on = x === b; x.classList.toggle('sel', on); x.setAttribute('aria-checked', on ? 'true' : 'false'); });
+      });
+      box.append(b);
+    });
+    $('#segnala-invia').disabled = true;
+    $('#segnala').hidden = false;
+  }
+  function chiudiSegnala() { $('#segnala-nota').blur(); $('#segnala').hidden = true; idSegnala = null; }
+  function inviaSegnala() {
+    if (!idSegnala || !motivoSegnala) return;
+    const id = idSegnala, blocca = !$('#segnala-blocca').parentNode.hidden && $('#segnala-blocca').checked;
+    G.segnala(id, motivoSegnala, $('#segnala-nota').value);
+    if (blocca) G.blocca(id);
+    chiudiSegnala(); chiudiFoglio();
+    UI.toast(blocca ? 'Grazie. Segnalazione salvata e persona bloccata.' : 'Grazie. Segnalazione salvata.');
+  }
+
+  /* ---------- regole della chat: la prima volta che si scrive ---------- */
+  const CHIAVE_REGOLE = 'theborg.regole.v1';
+  let dopoRegole = null;
+  function regoleViste() { try { return localStorage.getItem(CHIAVE_REGOLE) === '1'; } catch (e) { return true; } }
+  function mostraRegole(poi) { dopoRegole = poi || null; $('#regole').hidden = false; }
+  function chiudiRegole() {
+    try { localStorage.setItem(CHIAVE_REGOLE, '1'); } catch (e) { /* ok */ }
+    $('#regole').hidden = true; const f = dopoRegole; dopoRegole = null; if (f) f();
+  }
+
+  /* ---------- utenti bloccati (nel profilo) ---------- */
+  function aggiornaBloccati() {
+    const box = $('#bloccati-lista'); if (!box) return; box.innerHTML = '';
+    const l = G.elencoBloccati();
+    if (!l.length) { box.append(el('p', 'nota-piccola', 'Non hai bloccato nessuno.')); return; }
+    l.forEach(b => {
+      const r = el('div', 'bloccato-voce'), x = el('button', null, 'Sblocca'); x.type = 'button';
+      x.addEventListener('click', () => { G.sblocca(b.id); UI.toast(b.nick + ' sbloccato'); });
+      r.append(el('span', null, b.nick), x); box.append(r);
+    });
+  }
+
   /* ---------- amici (utenti dimostrativi) ---------- */
   function aggiornaAmici() {
     const box = $('#amici-lista'); box.innerHTML = '';
@@ -256,7 +308,7 @@
       const cv = el('canvas', 'mini-avatar'); cv.width = 88; cv.height = 104; disegnaMini(cv, u.look);
       const t = el('div', 'amico-testo'), nome = el('div', 'amico-nome', u.nick);
       nome.prepend(el('span', 'stato-pt' + (u.online ? '' : ' off')));
-      t.append(nome, el('div', 'amico-bio', bloccato ? 'Utente bloccato (demo)' : (u.online ? 'In piazza · ' : 'Non in linea · ') + u.bio));
+      t.append(nome, el('div', 'amico-bio', bloccato ? 'Utente bloccato' : (u.online ? 'In piazza · ' : 'Non in linea · ') + u.bio));
       b.addEventListener('click', () => apriFoglio(u.id));
       b.append(cv, t); box.append(b);
     });
@@ -315,6 +367,7 @@
     $('#profilo-nick').textContent = G.stato.giocatore.nick;
     document.querySelectorAll('#atmosfere .catena').forEach(b => b.classList.toggle('sel', b.dataset.id === G.stato.atmosfera));
     document.querySelectorAll('#grafica .catena').forEach(b => b.classList.toggle('sel', b.dataset.id === G.stato.grafica));
+    aggiornaBloccati();
   }
 
   /* ---------- schermata iniziale ---------- */
@@ -327,6 +380,7 @@
   function entra() {
     const nick = $('#nick').value.trim(), err = $('#nick-errore');
     if (!G.nickValido(nick)) { err.textContent = 'Usa da 3 a 14 caratteri: lettere, numeri o _ (senza spazi).'; return; }
+    if (!G.nickPermesso(nick)) { err.textContent = 'Questo nickname non è permesso nel Borgo: scegline un altro.'; return; }
     if (CFG.utentiDemo.some(u => u.nick.toLowerCase() === nick.toLowerCase())) { err.textContent = 'Nickname gia\' in uso (prova dimostrativa: la verifica vera sara\' sul server).'; return; }
     err.textContent = '';
     UI.fade(() => {
@@ -415,12 +469,23 @@
       if (!G.stato.dm[id]) G.conversazione(id);
       apriPagina('messaggi'); apriThread(id);
     });
-    $('#foglio-segnala').addEventListener('click', () => G.segnala(idFoglio));
+    $('#foglio-segnala').addEventListener('click', () => apriSegnala(idFoglio));
+    $('#segnala-annulla').addEventListener('click', chiudiSegnala);
+    $('#segnala .fc-sfondo').addEventListener('click', chiudiSegnala);
+    $('#segnala-invia').addEventListener('click', inviaSegnala);
+    $('#segnala-nota').addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); $('#segnala-nota').blur(); } });
+    $('#regole-ok').addEventListener('click', chiudiRegole);
+    $('#btn-regole').addEventListener('click', () => mostraRegole());
+    // la prima volta che si tocca la chat (pubblica o privata) si leggono le regole
+    ['#chat-input', '#dm-input'].forEach(sel => $(sel).addEventListener('focus', () => {
+      if (regoleViste()) return;
+      const inp = $(sel); inp.blur(); mostraRegole(() => { try { inp.focus(); } catch (e) { /* ok */ } });
+    }));
     $('#foglio-visita').addEventListener('click', () => { const id = idFoglio; chiudiFoglio(); if (B.Online && B.Online.visita) B.Online.visita(id); });
     $('#foglio-raggiungi').addEventListener('click', () => { const id = idFoglio; chiudiFoglio(); if (B.Online && B.Online.raggiungi) B.Online.raggiungi(id); });
     $('#foglio-blocca').addEventListener('click', () => {
-      if (G.stato.bloccati.has(idFoglio)) { G.sblocca(idFoglio); UI.toast('Utente sbloccato (dimostrativo)'); }
-      else { G.blocca(idFoglio); UI.toast('Utente bloccato: non vedrai piu\' i suoi messaggi (dimostrativo)'); }
+      if (G.stato.bloccati.has(idFoglio)) { G.sblocca(idFoglio); UI.toast('Utente sbloccato'); }
+      else { G.blocca(idFoglio); UI.toast('Utente bloccato: non vedrai più i suoi messaggi e il suo personaggio'); }
       aggiornaBottoneBlocco();
     });
 
@@ -452,7 +517,7 @@
     G.su('stanza', aggiornaStanza);
     G.su('profilo', d => apriFoglio(d.id));
     G.su('chat', () => rendiChat());
-    G.su('blocchi', () => { rendiChat(); aggiornaBadgeDM(); if (paginaAttiva === 'messaggi') { G.stato.dmAperto ? rendiThread() : mostraElencoDM(); } });
+    G.su('blocchi', () => { rendiChat(); aggiornaBadgeDM(); if (paginaAttiva === 'profilo') aggiornaBloccati(); if (paginaAttiva === 'messaggi') { G.stato.dmAperto ? rendiThread() : mostraElencoDM(); } });
     G.su('dm', d => {
       ordineDM = [d.id].concat(ordineDM.filter(x => x !== d.id));
       if (G.stato.dmAperto === d.id) { G.segnaLetti(d.id); rendiThread(); }

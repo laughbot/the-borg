@@ -135,10 +135,16 @@
       <div id="profilo-editor"></div>
       <h3 class="titolo-sezione">Atmosfera (prova dei colori)</h3>
       <div id="atmosfere" class="catene"></div>
+      <h3 class="titolo-sezione">Sicurezza</h3>
+      <div class="info-box sicurezza-box">
+        <p>Un filtro automatico copre le parolacce e blocca i messaggi con dati personali. Tocca il nome di una persona per bloccarla o segnalarla.</p>
+        <div id="bloccati-lista"></div>
+        <button id="btn-regole" class="btn-secondario">Le regole della chat</button>
+      </div>
       <h3 class="titolo-sezione">Informazioni sul prototipo</h3>
       <div class="info-box">
         <p><strong>Funziona davvero (in locale):</strong> mondo 3D con joystick e collisioni, piazza con belvedere e scale, casa con terrazza, cambio stanza dalle porte, minimappa, avatar personalizzabile (capelli, colori, vestiti, accessori), nickname e aspetto salvati sul dispositivo, rotazione della visuale, zoom, atmosfere.</p>
-        <p><strong>Dimostrativo (simulato):</strong> gli altri abitanti, la chat della piazza, i messaggi privati e le risposte, il blocco e la segnalazione, Negozio, Caffetteria, Sala Giochi, Forno, Biblioteca e Torre (porte non ancora apribili), la lista amici, i posti per i mobili.</p>
+        <p><strong>Dimostrativo (simulato):</strong> gli altri abitanti, la chat della piazza, i messaggi privati e le risposte, l'invio delle segnalazioni ai moderatori (per ora restano sul telefono), Negozio, Caffetteria, Sala Giochi, Forno, Biblioteca e Torre (porte non ancora apribili), la lista amici, i posti per i mobili.</p>
         <p><strong>Non esiste ancora:</strong> server, account, password, database e multiplayer reale.</p>
       </div>
       <h3 class="titolo-sezione">Grafica</h3>
@@ -179,7 +185,41 @@
           <button id="foglio-blocca" class="btn-secondario">Blocca</button>
         </div>
       </div>
-      <p class="nota-piccola">Segnala e Blocca sono dimostrativi: mostrano come funzionera' l'interfaccia, ma non esiste ancora un servizio di moderazione.</p>
+      <p class="nota-piccola">Blocca vale subito e resta salvato su questo telefono. Le segnalazioni partiranno verso i moderatori quando il server sarà attivo.</p>
+    </div>
+  </div>
+
+  <!-- Segnalazione con motivo (si apre da "Segnala" nella scheda di un utente) -->
+  <div id="segnala" class="finestra-chat" hidden>
+    <div class="fc-sfondo"></div>
+    <div class="fc-corpo" role="dialog" aria-modal="true" aria-labelledby="segnala-titolo">
+      <h2 id="segnala-titolo">Segnala <span id="segnala-nick"></span></h2>
+      <p class="fc-testo">Cosa è successo? Alla segnalazione si allegano i suoi ultimi messaggi.</p>
+      <div id="segnala-motivi" class="motivi" role="radiogroup" aria-label="Motivo"></div>
+      <input id="segnala-nota" maxlength="300" placeholder="Vuoi aggiungere qualcosa? (facoltativo)" autocomplete="off" enterkeyhint="done">
+      <label class="spunta"><input type="checkbox" id="segnala-blocca" checked> Blocca anche questa persona</label>
+      <div class="azioni-riga">
+        <button id="segnala-annulla" class="btn-secondario" type="button">Annulla</button>
+        <button id="segnala-invia" class="btn-primario" type="button" disabled>Invia</button>
+      </div>
+      <p class="nota-piccola">Per ora la segnalazione resta salvata su questo telefono e partirà verso i moderatori quando il server sarà attivo. Se qualcuno ti fa sentire a disagio o in pericolo, parlane subito con un adulto di cui ti fidi.</p>
+    </div>
+  </div>
+
+  <!-- Regole della chat (la prima volta che si scrive, e dal profilo) -->
+  <div id="regole" class="finestra-chat" hidden>
+    <div class="fc-sfondo"></div>
+    <div class="fc-corpo" role="dialog" aria-modal="true" aria-labelledby="regole-titolo">
+      <div class="fc-icona" aria-hidden="true">🛡️</div>
+      <h2 id="regole-titolo">Le regole della chat</h2>
+      <ol class="regole-lista">
+        <li><b>Rispetta tutti.</b> Niente insulti, prese in giro o parole volgari.</li>
+        <li><b>I tuoi dati restano tuoi.</b> Non scrivere mai numero, indirizzo, scuola, email o social, e non mandare foto.</li>
+        <li><b>Nel Borgo si resta nel Borgo.</b> Non accettare di vederti dal vivo o di passare su altre app con chi conosci solo qui.</li>
+        <li><b>Qualcosa non va?</b> Tocca il nome della persona per <b>bloccarla</b> e <b>segnalarla</b>, e parlane con un adulto di cui ti fidi.</li>
+      </ol>
+      <p class="nota-piccola">Un filtro automatico copre le parolacce e blocca i messaggi con dati personali. Chi insiste resta senza chat per un po'.</p>
+      <button id="regole-ok" class="btn-primario grande" type="button">Ho capito</button>
     </div>
   </div>
 
@@ -312,6 +352,9 @@
 <script>
 @@include(src/minigiochi/cripta/gioco.js)@@
 
+</script>
+<script>
+@@include(src/chat/filtro.js)@@
 </script>
 <script>
 @@include(src/borgo/logica.js)@@

@@ -226,6 +226,35 @@ button { cursor: pointer; border: 0; background: none; touch-action: manipulatio
 .azioni-riga > * { flex: 1; }
 .nota-piccola { margin: 4px 6px 0; font-size: 12px; color: var(--testo-tenue); line-height: 1.4; }
 
+/* ---------- finestre della chat: regole e segnalazione ---------- */
+.finestra-chat { position: absolute; inset: 0; z-index: 45; display: flex; align-items: center; justify-content: center; padding: 16px; }
+.finestra-chat[hidden] { display: none; }
+#regole { z-index: 46; }
+.fc-sfondo { position: absolute; inset: 0; background: rgba(10,5,18,.62); animation: appari .2s; }
+.fc-corpo { position: relative; width: 100%; max-width: 420px; max-height: 92%; overflow-y: auto; padding: 20px 18px calc(18px + env(safe-area-inset-bottom)); border-radius: 22px;
+  background: var(--prugna-2); border: 1px solid rgba(255,255,255,.15); box-shadow: 0 18px 50px rgba(0,0,0,.45); display: flex; flex-direction: column; gap: 10px; animation: sali .25s ease-out; }
+.fc-corpo h2 { margin: 0; font-size: 21px; line-height: 1.2; }
+.fc-testo { margin: 0; color: var(--crema-2); font-size: 14.5px; line-height: 1.4; }
+.fc-icona { font-size: 34px; text-align: center; line-height: 1; }
+#regole h2 { text-align: center; }
+.regole-lista { margin: 2px 0; padding-left: 22px; display: flex; flex-direction: column; gap: 9px; font-size: 15px; line-height: 1.42; color: var(--crema-2); }
+.regole-lista b { color: var(--crema); }
+.motivi { display: flex; flex-direction: column; gap: 6px; }
+.motivi button { text-align: left; padding: 11px 14px; border-radius: 14px; background: rgba(255,255,255,.07); border: 1px solid rgba(255,255,255,.12); color: var(--crema); font-size: 15px; line-height: 1.3; }
+.motivi button.sel { background: rgba(242,199,110,.18); border-color: var(--ambra); font-weight: 700; }
+#segnala-nota { padding: 11px 14px; border-radius: 14px; border: 1px solid rgba(255,255,255,.2); background: rgba(0,0,0,.25); color: var(--crema); outline: none; }
+#segnala-nota:focus { border-color: var(--ambra); }
+.spunta { display: flex; align-items: center; gap: 10px; font-size: 15px; }
+.spunta input { width: 20px; height: 20px; margin: 0; accent-color: var(--ambra); }
+.btn-primario:disabled { opacity: .45; box-shadow: none; }
+.riga.sistema { display: block; }
+.riga.sistema .link { color: var(--ambra); text-decoration: underline; font-style: normal; font-weight: 700; padding: 0 0 0 4px; font-size: inherit; }
+.sicurezza-box { padding: 12px 14px; display: flex; flex-direction: column; gap: 10px; }
+.sicurezza-box p { margin: 0; }
+.bloccato-voce { display: flex; align-items: center; gap: 10px; padding: 8px 8px 8px 12px; border-radius: 14px; background: rgba(0,0,0,.2); }
+.bloccato-voce span { flex: 1; min-width: 0; font-weight: 700; overflow: hidden; text-overflow: ellipsis; }
+.bloccato-voce button { padding: 7px 12px; border-radius: 12px; background: rgba(255,255,255,.1); color: var(--crema); font-size: 14px; font-weight: 700; }
+
 /* ---------- schermata iniziale ---------- */
 #inizio { position: absolute; inset: 0; z-index: 50; overflow-y: auto; -webkit-overflow-scrolling: touch;
   background: radial-gradient(ellipse at 50% -10%, #6a4aa0 0%, #3a2757 38%, #1e1430 100%); }
@@ -516,10 +545,16 @@ body.orizz #inizio-anteprima { width: 120px; height: 140px; }
       <div id="profilo-editor"></div>
       <h3 class="titolo-sezione">Atmosfera (prova dei colori)</h3>
       <div id="atmosfere" class="catene"></div>
+      <h3 class="titolo-sezione">Sicurezza</h3>
+      <div class="info-box sicurezza-box">
+        <p>Un filtro automatico copre le parolacce e blocca i messaggi con dati personali. Tocca il nome di una persona per bloccarla o segnalarla.</p>
+        <div id="bloccati-lista"></div>
+        <button id="btn-regole" class="btn-secondario">Le regole della chat</button>
+      </div>
       <h3 class="titolo-sezione">Informazioni sul prototipo</h3>
       <div class="info-box">
         <p><strong>Funziona davvero (in locale):</strong> mondo 3D con joystick e collisioni, piazza con belvedere e scale, casa con terrazza, cambio stanza dalle porte, minimappa, avatar personalizzabile (capelli, colori, vestiti, accessori), nickname e aspetto salvati sul dispositivo, rotazione della visuale, zoom, atmosfere.</p>
-        <p><strong>Dimostrativo (simulato):</strong> gli altri abitanti, la chat della piazza, i messaggi privati e le risposte, il blocco e la segnalazione, Negozio, Caffetteria, Sala Giochi, Forno, Biblioteca e Torre (porte non ancora apribili), la lista amici, i posti per i mobili.</p>
+        <p><strong>Dimostrativo (simulato):</strong> gli altri abitanti, la chat della piazza, i messaggi privati e le risposte, l'invio delle segnalazioni ai moderatori (per ora restano sul telefono), Negozio, Caffetteria, Sala Giochi, Forno, Biblioteca e Torre (porte non ancora apribili), la lista amici, i posti per i mobili.</p>
         <p><strong>Non esiste ancora:</strong> server, account, password, database e multiplayer reale.</p>
       </div>
       <h3 class="titolo-sezione">Grafica</h3>
@@ -560,7 +595,41 @@ body.orizz #inizio-anteprima { width: 120px; height: 140px; }
           <button id="foglio-blocca" class="btn-secondario">Blocca</button>
         </div>
       </div>
-      <p class="nota-piccola">Segnala e Blocca sono dimostrativi: mostrano come funzionera' l'interfaccia, ma non esiste ancora un servizio di moderazione.</p>
+      <p class="nota-piccola">Blocca vale subito e resta salvato su questo telefono. Le segnalazioni partiranno verso i moderatori quando il server sarà attivo.</p>
+    </div>
+  </div>
+
+  <!-- Segnalazione con motivo (si apre da "Segnala" nella scheda di un utente) -->
+  <div id="segnala" class="finestra-chat" hidden>
+    <div class="fc-sfondo"></div>
+    <div class="fc-corpo" role="dialog" aria-modal="true" aria-labelledby="segnala-titolo">
+      <h2 id="segnala-titolo">Segnala <span id="segnala-nick"></span></h2>
+      <p class="fc-testo">Cosa è successo? Alla segnalazione si allegano i suoi ultimi messaggi.</p>
+      <div id="segnala-motivi" class="motivi" role="radiogroup" aria-label="Motivo"></div>
+      <input id="segnala-nota" maxlength="300" placeholder="Vuoi aggiungere qualcosa? (facoltativo)" autocomplete="off" enterkeyhint="done">
+      <label class="spunta"><input type="checkbox" id="segnala-blocca" checked> Blocca anche questa persona</label>
+      <div class="azioni-riga">
+        <button id="segnala-annulla" class="btn-secondario" type="button">Annulla</button>
+        <button id="segnala-invia" class="btn-primario" type="button" disabled>Invia</button>
+      </div>
+      <p class="nota-piccola">Per ora la segnalazione resta salvata su questo telefono e partirà verso i moderatori quando il server sarà attivo. Se qualcuno ti fa sentire a disagio o in pericolo, parlane subito con un adulto di cui ti fidi.</p>
+    </div>
+  </div>
+
+  <!-- Regole della chat (la prima volta che si scrive, e dal profilo) -->
+  <div id="regole" class="finestra-chat" hidden>
+    <div class="fc-sfondo"></div>
+    <div class="fc-corpo" role="dialog" aria-modal="true" aria-labelledby="regole-titolo">
+      <div class="fc-icona" aria-hidden="true">🛡️</div>
+      <h2 id="regole-titolo">Le regole della chat</h2>
+      <ol class="regole-lista">
+        <li><b>Rispetta tutti.</b> Niente insulti, prese in giro o parole volgari.</li>
+        <li><b>I tuoi dati restano tuoi.</b> Non scrivere mai numero, indirizzo, scuola, email o social, e non mandare foto.</li>
+        <li><b>Nel Borgo si resta nel Borgo.</b> Non accettare di vederti dal vivo o di passare su altre app con chi conosci solo qui.</li>
+        <li><b>Qualcosa non va?</b> Tocca il nome della persona per <b>bloccarla</b> e <b>segnalarla</b>, e parlane con un adulto di cui ti fidi.</li>
+      </ol>
+      <p class="nota-piccola">Un filtro automatico copre le parolacce e blocca i messaggi con dati personali. Chi insiste resta senza chat per un po'.</p>
+      <button id="regole-ok" class="btn-primario grande" type="button">Ho capito</button>
     </div>
   </div>
 
@@ -10119,9 +10188,336 @@ body.pc #rd-hud .tasto,body.pc #rd-hud .base{display:none}
 </script>
 <script>
 /* =====================================================================
+   THE BORG - FILTRO DELLA CHAT
+   Controlla ogni messaggio (chat pubblica, messaggi privati, nickname)
+   prima che parta e quando arriva da un altro giocatore.
+
+   Tre livelli:
+   - LIEVE    parolacce e bestemmie: si coprono con ***, il messaggio parte;
+   - GRAVE    insulti discriminatori, minacce, contenuti sessuali: il messaggio
+              non parte;
+   - PRIVATO  numeri di telefono, email, link, indirizzi, contatti social,
+              richieste di foto o di incontri: il messaggio non parte.
+              Il gioco e' per ragazzi dai 14 anni: i dati personali non
+              si scambiano mai in chat.
+
+   Gli elenchi qui sotto si possono modificare liberamente:
+   - "parola"   vale solo la parola intera (e le sue lettere ripetute: "merdaaa");
+   - "radice*"  vale per tutte le parole che iniziano cosi' (stronzo, stronza, stronzate);
+   - le frasi con lo spazio valgono per quelle parole una dopo l'altra.
+   Il controllo ignora maiuscole, accenti, lettere ripetute, lettere separate
+   da spazi o punti ("c a z z o", "c.a.z.z.o") e i numeri usati come lettere
+   ("m3rd4").
+
+   Scritto in JavaScript "vecchio stile" (var, function) apposta: nella fase 2
+   lo stesso file servira' anche al server Nakama, che deve rifare il controllo
+   (il telefono di un giocatore si puo' sempre manomettere).
+   La prova automatica e' in test/filtro.test.mjs.
+   ===================================================================== */
+(function (radice) {
+  'use strict';
+
+  /* ---------- ELENCHI ---------- */
+
+  // LIEVE: si coprono con *** ma il messaggio parte
+  var LIEVI = [
+    'cazz*', 'minchi*', 'merd*', 'stronz*', 'vaffancul*', 'fancul*', 'coglion*', 'puttan*', 'mignott*',
+    'troia', 'troie', 'troione', 'bastard*', 'sexy', 'zoccola', 'zoccole', 'bocchinaro', 'bocchinara', 'cagata', 'cagate', 'culo', 'culi', 'culone', 'culona',
+    'inculo', 'inculi', 'inculata', 'inculare', 'inculato', 'sticazzi', 'figa', 'fica', 'pene', 'vagina',
+    'terrone', 'terroni', 'terrona', 'zingaro', 'zingari', 'zingara',
+    'porcodio', 'diocane', 'dioporco', 'dioboia', 'porcamadonna', 'madonnaputtana',
+    'porco dio', 'dio cane', 'dio porco', 'dio boia', 'porca madonna', 'madonna puttana', 'dio maiale', 'porco giuda',
+    'fuck*', 'shit', 'shitty', 'bitch*', 'asshole*', 'motherfuck*', 'cunt*', 'dickhead', 'wtf'
+  ];
+
+  // GRAVE: il messaggio non parte
+  var GRAVI = [
+    // insulti discriminatori
+    'negro', 'negri', 'negra', 'negre', 'negretto', 'negretti', 'nigga', 'nigger*', 'frocio', 'froci', 'frocia',
+    'frociaggine', 'ricchion*', 'culattone', 'culattoni', 'lesbicona', 'mongoloid*', 'faggot*',
+    'heil hitler', 'sieg heil', 'viva hitler', 'viva il duce',
+    // minacce e autolesionismo
+    // ("ti ammazzo" e "ti uccido" restano permessi: nei minigiochi si dicono per gioco)
+    'kys', 'suicidati', 'ammazzati', 'ucciditi', 'impiccati', 'ti sgozzo', 'ti accoltello', 'ti stupro',
+    'ti violento', 'kill yourself',
+    // contenuti sessuali
+    'porn*', 'sesso', 'sex', 'scopare', 'scopiamo', 'scoparti', 'scoparmi', 'scopata', 'scopate', 'trombare',
+    'trombiamo', 'pompin*', 'masturb*', 'segaiol*', 'una sega', 'farsi una sega', 'tette', 'tettona', 'tettone',
+    'arrapat*', 'nudes', 'foto nuda', 'foto nudo', 'foto nude', 'tutta nuda', 'tutto nudo', 'stupro', 'stuprare'
+  ];
+
+  // PRIVATO: frasi che chiedono o danno dati personali, foto o incontri (il messaggio non parte)
+  var PRIVATE = [
+    'dove abiti', 'dove vivi', 'dove stai di casa', 'in che via', 'il tuo indirizzo', 'il mio indirizzo',
+    'che scuola fai', 'in che scuola', 'che scuola vai', 'a che scuola',
+    'il mio numero', 'il tuo numero', 'dammi il numero', 'mandami il numero', 'ti do il numero', 'numero di telefono',
+    'numero di cell', 'numero di cellulare',
+    'mandami foto', 'mandami una foto', 'manda foto', 'manda una foto', 'mandami tue foto', 'foto tua', 'tua foto',
+    'videochiamata', 'video chiamata', 'facetime', 'ci vediamo dal vivo', 'vediamoci dal vivo', 'incontriamoci',
+    'ci incontriamo', 'vediamoci di persona', 'ci vediamo di persona'
+  ];
+
+  // contatti social: bloccati quando insieme c'e' un nome utente o un invito ("aggiungimi", "seguimi"...)
+  var SOCIAL = ['instagram', 'insta', 'ig', 'snapchat', 'snap', 'telegram', 'tiktok', 'whatsapp', 'whats', 'wapp',
+    'discord', 'facebook', 'fb', 'twitter', 'kik', 'threads', 'twitch', 'skype', 'signal'];
+  var INVITI = ['aggiungimi', 'aggiungetemi', 'seguimi', 'seguitemi', 'scrivimi', 'scrivetemi', 'contattami', 'cercami',
+    'add', 'follow', 'followami', 'mio', 'mia', 'profilo', 'account', 'nick', 'nome', 'trovi', 'numero', 'cell',
+    'sentiamo', 'sentiamoci', 'sentirci', 'scriviamo', 'scriviamoci', 'parliamo', 'spostiamoci', 'passiamo', 'continuiamo'];
+
+  // indirizzi web che si possono scrivere (il negozio del borgo)
+  var SITI_PERMESSI = ['laughtalecollectibles.it'];
+
+  var AVVISI = {
+    grave: 'Questo messaggio contiene parole che nel Borgo non sono permesse.',
+    privato: 'Per la tua sicurezza in chat non si scambiano numeri, email, link, indirizzi, social, foto o incontri dal vivo.'
+  };
+
+  /* ---------- normalizzazione ---------- */
+
+  var ACCENTI = { 'à': 'a', 'á': 'a', 'â': 'a', 'ä': 'a', 'ã': 'a', 'è': 'e', 'é': 'e', 'ê': 'e', 'ë': 'e', 'ì': 'i', 'í': 'i',
+    'î': 'i', 'ï': 'i', 'ò': 'o', 'ó': 'o', 'ô': 'o', 'ö': 'o', 'õ': 'o', 'ù': 'u', 'ú': 'u', 'û': 'u', 'ü': 'u', 'ç': 'c', 'ñ': 'n' };
+  // numeri e simboli usati al posto delle lettere
+  var LEET = { '0': 'o', '1': 'i', '3': 'e', '4': 'a', '5': 's', '7': 't', '8': 'b', '@': 'a', '$': 's', '€': 'e', '!': 'i', '|': 'i' };
+
+  // una parola "pulita": minuscole, senza accenti, numeri-lettera tradotti, solo lettere, lettere ripetute ridotte a una
+  function normParola(p) {
+    var s = String(p).toLowerCase(), out = '', i, c, prima = '';
+    for (i = 0; i < s.length; i++) {
+      c = s.charAt(i);
+      if (ACCENTI[c]) c = ACCENTI[c];
+      else if (LEET[c]) c = LEET[c];
+      if (c < 'a' || c > 'z') continue;
+      if (c === prima) continue;
+      out += c; prima = c;
+    }
+    return out;
+  }
+
+  // prepara un elenco: parole intere, radici e frasi
+  function preparaElenco(lista) {
+    var e = { parole: {}, radici: [], frasi: [] }, i, v;
+    for (i = 0; i < lista.length; i++) {
+      v = lista[i];
+      if (v.indexOf(' ') >= 0) e.frasi.push(v.split(' ').map(normParola).join(' '));
+      else if (v.charAt(v.length - 1) === '*') e.radici.push(normParola(v.slice(0, -1)));
+      else e.parole[normParola(v)] = true;
+    }
+    return e;
+  }
+  var E_LIEVI = preparaElenco(LIEVI), E_GRAVI = preparaElenco(GRAVI), E_PRIVATE = preparaElenco(PRIVATE);
+  var E_SOCIAL = preparaElenco(SOCIAL), E_INVITI = preparaElenco(INVITI);
+  // radici abbastanza lunghe e particolari da cercare anche dentro parole attaccate ("seiuncoglione")
+  var RADICI_DENTRO = [];
+  [E_LIEVI, E_GRAVI].forEach(function (e) {
+    e.radici.forEach(function (r) { if (r.length >= 5) RADICI_DENTRO.push(r); });
+  });
+  ['cazo', 'merda', 'putana', 'porcodio', 'diocane'].forEach(function (r) { RADICI_DENTRO.push(normParola(r)); });
+
+  // divide il testo in parole ricordando dove stanno nel testo originale.
+  // Le lettere separate da spazi ("c a z z o") diventano una parola sola.
+  function parole(testo) {
+    var re = /[^\s,;:?"'()\[\]{}<>«»…]+/g, m, lista = [];
+    while ((m = re.exec(testo))) {
+      var n = normParola(m[0]);
+      if (n) lista.push({ da: m.index, a: m.index + m[0].length, n: n, orig: m[0] });
+    }
+    // unisce le sequenze di almeno 3 lettere singole
+    var unite = [], i = 0;
+    while (i < lista.length) {
+      if (lista[i].n.length === 1) {
+        var j = i, s = '';
+        while (j < lista.length && lista[j].n.length === 1) { s += lista[j].n; j++; }
+        if (j - i >= 3) { unite.push({ da: lista[i].da, a: lista[j - 1].a, n: normParola(s), orig: testo.slice(lista[i].da, lista[j - 1].a) }); i = j; continue; }
+      }
+      unite.push(lista[i]); i++;
+    }
+    return unite;
+  }
+
+  function inElenco(n, e) {
+    if (e.parole[n]) return true;
+    for (var i = 0; i < e.radici.length; i++) if (n.indexOf(e.radici[i]) === 0) return true;
+    return false;
+  }
+  function dentro(n) {
+    for (var i = 0; i < RADICI_DENTRO.length; i++) if (n.length > RADICI_DENTRO[i].length && n.indexOf(RADICI_DENTRO[i]) >= 0) return true;
+    return false;
+  }
+  // cerca le frasi: restituisce le coppie [prima parola, ultima parola] trovate
+  function trovaFrasi(ps, frasi) {
+    var trovate = [], i, k, f, pz;
+    for (k = 0; k < frasi.length; k++) {
+      f = frasi[k].split(' ');
+      for (i = 0; i + f.length <= ps.length; i++) {
+        pz = 0;
+        while (pz < f.length && ps[i + pz].n === f[pz]) pz++;
+        if (pz === f.length) trovate.push([i, i + f.length - 1]);
+      }
+    }
+    return trovate;
+  }
+
+  /* ---------- dati personali ---------- */
+  function haTelefono(t) {
+    // date e orari ("12/10/2026 14:30") non sono numeri di telefono
+    t = t.replace(/\b\d{1,2}[\/.\-]\d{1,2}[\/.\-]\d{2,4}\b/g, ' ').replace(/\b\d{1,2}[:.]\d{2}\b/g, ' ');
+    var re = /(\+|00)?\d[\d\s.\-\/()]{6,}\d/g, m, cifre;
+    while ((m = re.exec(t))) {
+      cifre = m[0].replace(/\D/g, '');
+      if (cifre.length >= 9 && cifre.length <= 15) return true;
+      if ((m[1] || /^\s*\+/.test(m[0])) && cifre.length >= 8) return true;
+    }
+    return false;
+  }
+  function haEmail(t) {
+    return /[a-z0-9._%+\-]+\s*(@|\(at\)|\[at\]|\s+at\s+|\s+chiocciola\s+)\s*[a-z0-9\-]+\s*(\.|\s+dot\s+|\s+punto\s+)\s*[a-z]{2,}/i.test(t);
+  }
+  function haLink(t) {
+    var s = t.toLowerCase();
+    SITI_PERMESSI.forEach(function (p) { s = s.split('https://www.' + p).join(' ').split('https://' + p).join(' ').split('www.' + p).join(' ').split(p).join(' '); });
+    if (/(https?:\/\/|www\.)\S/.test(s)) return true;
+    return /[a-z0-9\-]{2,}\s?(\.|\s+punto\s+|\s+dot\s+)\s?(com|it|net|org|gg|eu|info|xyz|app|link|ru|uk|de|fr|es|biz|online|site|shop)\b/.test(s);
+  }
+  // "via Roma 12", "piazza Garibaldi, 3": ma non "vado via tra 5 minuti" o "in piazza alle 5"
+  var NON_NOMI = ['a', 'al', 'alla', 'alle', 'allo', 'ai', 'agli', 'e', 'ed', 'di', 'da', 'dal', 'dalle', 'in', 'con', 'per', 'tra', 'fra',
+    'su', 'che', 'chi', 'dopo', 'prima', 'verso', 'fino', 'entro', 'ogni', 'ora', 'ore', 'adesso', 'poi', 'subito', 'sono', 'tipo', 'circa',
+    'il', 'lo', 'la', 'le', 'gli', 'i', 'un', 'una', 'uno', 'mi', 'ti', 'ci', 'vi', 'si', 'ne', 'no', 'non', 'piu', 'tutti', 'tutte', 'qui', 'li', 'la'];
+  var NON_CIVICI = /^\s*(min|minut|sec|second|ore|or[ae]\b|volt|punt|gir|coin|euro|€|metri|km|anni|giorn|vite|livell|carte|%)/i;
+  function haIndirizzo(t) {
+    var re = /\b(via|viale|corso|piazza|piazzale|vicolo|largo|strada|contrada|borgata|frazione)\s+((?:[a-zàèéìòù']+\s+){0,3}?[a-zàèéìòù']+)\s*,?\s*(?:n\.?|n°|numero|civico)?\s*(\d{1,4})\b/gi, m;
+    while ((m = re.exec(t))) {
+      var nomi = m[2].toLowerCase().split(/\s+/), buono = true;
+      for (var i = 0; i < nomi.length; i++) if (NON_NOMI.indexOf(normParola(nomi[i]) || nomi[i]) >= 0 || NON_NOMI.indexOf(nomi[i]) >= 0) { buono = false; break; }
+      if (buono && !NON_CIVICI.test(t.slice(m.index + m[0].length))) return true;
+    }
+    return false;
+  }
+  function haSocial(ps) {
+    var social = false, invito = false, handle = false, i, p;
+    for (i = 0; i < ps.length; i++) {
+      p = ps[i];
+      if (inElenco(p.n, E_SOCIAL)) social = true;
+      else if (inElenco(p.n, E_INVITI)) invito = true;
+      if (/^@[a-z0-9_.]{3,}$/i.test(p.orig) || (/[a-z]/i.test(p.orig) && /[_.]|\d/.test(p.orig) && p.orig.length >= 4 && !/^\d/.test(p.orig))) handle = true;
+    }
+    return social && (invito || handle);
+  }
+
+  /* ---------- correzioni anti-spam ---------- */
+  function sistema(testo) {
+    var t = String(testo == null ? '' : testo).replace(/[\u0000-\u001f\u007f-\u009f\u200b-\u200f\u202a-\u202e\u2060-\u206f\ufeff]/g, '');
+    t = t.replace(/\s+/g, ' ').trim();
+    t = t.replace(/(.)\1{3,}/g, '$1$1$1');                       // "ciaooooooo" -> "ciaooo"
+    var lettere = t.replace(/[^a-zA-ZÀ-ÿ]/g, ''), maiusc = t.replace(/[^A-ZÀ-Þ]/g, '');
+    if (lettere.length >= 8 && maiusc.length / lettere.length > 0.7)   // TUTTO MAIUSCOLO: si abbassa
+      t = t.charAt(0) + t.slice(1).toLowerCase();
+    return t;
+  }
+
+  function copri(testo, tratti) {
+    if (!tratti.length) return testo;
+    tratti.sort(function (a, b) { return a[0] - b[0]; });
+    var out = '', pos = 0, i, da, a;
+    for (i = 0; i < tratti.length; i++) {
+      da = Math.max(tratti[i][0], pos); a = tratti[i][1];
+      if (a <= da) continue;
+      out += testo.slice(pos, da) + new Array(Math.min(a - da, 8) + 1).join('*');
+      pos = a;
+    }
+    return out + testo.slice(pos);
+  }
+
+  /* ---------- controllo completo ----------
+     restituisce { ok, testo, livello, avviso }
+     ok = false: il messaggio non deve partire (livello 'grave' o 'privato', avviso da mostrare) */
+  function controlla(testoOrig) {
+    var testo = sistema(testoOrig), ps = parole(testo), i, p, tratti = [], grave = false;
+
+    if (haTelefono(testo) || haEmail(testo) || haLink(testo) || haIndirizzo(testo) || haSocial(ps) || trovaFrasi(ps, E_PRIVATE.frasi).length)
+      return { ok: false, testo: testo, livello: 'privato', avviso: AVVISI.privato };
+
+    for (i = 0; i < ps.length; i++) {
+      p = ps[i];
+      if (inElenco(p.n, E_GRAVI)) grave = true;
+      else if (inElenco(p.n, E_LIEVI) || dentro(p.n)) tratti.push([p.da, p.a]);
+    }
+    if (grave || trovaFrasi(ps, E_GRAVI.frasi).length)
+      return { ok: false, testo: testo, livello: 'grave', avviso: AVVISI.grave };
+
+    trovaFrasi(ps, E_LIEVI.frasi).forEach(function (c) { tratti.push([ps[c[0]].da, ps[c[1]].a]); });
+    return { ok: true, testo: copri(testo, tratti), livello: tratti.length ? 'lieve' : null, avviso: null };
+  }
+
+  // per i messaggi che arrivano dagli altri: il testo da mostrare, o null se va nascosto
+  function ricevuto(testo) {
+    var r = controlla(testo);
+    return r.ok && r.testo ? r.testo : null;
+  }
+
+  // nickname: niente parolacce, nemmeno attaccate ad altre lettere o numeri ("Cazzone99").
+  // Le parole lunghe si cercano ovunque nel nickname, le corte solo all'inizio o da sole;
+  // NICK_INNOCENTI toglie prima le parole normali che ne contengono una ("Montenegro", "Penelope").
+  var NICK_INNOCENTI = ['montenegro', 'troiano', 'troiani', 'penelope', 'figaro', 'pacifica', 'possesso', 'assessore', 'cazzaniga'].map(normParola);
+  function nickOk(nick) {
+    var n = normParola(nick), i, k, tutte = [];
+    NICK_INNOCENTI.forEach(function (w) { n = n.split(w).join('-'); });
+    [E_LIEVI, E_GRAVI].forEach(function (e) {
+      Object.keys(e.parole).forEach(function (w) { tutte.push(w); });
+      e.radici.forEach(function (r) { tutte.push(r); });
+      e.frasi.forEach(function (f) { tutte.push(f.split(' ').join('')); });
+    });
+    var pezzi = n.split('-');
+    for (i = 0; i < tutte.length; i++) {
+      k = tutte[i];
+      for (var j = 0; j < pezzi.length; j++) {
+        if (k.length >= 5 ? pezzi[j].indexOf(k) >= 0 : (pezzi[j] === k || (k.length >= 3 && pezzi[j].indexOf(k) === 0 && e_radice(k)))) return false;
+      }
+    }
+    return true;
+  }
+  function e_radice(k) { return E_LIEVI.radici.indexOf(k) >= 0 || E_GRAVI.radici.indexOf(k) >= 0 || ['cazo', 'culo', 'figa', 'fica', 'pene', 'seso', 'tete'].indexOf(k) >= 0; }
+
+  /* ---------- limite di velocita' (modalita' lenta) ----------
+     Uno per ogni chat. prova(testo) restituisce null se si puo' inviare,
+     altrimenti il motivo da mostrare. */
+  function creaLimitatore(opz) {
+    opz = opz || {};
+    var minimo = opz.minimo || 700,          // ms tra un messaggio e l'altro
+      finestra = opz.finestra || 15000,      // in questa finestra...
+      massimo = opz.massimo || 5,            // ...al massimo tanti messaggi
+      pausa = opz.pausa || 10000,            // poi modalita' lenta per tanto
+      uguale = opz.uguale || 30000;          // stesso messaggio ripetuto: vietato per tanto
+    var inviati = [], fermoFino = 0;
+    return {
+      prova: function (testo, ora) {
+        ora = ora == null ? Date.now() : ora;
+        if (ora < fermoFino) return 'Modalità lenta: aspetta ' + Math.ceil((fermoFino - ora) / 1000) + ' secondi';
+        var ultimo = inviati[inviati.length - 1];
+        if (ultimo && ora - ultimo.t < minimo) return 'Piano, un messaggio alla volta';
+        var chiave = normParola(testo);
+        for (var i = 0; i < inviati.length; i++) if (inviati[i].k === chiave && ora - inviati[i].t < uguale) return 'Hai già scritto questo messaggio';
+        var recenti = inviati.filter(function (m) { return ora - m.t < finestra; });
+        if (recenti.length >= massimo) { fermoFino = ora + pausa; return 'Troppi messaggi di fila: modalità lenta per ' + Math.round(pausa / 1000) + ' secondi'; }
+        return null;
+      },
+      registra: function (testo, ora) {
+        ora = ora == null ? Date.now() : ora;
+        inviati.push({ t: ora, k: normParola(testo) });
+        inviati = inviati.filter(function (m) { return ora - m.t < Math.max(finestra, uguale); });
+      }
+    };
+  }
+
+  radice.FiltroChat = { controlla: controlla, ricevuto: ricevuto, nickOk: nickOk, creaLimitatore: creaLimitatore, sistema: sistema, normParola: normParola, AVVISI: AVVISI };
+})(typeof window !== 'undefined' ? window : this);
+</script>
+<script>
+/* =====================================================================
    BORGO LUME 3D - LOGICA DEL GIOCO (locale e SIMULATA)
-   Chat della piazza, messaggi privati, blocco, salvataggio del profilo.
+   Chat della piazza, messaggi privati, blocco, segnalazioni, salvataggio del profilo.
    Non disegna nulla: emette eventi. In futuro qui parlera' il server vero.
+   Ogni messaggio passa da controllaMessaggio(): filtro (src/chat/filtro.js)
+   e modalita' lenta. Chi invia messaggi bloccati di continuo resta muto per un po'.
    ===================================================================== */
 (function () {
   'use strict';
@@ -10144,6 +10540,31 @@ body.pc #rd-hud .tasto,body.pc #rd-hud .base{display:none}
   const botPiazza = () => CFG.utentiDemo.filter(u => u.online).slice(0, CFG.maxBotPiazza || 99);
   const inPiazza = () => botPiazza().filter(u => !stato.bloccati.has(u.id));
 
+  /* ---------- sicurezza: filtro, modalita' lenta, silenzio dopo troppi messaggi bloccati ---------- */
+  const FC = window.FiltroChat;
+  const limiti = { chat: FC.creaLimitatore(), dm: FC.creaLimitatore({ massimo: 8 }) };
+  const MUTO_DOPO = 3, MUTO_FINESTRA = 120000, MUTO_DURATA = 60000;   // 3 messaggi bloccati in 2 minuti -> 1 minuto di silenzio
+  let bloccatiDi = [], mutoFino = 0;
+  // tipo: 'chat' o 'dm'. Restituisce il testo da inviare (gia' ripulito) oppure null, dopo aver avvisato il giocatore.
+  function controllaMessaggio(testo, tipo, max) {
+    testo = FC.sistema(testo).slice(0, max || 120);
+    if (!testo) return null;
+    const ora = Date.now();
+    if (ora < mutoFino) { emetti('toast', 'Chat in pausa: potrai scrivere tra ' + Math.ceil((mutoFino - ora) / 1000) + ' secondi'); return null; }
+    const lim = limiti[tipo] || limiti.chat, no = lim.prova(testo, ora);
+    if (no) { emetti('toast', no); return null; }
+    const r = FC.controlla(testo);
+    if (!r.ok) {
+      bloccatiDi = bloccatiDi.filter(t => ora - t < MUTO_FINESTRA).concat(ora);
+      if (bloccatiDi.length >= MUTO_DOPO) { mutoFino = ora + MUTO_DURATA; bloccatiDi = []; emetti('toast', 'Troppi messaggi non permessi: chat in pausa per un minuto'); }
+      else emetti('toast', r.avviso);
+      emetti('bloccato', r);
+      return null;
+    }
+    lim.registra(r.testo, ora);
+    return r.testo;
+  }
+
   /* ---------- chat pubblica (simulata) ---------- */
   function aggiungiChat(id, nick, testo, io) {
     const voce = { id, nick, testo, ora: ora(), io: !!io };
@@ -10151,11 +10572,8 @@ body.pc #rd-hud .tasto,body.pc #rd-hud .base{display:none}
     emetti('chat', voce);
   }
   function inviaChat(testo) {
-    testo = (testo || '').trim().slice(0, 120);
+    testo = controllaMessaggio(testo, 'chat', 120);
     if (!testo) return false;
-    const adesso = performance.now();
-    if (adesso - stato.ultimoMsgChat < 700) { emetti('toast', 'Piano, un messaggio alla volta'); return false; }
-    stato.ultimoMsgChat = adesso;
     aggiungiChat('io', stato.giocatore.nick, testo, true);
     if (stato.stanzaId === 'piazza' && Math.random() < 0.55) {
       const cand = inPiazza();
@@ -10172,9 +10590,44 @@ body.pc #rd-hud .tasto,body.pc #rd-hud .base{display:none}
   function inviaDM() { emetti('toast', 'I messaggi privati si scambiano solo con gli amici veri'); return false; }
   function eliminaConversazione(id) { if (!stato.dm[id]) return; delete stato.dm[id]; emetti('dm', { id }); }
   function eliminaMessaggio(id, i) { const c = stato.dm[id]; if (!c || !c.msgs[i]) return; c.msgs.splice(i, 1); emetti('dm', { id }); }
-  function blocca(id) { stato.bloccati.add(id); emetti('blocchi', { id }); }
-  function sblocca(id) { stato.bloccati.delete(id); emetti('blocchi', { id }); }
-  function segnala() { emetti('toast', 'Segnalazione registrata (dimostrativa: non viene inviato nulla)'); }
+  /* ---------- blocchi: restano salvati su questo telefono ---------- */
+  const CHIAVE_BLOCCHI = 'theborg.bloccati.v1', CHIAVE_SEGNALAZIONI = 'theborg.segnalazioni.v1';
+  const nomiBloccati = {};   // id -> nick, per l'elenco nel profilo
+  function caricaBlocchi() {
+    try { const l = JSON.parse(localStorage.getItem(CHIAVE_BLOCCHI) || '[]'); l.forEach(b => { stato.bloccati.add(b.id); nomiBloccati[b.id] = b.nick; }); } catch (e) { /* niente */ }
+  }
+  function salvaBlocchi() {
+    try { localStorage.setItem(CHIAVE_BLOCCHI, JSON.stringify([...stato.bloccati].map(id => ({ id, nick: nomiBloccati[id] || (utenteDi(id) || {}).nick || id })))); } catch (e) { /* storage non disponibile */ }
+  }
+  const utenteDi = id => (window.Gioco && window.Gioco.utente ? window.Gioco.utente(id) : utente(id));
+  function blocca(id) { nomiBloccati[id] = (utenteDi(id) || {}).nick || nomiBloccati[id] || id; stato.bloccati.add(id); salvaBlocchi(); emetti('blocchi', { id }); }
+  function sblocca(id) { stato.bloccati.delete(id); salvaBlocchi(); emetti('blocchi', { id }); }
+  function elencoBloccati() { return [...stato.bloccati].map(id => ({ id, nick: nomiBloccati[id] || (utenteDi(id) || {}).nick || id })); }
+
+  /* ---------- segnalazioni ----------
+     Restano in coda su questo telefono, con gli ultimi messaggi di quella persona come prova:
+     quando ci sara' il server (fase 2) partiranno verso i moderatori. */
+  const MOTIVI = [
+    ['insulti', 'Insulti, bullismo o prese in giro'],
+    ['sessuale', 'Messaggi o richieste a sfondo sessuale'],
+    ['dati', 'Mi chiede dati personali, foto o di vederci'],
+    ['minacce', 'Minacce o violenza'],
+    ['spam', 'Spam o pubblicità'],
+    ['imbroglio', 'Imbrogli o scambi scorretti'],
+    ['nick', 'Nickname o aspetto offensivo'],
+    ['altro', 'Altro']
+  ];
+  function segnalazioni() { try { return JSON.parse(localStorage.getItem(CHIAVE_SEGNALAZIONI) || '[]'); } catch (e) { return []; } }
+  function segnala(id, motivo, nota) {
+    const u = utenteDi(id) || { nick: id }, conv = stato.dm[id];
+    const prove = stato.chat.filter(m => m.id === id).slice(-10).map(m => ({ dove: 'chat', ora: m.ora, testo: m.testo }))
+      .concat(conv ? conv.msgs.filter(m => m.da === id).slice(-10).map(m => ({ dove: 'privato', ora: m.ora, testo: m.testo })) : []);
+    const s = { quando: new Date().toISOString(), id, nick: u.nick, motivo: MOTIVI.some(m => m[0] === motivo) ? motivo : 'altro',
+      nota: FC.sistema(nota || '').slice(0, 300), stanza: stato.stanzaId, prove, inviata: false };
+    try { localStorage.setItem(CHIAVE_SEGNALAZIONI, JSON.stringify(segnalazioni().concat(s).slice(-50))); } catch (e) { /* storage non disponibile */ }
+    emetti('segnalazione', s);
+    return s;
+  }
 
   /* ---------- salvataggio locale (solo su questo dispositivo) ---------- */
   function carica() { try { return JSON.parse(localStorage.getItem(CFG.chiaveSalvataggio) || 'null'); } catch (e) { return null; } }
@@ -10198,15 +10651,16 @@ body.pc #rd-hud .tasto,body.pc #rd-hud .base{display:none}
   function avvia(nick, look) {
     stato.giocatore = { id: 'io', nick, look: Object.assign({}, look), io: true };
     stato.chat = []; stato.dm = {}; stato.bloccati = new Set(); stato.dmAperto = null; stato.timerChat = 7;
-    salva();
+    caricaBlocchi(); salva();
   }
   function nickValido(n) { return /^[A-Za-z0-9_]{3,14}$/.test(n); }
+  function nickPermesso(n) { return FC.nickOk(n); }
   function impostaAtmosfera(id) { stato.atmosfera = id; salva(); emetti('atmosfera', id); }
   function impostaGrafica(g) { stato.grafica = g; salva(); emetti('grafica', g); }
   function cambiaLook(look) { stato.giocatore.look = Object.assign({}, look); salva(); emetti('look', stato.giocatore.look); }
 
   window.Gioco = { stato, su, emetti, avvia, tick, inviaChat, inviaDM, eliminaConversazione, eliminaMessaggio, conversazione, totNonLetti, segnaLetti, blocca, sblocca, segnala,
-    carica, salva, utente, nickValido, impostaAtmosfera, impostaGrafica, cambiaLook, inPiazza, botPiazza };
+    segnalazioni, MOTIVI, elencoBloccati, controllaMessaggio, carica, salva, utente, nickValido, nickPermesso, impostaAtmosfera, impostaGrafica, cambiaLook, inPiazza, botPiazza };
 })();
 
 </script>
@@ -10951,7 +11405,12 @@ body.arredando #joy,body.arredando #controlli,body.arredando #btn-contesto,body.
     const bx = finestra('<div style="font-size:30px">📋</div><b>Cosa scrivi sul cartello?</b><input maxlength="40" enterkeyhint="done"><small>Lo leggono gli amici che vengono a trovarti</small><button>Scrivi</button><button class="sec">Annulla</button>');
     const inp = bx.querySelector('input'), [ok, no] = bx.querySelectorAll('button');
     inp.value = attuale || ''; setTimeout(() => { try { inp.focus(); inp.select(); } catch (e) { /* ok */ } }, 50);
-    const salva = () => { const t = pulito(inp.value, 40); inp.blur(); chiudi(); fatto(t || 'Benvenuti!'); };
+    // il cartello lo leggono gli altri: passa dallo stesso filtro della chat
+    const salva = () => {
+      const t = pulito(inp.value, 40), r = t && window.FiltroChat ? window.FiltroChat.controlla(t) : { ok: true, testo: t };
+      if (!r.ok) { toast(r.avviso); return; }
+      inp.blur(); chiudi(); fatto(r.testo || 'Benvenuti!');
+    };
     ok.addEventListener('click', salva); inp.addEventListener('keydown', e => { if (e.key === 'Enter') salva(); if (e.key === 'Escape') chiudi(); });
     no.addEventListener('click', () => { inp.blur(); chiudi(); });
   }
@@ -11026,10 +11485,11 @@ body.arredando #joy,body.arredando #controlli,body.arredando #btn-contesto,body.
         scriviCartello(m.s.t, t => esegui(st, m, t));
       },
       applica(st, m, v) { m.s.t = v; },
-      stato: true, valida: (v, st, nick) => (st.id === 'ospite' && String(nick).toLowerCase() === String(st.ospite).toLowerCase() ? pulito(v, 40) || 'Benvenuti!' : undefined)
+      stato: true, valida: (v, st, nick) => (st.id === 'ospite' && String(nick).toLowerCase() === String(st.ospite).toLowerCase() ? cartelloPulito(pulito(v, 40)) : undefined)
     }
   };
 
+  const cartelloPulito = t => (t && window.FiltroChat ? window.FiltroChat.ricevuto(t) : t) || 'Benvenuti!';
   function luceVista(m) {
     const p = m.g.userData.paralume; if (!p) return; const mt = p.material;
     if (!p.userData.col) p.userData.col = mt.color.getHex();
@@ -14470,7 +14930,8 @@ body.bv-attivo #barra-alto,body.bv-attivo #controlli,body.bv-attivo #btn-contest
 
   function rendiChat() {
     const lista = $('#chat-lista'); lista.innerHTML = '';
-    lista.append(el('div', 'riga sistema', 'Benvenuto in piazza. DEMO: gli altri abitanti e i loro messaggi sono simulati.'));
+    const benv = el('div', 'riga sistema', 'Benvenuto! Rispetta tutti e non scrivere mai dati personali.'), lr = el('button', 'link', 'Regole');
+    lr.type = 'button'; lr.addEventListener('click', () => mostraRegole()); benv.append(lr); lista.append(benv);
     const visibili = G.stato.chat.filter(m => !G.stato.bloccati.has(m.id));
     visibili.forEach(m => {
       const r = el('div', 'riga' + (m.io ? ' io' : ''));
@@ -14502,7 +14963,7 @@ body.bv-attivo #barra-alto,body.bv-attivo #controlli,body.bv-attivo #btn-contest
       const b = el('button', 'dm-voce' + (c.nonLetti && !bloccato ? ' nonletto' : '')); b.type = 'button';
       const cv = el('canvas', 'mini-avatar'); cv.width = 88; cv.height = 104; disegnaMini(cv, u.look);
       const t = el('div', 'dm-testo'), nome = el('div', 'dm-nome', u.nick); nome.append(el('small', null, ultimo.ora));
-      t.append(nome, el('div', 'dm-anteprima', bloccato ? 'Utente bloccato (demo)' : ((ultimo.da === 'io' ? 'Tu: ' : '') + ultimo.testo)));
+      t.append(nome, el('div', 'dm-anteprima', bloccato ? 'Utente bloccato' : ((ultimo.da === 'io' ? 'Tu: ' : '') + ultimo.testo)));
       b.append(cv, t);
       if (c.nonLetti && !bloccato) b.append(el('span', 'pallino', String(c.nonLetti)));
       b.addEventListener('click', () => apriThread(id));
@@ -14538,7 +14999,7 @@ body.bv-attivo #barra-alto,body.bv-attivo #controlli,body.bv-attivo #btn-contest
     box.scrollTop = box.scrollHeight;
     const cest = $('#dm-elimina'); cest.classList.remove('conferma'); cest.textContent = 'Elimina chat';
     $('#dm-input').disabled = bloccato;
-    $('#dm-input').placeholder = bloccato ? 'Utente bloccato (demo)' : 'Scrivi un messaggio privato…';
+    $('#dm-input').placeholder = bloccato ? 'Utente bloccato' : 'Scrivi un messaggio privato…';
   }
   function aggiornaBadgeDM() {
     const n = G.totNonLetti(), b = $('#badge-dm'); b.hidden = n === 0; b.textContent = n > 9 ? '9+' : String(n);
@@ -14559,6 +15020,57 @@ body.bv-attivo #barra-alto,body.bv-attivo #controlli,body.bv-attivo #btn-contest
   function chiudiFoglio() { $('#foglio').hidden = true; idFoglio = null; lookFoglio = null; }
   function aggiornaBottoneBlocco() { $('#foglio-blocca').textContent = G.stato.bloccati.has(idFoglio) ? 'Sblocca' : 'Blocca'; }
 
+  /* ---------- segnalazione con motivo ---------- */
+  let idSegnala = null, motivoSegnala = null;
+  function apriSegnala(id) {
+    const u = G.utente(id); if (!u) return;
+    idSegnala = id; motivoSegnala = null;
+    $('#segnala-nick').textContent = u.nick; $('#segnala-nota').value = '';
+    $('#segnala-blocca').checked = !G.stato.bloccati.has(id); $('#segnala-blocca').parentNode.hidden = G.stato.bloccati.has(id);
+    const box = $('#segnala-motivi'); box.innerHTML = '';
+    G.MOTIVI.forEach(m => {
+      const b = el('button', null, m[1]); b.type = 'button'; b.setAttribute('role', 'radio'); b.setAttribute('aria-checked', 'false');
+      b.addEventListener('click', () => {
+        motivoSegnala = m[0]; $('#segnala-invia').disabled = false;
+        box.querySelectorAll('button').forEach(x => { const on = x === b; x.classList.toggle('sel', on); x.setAttribute('aria-checked', on ? 'true' : 'false'); });
+      });
+      box.append(b);
+    });
+    $('#segnala-invia').disabled = true;
+    $('#segnala').hidden = false;
+  }
+  function chiudiSegnala() { $('#segnala-nota').blur(); $('#segnala').hidden = true; idSegnala = null; }
+  function inviaSegnala() {
+    if (!idSegnala || !motivoSegnala) return;
+    const id = idSegnala, blocca = !$('#segnala-blocca').parentNode.hidden && $('#segnala-blocca').checked;
+    G.segnala(id, motivoSegnala, $('#segnala-nota').value);
+    if (blocca) G.blocca(id);
+    chiudiSegnala(); chiudiFoglio();
+    UI.toast(blocca ? 'Grazie. Segnalazione salvata e persona bloccata.' : 'Grazie. Segnalazione salvata.');
+  }
+
+  /* ---------- regole della chat: la prima volta che si scrive ---------- */
+  const CHIAVE_REGOLE = 'theborg.regole.v1';
+  let dopoRegole = null;
+  function regoleViste() { try { return localStorage.getItem(CHIAVE_REGOLE) === '1'; } catch (e) { return true; } }
+  function mostraRegole(poi) { dopoRegole = poi || null; $('#regole').hidden = false; }
+  function chiudiRegole() {
+    try { localStorage.setItem(CHIAVE_REGOLE, '1'); } catch (e) { /* ok */ }
+    $('#regole').hidden = true; const f = dopoRegole; dopoRegole = null; if (f) f();
+  }
+
+  /* ---------- utenti bloccati (nel profilo) ---------- */
+  function aggiornaBloccati() {
+    const box = $('#bloccati-lista'); if (!box) return; box.innerHTML = '';
+    const l = G.elencoBloccati();
+    if (!l.length) { box.append(el('p', 'nota-piccola', 'Non hai bloccato nessuno.')); return; }
+    l.forEach(b => {
+      const r = el('div', 'bloccato-voce'), x = el('button', null, 'Sblocca'); x.type = 'button';
+      x.addEventListener('click', () => { G.sblocca(b.id); UI.toast(b.nick + ' sbloccato'); });
+      r.append(el('span', null, b.nick), x); box.append(r);
+    });
+  }
+
   /* ---------- amici (utenti dimostrativi) ---------- */
   function aggiornaAmici() {
     const box = $('#amici-lista'); box.innerHTML = '';
@@ -14568,7 +15080,7 @@ body.bv-attivo #barra-alto,body.bv-attivo #controlli,body.bv-attivo #btn-contest
       const cv = el('canvas', 'mini-avatar'); cv.width = 88; cv.height = 104; disegnaMini(cv, u.look);
       const t = el('div', 'amico-testo'), nome = el('div', 'amico-nome', u.nick);
       nome.prepend(el('span', 'stato-pt' + (u.online ? '' : ' off')));
-      t.append(nome, el('div', 'amico-bio', bloccato ? 'Utente bloccato (demo)' : (u.online ? 'In piazza · ' : 'Non in linea · ') + u.bio));
+      t.append(nome, el('div', 'amico-bio', bloccato ? 'Utente bloccato' : (u.online ? 'In piazza · ' : 'Non in linea · ') + u.bio));
       b.addEventListener('click', () => apriFoglio(u.id));
       b.append(cv, t); box.append(b);
     });
@@ -14627,6 +15139,7 @@ body.bv-attivo #barra-alto,body.bv-attivo #controlli,body.bv-attivo #btn-contest
     $('#profilo-nick').textContent = G.stato.giocatore.nick;
     document.querySelectorAll('#atmosfere .catena').forEach(b => b.classList.toggle('sel', b.dataset.id === G.stato.atmosfera));
     document.querySelectorAll('#grafica .catena').forEach(b => b.classList.toggle('sel', b.dataset.id === G.stato.grafica));
+    aggiornaBloccati();
   }
 
   /* ---------- schermata iniziale ---------- */
@@ -14639,6 +15152,7 @@ body.bv-attivo #barra-alto,body.bv-attivo #controlli,body.bv-attivo #btn-contest
   function entra() {
     const nick = $('#nick').value.trim(), err = $('#nick-errore');
     if (!G.nickValido(nick)) { err.textContent = 'Usa da 3 a 14 caratteri: lettere, numeri o _ (senza spazi).'; return; }
+    if (!G.nickPermesso(nick)) { err.textContent = 'Questo nickname non è permesso nel Borgo: scegline un altro.'; return; }
     if (CFG.utentiDemo.some(u => u.nick.toLowerCase() === nick.toLowerCase())) { err.textContent = 'Nickname gia\' in uso (prova dimostrativa: la verifica vera sara\' sul server).'; return; }
     err.textContent = '';
     UI.fade(() => {
@@ -14727,12 +15241,23 @@ body.bv-attivo #barra-alto,body.bv-attivo #controlli,body.bv-attivo #btn-contest
       if (!G.stato.dm[id]) G.conversazione(id);
       apriPagina('messaggi'); apriThread(id);
     });
-    $('#foglio-segnala').addEventListener('click', () => G.segnala(idFoglio));
+    $('#foglio-segnala').addEventListener('click', () => apriSegnala(idFoglio));
+    $('#segnala-annulla').addEventListener('click', chiudiSegnala);
+    $('#segnala .fc-sfondo').addEventListener('click', chiudiSegnala);
+    $('#segnala-invia').addEventListener('click', inviaSegnala);
+    $('#segnala-nota').addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); $('#segnala-nota').blur(); } });
+    $('#regole-ok').addEventListener('click', chiudiRegole);
+    $('#btn-regole').addEventListener('click', () => mostraRegole());
+    // la prima volta che si tocca la chat (pubblica o privata) si leggono le regole
+    ['#chat-input', '#dm-input'].forEach(sel => $(sel).addEventListener('focus', () => {
+      if (regoleViste()) return;
+      const inp = $(sel); inp.blur(); mostraRegole(() => { try { inp.focus(); } catch (e) { /* ok */ } });
+    }));
     $('#foglio-visita').addEventListener('click', () => { const id = idFoglio; chiudiFoglio(); if (B.Online && B.Online.visita) B.Online.visita(id); });
     $('#foglio-raggiungi').addEventListener('click', () => { const id = idFoglio; chiudiFoglio(); if (B.Online && B.Online.raggiungi) B.Online.raggiungi(id); });
     $('#foglio-blocca').addEventListener('click', () => {
-      if (G.stato.bloccati.has(idFoglio)) { G.sblocca(idFoglio); UI.toast('Utente sbloccato (dimostrativo)'); }
-      else { G.blocca(idFoglio); UI.toast('Utente bloccato: non vedrai piu\' i suoi messaggi (dimostrativo)'); }
+      if (G.stato.bloccati.has(idFoglio)) { G.sblocca(idFoglio); UI.toast('Utente sbloccato'); }
+      else { G.blocca(idFoglio); UI.toast('Utente bloccato: non vedrai più i suoi messaggi e il suo personaggio'); }
       aggiornaBottoneBlocco();
     });
 
@@ -14764,7 +15289,7 @@ body.bv-attivo #barra-alto,body.bv-attivo #controlli,body.bv-attivo #btn-contest
     G.su('stanza', aggiornaStanza);
     G.su('profilo', d => apriFoglio(d.id));
     G.su('chat', () => rendiChat());
-    G.su('blocchi', () => { rendiChat(); aggiornaBadgeDM(); if (paginaAttiva === 'messaggi') { G.stato.dmAperto ? rendiThread() : mostraElencoDM(); } });
+    G.su('blocchi', () => { rendiChat(); aggiornaBadgeDM(); if (paginaAttiva === 'profilo') aggiornaBloccati(); if (paginaAttiva === 'messaggi') { G.stato.dmAperto ? rendiThread() : mostraElencoDM(); } });
     G.su('dm', d => {
       ordineDM = [d.id].concat(ordineDM.filter(x => x !== d.id));
       if (G.stato.dmAperto === d.id) { G.segnaLetti(d.id); rendiThread(); }
@@ -15460,9 +15985,10 @@ body.orizz #pagina-zaino .zn-carte{grid-template-columns:repeat(auto-fill,minmax
     punto(a, pr);
     aiGiochi(peer, a.nick, pr);   // nei minigiochi: il suo stato di gioco
     // messaggio nuovo in chat: entra nella chat pubblica e appare nel fumetto
+    // (passa dal filtro anche qui: il telefono di chi scrive si puo' manomettere; chi e' bloccato non si legge)
     if (pr.msg && pr.msg.n !== a.nMsg) {
-      a.nMsg = pr.msg.n; const t = testo(pr.msg.t, 120);
-      if (t && stessoLuogo(pr.s, luogo())) {
+      a.nMsg = pr.msg.n; const t = filtra(testo(pr.msg.t, 120));
+      if (t && stessoLuogo(pr.s, luogo()) && !bloccato(a)) {
         const d = new Date(), voce = { id: idAmico(a.nick), nick: a.nick, testo: t, ora: String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0'), io: false, amico: true };
         G.stato.chat.push(voce); if (G.stato.chat.length > 80) G.stato.chat.shift(); G.emetti('chat', voce);
         bolla(a, t, 4.5);
@@ -15470,8 +15996,10 @@ body.orizz #pagina-zaino .zn-carte{grid-template-columns:repeat(auto-fill,minmax
     }
     riceviDm(a, pr); riceviEv(a, pr); riceviMo(a, pr);
     const mcK = JSON.stringify(pr.mc || null); if (mcK !== a.mcK) { a.mcK = mcK; G.emetti('annunci'); }
-    if (pr.em && pr.em.n !== a.nEm) { a.nEm = pr.em.n; const e = EMOTE[pr.em.t]; if (e) { a.av.faiEmote(pr.em.t, e[1]); bolla(a, e[0], e[1] + 0.4); } }
+    if (pr.em && pr.em.n !== a.nEm) { a.nEm = pr.em.n; const e = EMOTE[pr.em.t]; if (e && !bloccato(a)) { a.av.faiEmote(pr.em.t, e[1]); bolla(a, e[0], e[1] + 0.4); } }
   }
+  const filtra = t => (t && window.FiltroChat ? window.FiltroChat.ricevuto(t) : t);
+  const bloccato = a => G.stato.bloccati.has(idAmico(a.nick));
   const EMOTE = { saluta: ['Ciao!', 3], balla: ['♪', 5], ridi: ['Ahah!', 3], applaudi: ['Bravo!', 4], evviva: ['Evviva!', 3] };
   const viaBolla = (r, b) => { r.remove(b); if (b.material) { if (b.material.map) b.material.map.dispose(); b.material.dispose(); } };
   function bolla(a, t, sec) { if (a.bolla) viaBolla(a.av.root, a.bolla); a.bolla = B.fumetto(t); a.bolla.position.y = 3.05; a.av.root.add(a.bolla); a.durBolla = sec; }
@@ -15485,7 +16013,7 @@ body.orizz #pagina-zaino .zn-carte{grid-template-columns:repeat(auto-fill,minmax
     tInvio -= dt; if (tInvio <= 0) { tInvio = Object.keys(GIOCHI).some(n => GIOCHI[n]() && GIOCHI[n]().attivo) ? 0.066 : 0.1; invia(); }
     const libero = !(B.Raid && B.Raid.attivo) && !(B.Paintball && B.Paintball.attivo) && !(B.Kart && B.Kart.attivo), qui = luogo();
     amici.forEach(a => {
-      const pr = a.pr, vis = libero && qui !== 'casa' && stessoLuogo(pr.s, qui);
+      const pr = a.pr, vis = libero && qui !== 'casa' && stessoLuogo(pr.s, qui) && !bloccato(a);
       a.av.root.visible = vis;
       if (!vis) { a.vis = false; return; }
       const d = dove(a, ora / 1000) || { x: num(pr.x, a.x), z: num(pr.z, a.z), y: num(pr.y, a.y), r: num(pr.r, a.r), v: 0 };
@@ -15532,7 +16060,7 @@ body.orizz #pagina-zaino .zn-carte{grid-template-columns:repeat(auto-fill,minmax
     pr.dm.l.slice(-3).forEach(e => {
       if (!e || num(e.n, 0) <= a.nDm) return;
       a.nDm = num(e.n, 0);
-      const t = testo(e.t, 200), id = idAmico(a.nick);
+      const t = filtra(testo(e.t, 200)), id = idAmico(a.nick);
       if (!t || !mio || testo(e.a, 20).toLowerCase() !== mio || G.stato.bloccati.has(id)) return;
       const d = new Date(), c = G.conversazione(id);
       c.msgs.push({ da: id, testo: t, ora: String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0') });
@@ -15552,11 +16080,11 @@ body.orizz #pagina-zaino .zn-carte{grid-template-columns:repeat(auto-fill,minmax
   };
   G.inviaDM = function (id, t) {
     if (typeof id !== 'string' || id.indexOf('amico:') !== 0) return inviaOrig(id, t);
-    t = (t || '').trim().slice(0, 200);
-    if (!t) return false;
     if (G.stato.bloccati.has(id)) { G.emetti('toast', 'Hai bloccato questo utente'); return false; }
     const a = amicoDa(id);
     if (!a) { G.emetti('toast', G.utente(id).nick + ' non è online: il messaggio non può arrivare'); return false; }
+    t = G.controllaMessaggio(t, 'dm', 200);   // filtro e modalita' lenta, come la chat
+    if (!t) return false;
     const d = new Date();
     G.conversazione(id).msgs.push({ da: 'io', testo: t, ora: String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0') });
     G.emetti('dm', { id });

@@ -1,4 +1,4 @@
-name: Controlla index.html
+name: Controlla index.html e prove
 
 # index.html si costruisce dai sorgenti in src/: se qualcuno lo modifica a mano,
 # o dimentica di ricostruirlo, questo controllo fallisce.
@@ -15,3 +15,4 @@ jobs:
         with:
           node-version: 22
       - run: node strumenti/costruisci.mjs --controlla
+      - run: node test/filtro.test.mjs
