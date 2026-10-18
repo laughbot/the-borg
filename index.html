@@ -44,7 +44,7 @@
   --font: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
 }
 * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
-html, body { margin: 0; height: 100%; background: #140d1f; font-family: var(--font); color: var(--crema); overscroll-behavior: none; }
+html, body { margin: 0; height: 100%; overflow: hidden; background: #140d1f; font-family: var(--font); color: var(--crema); overscroll-behavior: none; }
 body { display: flex; align-items: center; justify-content: center;
   background: radial-gradient(ellipse at 50% 20%, #3a2a57 0%, #140d1f 70%); }
 button, input { font-family: inherit; font-size: 16px; color: inherit; }
@@ -3785,7 +3785,7 @@ window.B3_LOGO = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAyAAAAC3CAIAAABl
 (function () {
   'use strict';
   const B = window.B3; B.rot = { on: false, vw: 0 }; B.touch = window.matchMedia('(pointer: coarse)').matches; document.body.classList.toggle('pc', !B.touch);
-  let gioco = false;
+  let gioco = false, ultimaFirma = '';
   B.pt = (x, y) => B.rot.on ? [y, B.rot.vw - x] : [x, y];          // da coordinate dello schermo a coordinate dentro l'app
   B.ptE = e => B.pt(e.clientX, e.clientY);
   // orizzontale = telefono/tablet girato di lato (non una finestra larga di PC, e non la tastiera che rimpicciolisce la pagina)
@@ -3795,11 +3795,17 @@ window.B3_LOGO = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAyAAAAC3CAIAAABl
     return land && window.innerWidth > window.innerHeight && Math.min(screen.width, screen.height) <= 600;
   }
   B.orienta = function (inGioco) {
-    if (inGioco !== undefined) gioco = !!inGioco;
+    if (inGioco !== undefined && !!inGioco !== gioco) { gioco = !!inGioco; ultimaFirma = ''; }
     const a = document.getElementById('app'); if (!a) return;
     window.B3_ORIZZ = inOrizzontale(); document.body.classList.toggle('orizz', window.B3_ORIZZ);
-    if (!window.B3_ORIZZ && !gioco) { a.style.cssText = ''; B.rot.on = false; if (B.app) B.app.misura(); if (window.UI && window.UI.aggiornaArea) window.UI.aggiornaArea(); return; }
     const vw = window.innerWidth, vh = window.innerHeight, st = a.style;
+    const firma = [window.B3_ORIZZ, gioco, vw, vh].join();
+    if (firma === ultimaFirma) return;                       // niente e' cambiato: non tocco il layout (evita rimbalzi)
+    ultimaFirma = firma;
+    if (!window.B3_ORIZZ && !gioco) {
+      ['position', 'left', 'top', 'border-radius', 'box-shadow', 'margin', 'max-width', 'max-height', 'width', 'height', 'transform', 'transform-origin'].forEach(k => st.removeProperty(k));
+      B.rot.on = false; if (B.app) B.app.misura(); if (window.UI && window.UI.aggiornaArea) window.UI.aggiornaArea(); return;
+    }
     st.position = 'fixed'; st.left = '0'; st.top = '0'; st.borderRadius = '0'; st.boxShadow = 'none'; st.margin = '0'; st.maxWidth = 'none'; st.maxHeight = 'none';
     if (!window.B3_ORIZZ && vh > vw) { st.width = vh + 'px'; st.height = vw + 'px'; st.transformOrigin = '0 0'; st.transform = 'translateX(' + vw + 'px) rotate(90deg)'; B.rot.on = true; B.rot.vw = vw; }
     else { st.width = vw + 'px'; st.height = vh + 'px'; st.transform = 'none'; B.rot.on = false; }
@@ -3812,10 +3818,16 @@ window.B3_LOGO = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAyAAAAC3CAIAAABl
   window.addEventListener('resize', () => {
     const a = document.activeElement, scrive = a && (a.tagName === 'INPUT' || a.tagName === 'TEXTAREA'), o = tipoOr();
     if (scrive && o === ultimoOr) return;
-    ultimoOr = o; B.orienta();
+    ultimoOr = o; dopoRotazione();
   });
-  window.addEventListener('orientationchange', () => setTimeout(() => B.orienta(), 150));
-  if (screen.orientation && screen.orientation.addEventListener) screen.orientation.addEventListener('change', () => setTimeout(() => B.orienta(), 100));
+  // mentre il telefono gira le misure arrivano a scatti: rifaccio il layout a ogni fotogramma e di nuovo quando si sono fermate
+  let tFine = 0, rafOr = 0;
+  function dopoRotazione() {
+    if (!rafOr) rafOr = requestAnimationFrame(() => { rafOr = 0; B.orienta(); });
+    clearTimeout(tFine); tFine = setTimeout(() => { ultimaFirma = ''; B.orienta(); }, 350);
+  }
+  window.addEventListener('orientationchange', dopoRotazione);
+  if (screen.orientation && screen.orientation.addEventListener) screen.orientation.addEventListener('change', dopoRotazione);
   B.orienta();
 })();
 
@@ -14283,16 +14295,23 @@ body.bv-attivo #barra-alto,body.bv-attivo #controlli,body.bv-attivo #btn-contest
       if (e.target.tagName !== 'INPUT') return;
       setTimeout(() => {
         if (document.activeElement && document.activeElement.tagName === 'INPUT') return;
-        app.classList.remove('tastiera'); UI.aggiornaArea(); window.scrollTo(0, 0);
+        app.classList.remove('tastiera'); app.style.height = ''; UI.aggiornaArea(); window.scrollTo(0, 0);
       }, 350);
     });
     ['#chat-form button', '#dm-form button'].forEach(sel => $(sel).addEventListener('mousedown', e => e.preventDefault()));
     if (window.visualViewport) {
-      const adatta = () => {
+      let rafVV = 0;
+      const adatta = () => { if (!rafVV) rafVV = requestAnimationFrame(() => { rafVV = 0; adattaOra(); }); };
+      const adattaOra = () => {
+        if (window.scrollY || window.scrollX) window.scrollTo(0, 0);
         if (window.B3_ORIZZ || document.body.classList.contains('kart-attivo') || document.body.classList.contains('pb-attivo') || document.body.classList.contains('raid-attivo')) { window.scrollTo(0, 0); return; }
-        if (inInizio()) { if (app.style.height) { app.style.height = ''; UI.aggiornaArea(); } window.scrollTo(0, 0); return; }
-        if (window.innerWidth < 560 && !window.B3_ORIZZ) app.style.height = window.visualViewport.height + 'px'; else app.style.height = '';
-        window.scrollTo(0, 0); UI.aggiornaArea();
+        if (inInizio()) { if (app.style.height) { app.style.height = ''; UI.aggiornaArea(); } return; }
+        // senza tastiera l'app occupa tutto lo schermo; prima seguiva sempre l'area visibile e, girando il telefono,
+        // barre del browser e altezza si rincorrevano facendo oscillare la schermata
+        const tastiera = app.classList.contains('tastiera') && window.innerWidth < 560;
+        const h = tastiera ? Math.round(window.visualViewport.height) + 'px' : '';
+        if (app.style.height === h) return;
+        app.style.height = h; UI.aggiornaArea();
         const box = $('#dm-messaggi'); if (box && !$('#dm-thread').hidden) box.scrollTop = box.scrollHeight;   // ultimi messaggi sopra la tastiera
       };
       window.visualViewport.addEventListener('resize', adatta); window.visualViewport.addEventListener('scroll', adatta); adatta();
