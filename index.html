@@ -8,6 +8,7 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="The Borg">
   <meta name="theme-color" content="#241a33">
+  <title>The Borg 3D</title>
   <link rel="manifest" href="manifest.webmanifest">
   <link rel="apple-touch-icon" href="apple-touch-icon.png">
   <link rel="icon" type="image/png" sizes="192x192" href="icona-192.png">
@@ -22,7 +23,6 @@
     } catch (e) {}
   })();
   </script>
-  <title>The Borg 3D</title>
   <style>
 /* =====================================================================
    BORGO LUME - STILE DELL'INTERFACCIA
@@ -10955,8 +10955,9 @@ body.arredando #joy,body.arredando #controlli,body.arredando #btn-contesto,body.
    - Laghetto da pesca (lato est): sgabelli sulla riva e sul pontile, pesci da collezionare,
      secchio da vendere alla Pescheria del mercatino, Trofeo di pesca a 8 specie
    - Ruota panoramica (angolo nord-est): si sale dalla pedana, un giro completo e si scende
-   - Mercatino (fascia nord, davanti ai negozi): banchi degli abitanti con offerte del giorno
-     e il tuo banco, dove metti in vendita i mobili che non usi
+   - Mercatino (fascia nord, davanti ai negozi): 4 banchi degli abitanti. Ognuno compra e
+     vende la sua merce: pesci alla Pescheria, mobili e luci ai loro banchi, carte di
+     Belinverse 2 al banco Belinverse TCG (prezzo secondo la rarita')
    Il mondo chiama B.costruisciAttivita(ctx) mentre costruisce la piazza; main.js chiama
    B.Attivita.init(app). Tutti i numeri di bilanciamento sono in B.ATTIVITA_CFG.
    DIMOSTRATIVO: gli abitanti sono simulati e i dati restano su questo dispositivo.
@@ -10967,15 +10968,18 @@ body.arredando #joy,body.arredando #controlli,body.arredando #btn-contesto,body.
   const G = () => window.Gioco;
   const el = (t, c, h) => { const e = document.createElement(t); if (c) e.className = c; if (h !== undefined) e.innerHTML = h; return e; };
   const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+  const esc = t => String(t).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
 
   /* ---------- TABELLA DI BILANCIAMENTO E POSIZIONI ---------- */
   const CF = B.ATTIVITA_CFG = {
     lago: { x: 38, z: 32, rx: 8.5, rz: 6.5 },
     pontile: { x: 38, z0: 33.6, z1: 41.2, w: 1.8, h: 0.28 },
     ruota: { x: 34, z: 3, R: 8, hub: 11.0, cabine: 8, giro: 40, appeso: 2.75 },
-    mercato: { z: 5, xs: [-15, -9, -3, 3, 9, 15] },
+    mercato: { z: 5, xs: [-13.5, -6.5, 6.5, 13.5] },
     pesca: { tettoPescheria: 600, attesa: [2.2, 6.5], finestra: 1.15, trofeo: 8 },
-    banco: { max: 3, quota: 0.55, prezzoEsclusivi: 400, attesa: [45, 150] }
+    usato: { quota: 0.55, prezzoEsclusivi: 400 },          // i banchi ti ricomprano i mobili liberi al 55% del negozio
+    carte: { C: 8, R: 25, SR: 70, alt: 1000, tetto: 1200 },  // banco Belinverse TCG: coins per carta (pacchetto 150 = 6 carte) e massimo al giorno
+    annunci: { max: 10, consigliato: 2 }                     // carte in vendita agli amici: quante e prezzo proposto (x valore del banco; Alternative a 1000)
   };
   const RAR = {
     comune:      { nome: 'Comune',      col: '#cfd8dc', peso: 52,  zona: 0.34, vel: 0.9 },
@@ -11006,7 +11010,7 @@ body.arredando #joy,body.arredando #controlli,body.arredando #btn-contesto,body.
 
   /* ---------- salvataggio ---------- */
   const CH = 'borg_piazza_v1';
-  const S = { pesci: {}, secchio: {}, vend: { g: '', c: 0 }, banco: [], merc: { g: '', presi: [] }, trofeo: 0, giri: 0 };
+  const S = { pesci: {}, secchio: {}, vend: { g: '', c: 0 }, vendC: { g: '', c: 0 }, annunci: [], nAnn: 0, banco: [], merc: { g: '', presi: [] }, trofeo: 0, giri: 0 };
   try { const r = JSON.parse(localStorage.getItem(CH) || 'null'); if (r) Object.assign(S, r); } catch (e) { /* ok */ }
   const salva = () => { try { localStorage.setItem(CH, JSON.stringify(S)); } catch (e) { /* ok */ } };
   const oggi = () => { const d = new Date(); return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); };
@@ -11255,9 +11259,7 @@ body.arredando #joy,body.arredando #controlli,body.arredando #btn-contesto,body.
     { tema: 'pesce',   nome: 'Pescheria',          a: '#4f8ab8', b: '#fbf3dc' },
     { tema: 'usato',   nome: 'Mobili usati',       a: '#c8553d', b: '#f6e8cc' },
     { tema: 'luci',    nome: 'Luci e decorazioni', a: '#7a2fd6', b: '#f4ead6' },
-    { tema: 'rarita',  nome: 'Rarità',             a: '#2a1f36', b: '#f2c76e' },
-    { tema: 'affare',  nome: 'Affare del giorno',  a: '#3f7a6a', b: '#f4ead6' },
-    { tema: 'tuo',     nome: 'Il tuo banco',       a: '#f2c76e', b: '#e0675c' }
+    { tema: 'carte',   nome: 'Belinverse TCG',     a: '#1f3a78', b: '#f2c76e' }
   ];
   function costruisciMercato(ctx) {
     const MZ = CF.mercato.z, sc = ctx.scene, gm = M('#fff').gradientMap;
@@ -11272,14 +11274,14 @@ body.arredando #joy,body.arredando #controlli,body.arredando #btn-contesto,body.
       tenda.position.set(0, 2.8, 0.16); tenda.rotation.x = 0.26; tenda.castShadow = true; g.add(tenda);
       const fest = new T.Mesh(new T.PlaneGeometry(3.4, 0.34), new T.MeshBasicMaterial({ map: B.texFestone(d.a, d.b, 10), transparent: true, alphaTest: 0.4, side: T.DoubleSide }));
       fest.position.set(0, 2.39, 1.12); g.add(fest);
-      const ins = insegna(d.nome, 0.5, d.tema === 'tuo' ? { fondo: '#8a5a20' } : null); ins.position.set(0, 3.32, 0.2); ins.rotation.x = -0.1; g.add(ins);
+      const ins = insegna(d.nome, 0.5, d.tema === 'carte' ? { fondo: '#1f2f5e' } : null); ins.position.set(0, 3.32, 0.2); ins.rotation.x = -0.1; g.add(ins);
       // casse ai lati
       g.add(mesh(new T.BoxGeometry(0.6, 0.45, 0.6), M('#8a5a35'), { x: 1.95, y: 0.225, z: 0.2, lb: 0.012 }));
       if (i % 2) g.add(mesh(new T.BoxGeometry(0.5, 0.38, 0.5), M('#9a6a42'), { x: -1.9, y: 0.19, z: -0.2, lb: 0.012 }));
       const merce = new T.Group(); merce.userData.vivo = true; merce.position.set(0, 0.96, 0.4); g.add(merce);
       ctx.ostacoli.push({ t: 'b', x0: x - 1.75, x1: x + 1.75, z0: MZ - 0.75, z1: MZ + 0.95 });
       if (i % 2) ctx.ostacoli.push({ t: 'c', x: x - 1.9, z: MZ - 0.2, r: 0.3 }); ctx.ostacoli.push({ t: 'c', x: x + 1.95, z: MZ + 0.2, r: 0.35 });
-      const porta = { id: 'banco-' + i, nome: d.nome, testo: (d.tema === 'tuo' ? '🧺 ' : d.tema === 'pesce' ? '🐟 ' : '🛒 ') + d.nome, x, z: MZ + 1.95, r: 1.35, fn: () => Mercato.apri(i) };
+      const porta = { id: 'banco-' + i, nome: d.nome, testo: (d.tema === 'carte' ? '🃏 ' : d.tema === 'pesce' ? '🐟 ' : '🛒 ') + d.nome, x, z: MZ + 1.95, r: 1.35, fn: () => Mercato.apri(i) };
       ctx.porte.push(porta);
       W.banchi.push({ g, merce, x, z: MZ, d, venditore: { x, z: MZ - 1.15, yaw: 0 } });
     });
@@ -11300,7 +11302,7 @@ body.arredando #joy,body.arredando #controlli,body.arredando #btn-contesto,body.
       const curva = new T.CatmullRomCurve3([new T.Vector3(a, 3.0, MZ - 0.55), new T.Vector3((a + b) / 2, 2.55, MZ - 0.55), new T.Vector3(b, 3.0, MZ - 0.55)]);
       sc.add(new T.Mesh(new T.TubeGeometry(curva, 12, 0.015, 4), cavo));
     }
-    ctx.toccabili.push({ obj: ia, testo: 'Mercatino: gli abitanti vendono le offerte del giorno; al tuo banco puoi vendere i mobili che non usi.' });
+    ctx.toccabili.push({ obj: ia, testo: 'Mercatino: ogni banco compra e vende la sua merce. Pesci alla Pescheria, mobili e luci ai loro banchi, carte di Belinverse al banco Belinverse TCG.' });
   }
 
   /* =====================================================================
@@ -11313,7 +11315,7 @@ body.arredando #joy,body.arredando #controlli,body.arredando #btn-contesto,body.
     const liberi = app.npc.slice();
     const prendi = () => liberi.shift();
     ruoli.pescatori = W.postiNpc.map((p, i) => { const o = prendi(); if (!o) return null; const canna = creaCanna(); o.av.root.add(canna.g); canna.g.position.set(0.24, 1.05, 0.22); return { o, p, canna, prossimo: rnd(8, 25), fil: creaFilo(), gall: creaGalleggiante() }; }).filter(Boolean);
-    ruoli.venditori = W.banchi.slice(0, 5).map((b, i) => { const o = prendi(); return o ? { o, b } : null; }).filter(Boolean);
+    ruoli.venditori = W.banchi.map((b, i) => { const o = prendi(); return o ? { o, b } : null; }).filter(Boolean);
     ruoli.passeggeri = [2, 5].map(c => { const o = prendi(); return o ? { o, c, prossimo: rnd(10, 30) } : null; }).filter(Boolean);
     ruoli.pescatori.forEach(r => { r.gall.position.set(r.p.lancio.x, W.acquaY + 0.05, r.p.lancio.z); });
   }
@@ -11539,17 +11541,16 @@ body.arredando #joy,body.arredando #controlli,body.arredando #btn-contesto,body.
   /* =====================================================================
      MERCATINO
      ===================================================================== */
-  function nuovoGiornoMercato() { const o = oggi(); if (S.merc.g !== o) { S.merc = { g: o, presi: [] }; salva(); } if (S.vend.g !== o) { S.vend = { g: o, c: 0 }; salva(); } }
+  function nuovoGiornoMercato() { const o = oggi(); if (S.merc.g !== o) { S.merc = { g: o, presi: [] }; salva(); } if (S.vend.g !== o) { S.vend = { g: o, c: 0 }; salva(); } if (!S.vendC || S.vendC.g !== o) { S.vendC = { g: o, c: 0 }; salva(); } }
   function prezzoPesce(sp) { const r = seme(oggi() + sp.id)(); return Math.max(1, Math.round(sp.prezzo * (0.85 + r * 0.3))); }
+  const eLuce = a => !!a.luce || ['vaso', 'pianta', 'tappeto', 'fontana'].indexOf(a.id) >= 0;
   function offerte(i) {
     nuovoGiornoMercato();
     const tema = BANCHI[i].tema, rng = seme(oggi() + ':' + i), A = (B.ARREDI || []).filter(a => !a.esclusivo && a.prezzo > 0);
     const mescola = l => { l = l.slice(); for (let k = l.length - 1; k > 0; k--) { const j = Math.floor(rng() * (k + 1)); [l[k], l[j]] = [l[j], l[k]]; } return l; };
     let out = [];
     if (tema === 'usato') out = mescola(A).slice(0, 4).map(a => ({ id: a.id, prezzo: Math.round(a.prezzo * (0.62 + rng() * 0.2)), pieno: a.prezzo }));
-    else if (tema === 'luci') { const l = A.filter(a => a.luce || ['vaso', 'pianta', 'tappeto', 'fontana'].indexOf(a.id) >= 0); out = mescola(l).slice(0, 3).map(a => ({ id: a.id, prezzo: Math.round(a.prezzo * 0.85), pieno: a.prezzo })); }
-    else if (tema === 'rarita') out = [{ id: 'lanterna', prezzo: 650 }, { id: 'statua', prezzo: 950 }].concat(mescola(A.slice().sort((a, b) => b.prezzo - a.prezzo).slice(0, 4)).slice(0, 1).map(a => ({ id: a.id, prezzo: a.prezzo, pieno: a.prezzo })));
-    else if (tema === 'affare') { const l = mescola(A); out = [{ id: l[0].id, prezzo: Math.round(l[0].prezzo * 0.5), pieno: l[0].prezzo, top: true }].concat(l.slice(1, 3).map(a => ({ id: a.id, prezzo: Math.round(a.prezzo * 0.8), pieno: a.prezzo }))); }
+    else if (tema === 'luci') { const l = A.filter(eLuce); out = mescola(l).slice(0, 3).map(a => ({ id: a.id, prezzo: Math.round(a.prezzo * 0.85), pieno: a.prezzo })); }
     out.forEach((o, k) => { o.k = i + ':' + k; o.venduto = S.merc.presi.indexOf(o.k) >= 0; });
     return out;
   }
@@ -11573,26 +11574,35 @@ body.arredando #joy,body.arredando #controlli,body.arredando #btn-contesto,body.
           b.merce.add(mesh(new T.BoxGeometry(0.62, 0.04, 0.42), M('#e8f4fb'), { x, y: 0.17 }));
           for (let j = 0; j < 3; j++) { const sp = SPECIE[(k * 3 + j) % 8], f = pesce3D(sp); f.scale.setScalar(0.75); f.rotation.set(0, 0.2 + j * 0.3, 0); f.position.set(x - 0.18 + j * 0.18, 0.24, (j - 1) * 0.08); b.merce.add(f); }
         });
-      } else if (t === 'tuo') mettiMerce(b, S.banco.map(v => v.id));
+      } else if (t === 'carte') mettiCarte(b);
       else mettiMerce(b, offerte(i).filter(o => !o.venduto).map(o => o.id));
     });
   }
-  // il tuo banco: vendite simulate (un abitante passa e compra)
-  function controllaVendite(silenzioso) {
-    const ora = Date.now(); let cambiato = false;
-    S.banco.slice().forEach(v => {
-      if (v.fine > ora) return;
-      S.banco.splice(S.banco.indexOf(v), 1); cambiato = true;
-      if (B.Eco) B.Eco.add(v.prezzo);
-      const ut = (window.CONFIG && window.CONFIG.utentiDemo) || [], chi = ut.length ? ut[(Math.random() * ut.length) | 0].nick : 'Un abitante';
-      const nome = ((B.ARREDI || []).find(a => a.id === v.id) || { nome: v.id }).nome;
-      toast((silenzioso ? 'Mentre eri via, ' : '🧺 ') + chi + ' ha comprato dal tuo banco: ' + nome + ' (+' + v.prezzo + ' coins)');
-      missione('mercato');
+  // le carte di Belinverse in piedi sul banco (tre a caso tra le rare, cambiano ogni giorno)
+  function mettiCarte(b) {
+    if (b.merce.children.length) return;
+    const BC = B.BELIN_CARTE; if (!BC) return;
+    const rng = seme(oggi() + ':carte'), rare = BC.CARTE.filter(k => k.r === 'SR'), ids = [];
+    while (ids.length < 3 && rare.length) ids.push(rare.splice(Math.floor(rng() * rare.length), 1)[0].id);
+    const src = id => (window.BELIN_IMG && window.BELIN_IMG[id]) || ('img/belinverse/' + id + '.webp');
+    ids.forEach((id, k) => {
+      const tx = new T.TextureLoader().load(src(id)); tx.encoding = T.sRGBEncoding;
+      const c = new T.Mesh(new T.PlaneGeometry(0.5, 0.7), new T.MeshBasicMaterial({ map: tx, side: T.DoubleSide }));
+      c.position.set((k - 1) * 0.72, 0.42, 0.05 - Math.abs(k - 1) * 0.08); c.rotation.set(-0.22, (1 - k) * 0.25, 0); b.merce.add(c);
+      b.merce.add(mesh(new T.BoxGeometry(0.56, 0.06, 0.2), M('#2c2140'), { x: c.position.x, y: 0.03, z: c.position.z + 0.08 }));
     });
-    if (cambiato) { salva(); merceRiposta(); if (Mercato.aperto === 5) Mercato.disegna(); }
+    // mazzetti di buste
+    [-1.2, 1.2].forEach(x => b.merce.add(mesh(new T.BoxGeometry(0.34, 0.12, 0.46), M('#c8553d'), { x, y: 0.06, z: 0.12, lb: 0.01 })));
+  }
+  // vecchio "tuo banco": i mobili che ci erano rimasti tornano liberi in casa
+  function restituisciBanco() {
+    if (!S.banco || !S.banco.length || !B.Eco) return;
+    S.banco.forEach(v => B.Eco.regala(v.id)); S.banco = []; salva();
   }
   const Mercato = B.Mercato = {
     aperto: -1,
+    annunciRete: () => (S.annunci.length ? S.annunci.map(a => [a.i, a.id, a.p]) : null),
+    vendutoA,
     apri(i) {
       Mercato.aperto = i; nuovoGiornoMercato();
       const ven = ruoli.venditori.find(r => r.b === W.banchi[i]);
@@ -11604,8 +11614,9 @@ body.arredando #joy,body.arredando #controlli,body.arredando #btn-contesto,body.
       const tema = BANCHI[i].tema, ven = ruoli.venditori.find(r => r.b === W.banchi[i]);
       const intro = t => c.appendChild(el('p', 'att-intro', t));
       if (tema === 'pesce') return disegnaPescheria(c, ven);
-      if (tema === 'tuo') return disegnaTuoBanco(c);
-      intro((ven ? '<b>' + ven.o.nick + '</b> · ' : '') + (tema === 'rarita' ? 'Pezzi che non trovi in negozio.' : tema === 'affare' ? 'Un pezzo a metà prezzo, solo oggi.' : 'Offerte di oggi: domani cambiano.'));
+      if (tema === 'carte') return disegnaBancoCarte(c, ven);
+      intro((ven ? '<b>' + ven.o.nick + '</b> · ' : '') + 'Offerte di oggi: domani cambiano. Più giù puoi vendergli i tuoi ' + (tema === 'luci' ? 'lampade e decorazioni' : 'mobili') + ' che non usi.');
+      c.appendChild(el('h3', '', 'In vendita oggi'));
       offerte(i).forEach(o => {
         const a = (B.ARREDI || []).find(q => q.id === o.id); if (!a) return;
         const d = el('div', 'att-cd' + (o.top ? ' top' : '')); d.appendChild(immagineMobile(a));
@@ -11618,6 +11629,7 @@ body.arredando #joy,body.arredando #controlli,body.arredando #btn-contesto,body.
         });
         d.appendChild(bt); c.appendChild(d);
       });
+      disegnaVendiMobili(c, tema, ven);
     }
   };
   function disegnaPescheria(c, ven) {
@@ -11643,32 +11655,112 @@ body.arredando #joy,body.arredando #controlli,body.arredando #btn-contesto,body.
     if (ven && guad && app.mostraBolla) app.mostraBolla(ven.o, 'Che bel pescato!', 3);
     aggSecchio(); Mercato.disegna();
   }
-  function disegnaTuoBanco(c) {
-    controllaVendite();
-    c.appendChild(el('p', 'att-intro', 'Metti in vendita i mobili che non usi: passa qualche abitante e li compra (al ' + Math.round(CF.banco.quota * 100) + '% del prezzo del negozio). Puoi esporre ' + CF.banco.max + ' oggetti.'));
-    c.appendChild(el('h3', '', 'In vendita'));
-    if (!S.banco.length) c.appendChild(el('p', 'att-vuoto', 'Il banco è vuoto.'));
-    S.banco.forEach(v => {
-      const a = (B.ARREDI || []).find(q => q.id === v.id) || { nome: v.id, w: 1, d: 1 }, d = el('div', 'att-cd');
-      d.appendChild(immagineMobile(a)); d.appendChild(el('b', '', a.nome)); d.appendChild(el('small', '', '🪙 ' + v.prezzo + ' · ' + (v.fine - Date.now() < 30000 ? 'qualcuno lo sta guardando…' : 'in attesa di un acquirente')));
-      const b = el('button', 'att-bt sec', 'Ritira'); b.addEventListener('click', () => { S.banco.splice(S.banco.indexOf(v), 1); salva(); if (B.Eco) B.Eco.regala(v.id); ov.dire('Ritirato: ' + a.nome); merceRiposta(); Mercato.disegna(); });
-      d.appendChild(b); c.appendChild(d);
-    });
-    c.appendChild(el('h3', '', 'I tuoi mobili liberi'));
-    const liberi = (B.ARREDI || []).filter(a => B.Eco && B.Eco.liberi(a.id) > 0);
-    if (!liberi.length) c.appendChild(el('p', 'att-vuoto', 'Non hai mobili liberi: quelli che hai sono tutti in casa.'));
+  // vendere i mobili liberi al banco giusto: luci e decorazioni da una parte, tutto il resto ai mobili usati
+  function disegnaVendiMobili(c, tema, ven) {
+    c.appendChild(el('h3', '', tema === 'luci' ? 'Vendi le tue luci e decorazioni' : 'Vendi i tuoi mobili'));
+    const liberi = (B.ARREDI || []).filter(a => B.Eco && B.Eco.liberi(a.id) > 0 && (tema === 'luci') === eLuce(a));
+    if (!liberi.length) { c.appendChild(el('p', 'att-vuoto', 'Non hai ' + (tema === 'luci' ? 'luci o decorazioni' : 'mobili') + ' liberi da vendere: quelli che hai sono tutti in casa.')); return; }
+    c.appendChild(el('p', 'att-intro', 'Te li ricompra al ' + Math.round(CF.usato.quota * 100) + '% del prezzo del negozio. Vendi solo quelli che non hai messo in casa.'));
     liberi.forEach(a => {
-      const prezzo = a.esclusivo || !a.prezzo ? CF.banco.prezzoEsclusivi : Math.max(10, Math.round(a.prezzo * CF.banco.quota)), d = el('div', 'att-cd');
+      const prezzo = a.esclusivo || !a.prezzo ? CF.usato.prezzoEsclusivi : Math.max(10, Math.round(a.prezzo * CF.usato.quota)), d = el('div', 'att-cd');
       d.appendChild(immagineMobile(a)); d.appendChild(el('b', '', a.nome)); d.appendChild(el('small', '', 'Ne hai liberi: ' + B.Eco.liberi(a.id)));
-      const b = el('button', 'att-bt', 'Vendi a 🪙 ' + prezzo); b.disabled = S.banco.length >= CF.banco.max;
+      const b = el('button', 'att-bt', 'Vendi a 🪙 ' + prezzo);
       b.addEventListener('click', () => {
-        if (S.banco.length >= CF.banco.max || B.Eco.liberi(a.id) <= 0) return;
-        B.Eco.stato.inv[a.id]--; B.Eco.salva(); B.Eco.avvisa();
-        S.banco.push({ id: a.id, prezzo, fine: Date.now() + rnd(CF.banco.attesa[0], CF.banco.attesa[1]) * 1000 }); salva(); missione('mercato');
-        ov.dire('In vendita: ' + a.nome); merceRiposta(); Mercato.disegna();
+        if (B.Eco.liberi(a.id) <= 0) return;
+        B.Eco.stato.inv[a.id]--; B.Eco.salva(); B.Eco.add(prezzo); missione('mercato');
+        ov.dire('Venduto: ' + a.nome + ' (+' + prezzo + ' coins)'); if (ven && app.mostraBolla) app.mostraBolla(ven.o, 'Affare fatto!', 3);
+        Mercato.disegna();
       });
       d.appendChild(b); c.appendChild(d);
     });
+  }
+  // banco Belinverse TCG: compra le carte che hai in più, prezzo secondo la rarità
+  const NOMI_RAR_C = { C: 'Comune', R: 'Rara', SR: 'Super rara', alt: 'Belinone Alternative' };
+  const COL_RAR_C = { C: '#cfd8dc', R: '#6fb4f0', SR: '#c58bd6', alt: '#f2c76e' };
+  const rarCarta = k => k.t === 'L' ? 'alt' : (CF.carte[k.r] ? k.r : 'C');
+  const prezzoConsigliato = k => rarCarta(k) === 'alt' ? CF.carte.alt : CF.carte[rarCarta(k)] * CF.annunci.consigliato;
+  const nomeCarta = id => ((B.BELIN_CARTE && B.BELIN_CARTE.PER_ID[id]) || { n: id }).n;
+  const imgCarta = id => (window.BELIN_IMG && window.BELIN_IMG[id]) || ('img/belinverse/' + id + '.webp');
+  function riquadroCarta(k, sotto) {
+    const r = rarCarta(k), d = el('div', 'att-cd');
+    const im = el('div', 'att-im carta'); const i = new Image(); i.src = imgCarta(k.id); i.alt = k.n; i.loading = 'lazy'; im.appendChild(i); d.appendChild(im);
+    d.appendChild(el('b', '', esc(k.n)));
+    d.appendChild(el('small', '', '<span class="rar" style="background:' + COL_RAR_C[r] + '">' + NOMI_RAR_C[r] + '</span>' + (sotto ? ' ' + sotto : '')));
+    return d;
+  }
+  function disegnaBancoCarte(c, ven) {
+    const BC = B.BELIN_CARTE, BV = B.Belinverse, ON = B.Online;
+    const resta = Math.max(0, CF.carte.tetto - S.vendC.c);
+    c.appendChild(el('p', 'att-intro', (ven ? '<b>' + ven.o.nick + '</b> · ' : '') + 'Qui le carte di Belinverse 2 si comprano e si vendono tra giocatori: metti in vendita le tue e compra quelle dei tuoi amici online.'));
+    if (!BC || !BV) { c.appendChild(el('p', 'att-vuoto', 'Le carte non sono disponibili.')); return; }
+    // 1) in vendita dagli amici
+    c.appendChild(el('h3', '', '🛒 In vendita dagli altri giocatori'));
+    const loro = ON && ON.annunci ? ON.annunci() : [];
+    if (!loro.length) c.appendChild(el('p', 'att-vuoto', ON && ON.inLinea && ON.inLinea() ? 'Nessun amico online ha carte in vendita adesso.' : 'Qui vedi le carte messe in vendita dai tuoi amici quando giocate insieme online.'));
+    loro.forEach(l => {
+      const k = BC.PER_ID[l.id]; if (!k) return;
+      const d = riquadroCarta(k, '· da <b>' + esc(l.nick) + '</b>');
+      const b = el('button', 'att-bt', l.attesa ? 'In attesa di ' + esc(l.nick) + '…' : 'Compra a 🪙 ' + l.p); b.disabled = l.attesa || !B.Eco || B.Eco.coins < l.p;
+      b.addEventListener('click', () => {
+        const r = ON.compra(l.nick, l.i);
+        ov.dire({ ok: 'Pagato 🪙 ' + l.p + ': aspetta che ' + l.nick + ' ti passi la carta', soldi: 'Non hai abbastanza coins', esaurito: 'Questa carta non è più in vendita', offline: l.nick + ' non è più online', attesa: 'Stai già aspettando questa carta' }[r] || '');
+        Mercato.disegna();
+      });
+      d.appendChild(b); c.appendChild(d);
+    });
+    // 2) le mie carte in vendita
+    c.appendChild(el('h3', '', '🏷️ Le tue carte in vendita <small>' + S.annunci.length + ' / ' + CF.annunci.max + '</small>'));
+    if (!S.annunci.length) c.appendChild(el('p', 'att-vuoto', 'Non hai carte in vendita.'));
+    else c.appendChild(el('p', 'att-intro', 'Le vedono i tuoi amici quando siete online insieme: quando uno la compra, i coins arrivano a te.'));
+    S.annunci.forEach(a => {
+      const k = BC.PER_ID[a.id]; if (!k) return;
+      const d = riquadroCarta(k, '🪙 ' + a.p);
+      const b = el('button', 'att-bt sec', 'Ritira'); b.addEventListener('click', () => { ritiraAnnuncio(a); ov.dire('Ritirata: ' + k.n + ' (torna nello zaino)'); Mercato.disegna(); });
+      d.appendChild(b); c.appendChild(d);
+    });
+    // 3) le mie carte da mettere in vendita
+    const coll = BV.collezione();
+    const lista = BC.CARTE.concat(BC.LEADER.filter(l => l.alt)).filter(k => BV.vendibili(k.id) > 0);
+    c.appendChild(el('h3', '', '🃏 Metti in vendita le tue carte'));
+    if (!lista.length) { c.appendChild(el('p', 'att-vuoto', Object.keys(coll).length ? 'Le carte che hai le usi tutte nel tuo mazzo.' : 'Non hai ancora carte. Il venditore della sala TCG ti regala un pacchetto al giorno.')); return; }
+    c.appendChild(el('p', 'att-intro', 'Scegli il prezzo (quello proposto dipende dalla rarità). Le copie del tuo mazzo e il Belinone scelto restano tue. Se hai fretta, ' + (ven ? ven.o.nick : 'il banco') + ' te le compra subito a meno: Comune 🪙 ' + CF.carte.C + ', Rara 🪙 ' + CF.carte.R + ', Super rara 🪙 ' + CF.carte.SR + ', Alternative 🪙 ' + CF.carte.alt + ' (oggi può spendere ancora 🪙 ' + resta + ').'));
+    const pieno = S.annunci.length >= CF.annunci.max;
+    lista.forEach(k => {
+      const nv = BV.vendibili(k.id), d = riquadroCarta(k, nv > 1 ? '· ne hai ' + nv + ' da vendere' : '');
+      const riga = el('div', 'att-prezzo'), inp = el('input'); inp.type = 'number'; inp.min = 1; inp.max = 99999; inp.inputMode = 'numeric'; inp.value = prezzoConsigliato(k);
+      riga.append(el('span', '', '🪙'), inp); d.appendChild(riga);
+      const b = el('button', 'att-bt', pieno ? 'Banco pieno' : 'Metti in vendita'); b.disabled = pieno;
+      b.addEventListener('click', () => {
+        const p = Math.round(+inp.value); if (!(p >= 1 && p <= 99999)) { ov.dire('Scrivi un prezzo da 1 a 99999'); return; }
+        if (S.annunci.length >= CF.annunci.max || !BV.vendi(k.id, 1)) return;
+        S.annunci.push({ i: ++S.nAnn, id: k.id, p }); salva(); missione('mercato');
+        ov.dire('In vendita: ' + k.n + ' a 🪙 ' + p); Mercato.disegna();
+      });
+      const sub = el('button', 'att-bt sec', 'Vendi subito a 🪙 ' + CF.carte[rarCarta(k)]); sub.disabled = CF.carte[rarCarta(k)] > resta;
+      sub.addEventListener('click', () => vendiCarte([{ k, n: 1 }], ven));
+      d.append(b, sub); c.appendChild(d);
+    });
+  }
+  function ritiraAnnuncio(a) {
+    const n = S.annunci.indexOf(a); if (n < 0) return;
+    S.annunci.splice(n, 1); salva(); if (B.Belinverse) B.Belinverse.aggiungi(a.id);
+  }
+  // un amico ha comprato una carta (online.js): l'annuncio deve esserci ancora, uguale
+  function vendutoA(i, id, p, nick) {
+    const a = S.annunci.find(x => x.i === i && x.id === id && x.p === p); if (!a) return false;
+    S.annunci.splice(S.annunci.indexOf(a), 1); salva();
+    if (B.Eco) B.Eco.add(p); missione('mercato');
+    toast('🃏 ' + nick + ' ha comprato ' + nomeCarta(id) + ' dal tuo banco (+' + p + ' coins)');
+    if (Mercato.aperto >= 0 && ov.aperta()) Mercato.disegna();
+    return true;
+  }
+  function vendiCarte(lista, ven) {
+    const BV = B.Belinverse; let guad = 0, n = 0, resta = CF.carte.tetto - S.vendC.c, finito = false;
+    lista.forEach(o => { const p = CF.carte[rarCarta(o.k)]; for (let q = 0; q < o.n; q++) { if (p > resta) { finito = true; break; } if (!BV.vendi(o.k.id, 1)) break; guad += p; resta -= p; n++; } });
+    S.vendC.c += guad; salva(); if (guad && B.Eco) B.Eco.add(guad); if (guad) missione('mercato');
+    ov.dire(guad ? 'Vendut' + (n > 1 ? 'e ' + n + ' carte' : 'a') + '! +' + guad + ' coins' + (finito ? ' (per oggi ha finito i soldi)' : '') : 'Per oggi il banco non compra più carte: torna domani');
+    if (ven && guad && app.mostraBolla) app.mostraBolla(ven.o, 'Bella carta!', 3);
+    Mercato.disegna();
   }
   function immagineMobile(a) {
     const im = el('div', 'att-im'), src = B.anteprimaMobile ? B.anteprimaMobile(a.id) : null;
@@ -11763,6 +11855,10 @@ body.orizz #pesca-pan{left:auto;right:136px;bottom:16px}
 .att-ov .att-im{width:100%;aspect-ratio:1/1;border-radius:12px;background:radial-gradient(circle at 50% 40%,#5a4670,#2c2038);display:grid;place-items:center;font-size:44px;overflow:hidden}
 .att-ov .att-im.pesce{aspect-ratio:200/130;background:radial-gradient(circle at 50% 45%,#3f7fa8,#1f3f5a)}
 .att-ov .att-im img{width:100%;height:100%;object-fit:contain}
+.att-ov .att-im.carta{aspect-ratio:5/7;background:none;border-radius:8px}
+.att-ov .att-prezzo{display:flex;align-items:center;gap:6px;width:100%;margin-top:4px}
+.att-ov .att-prezzo input{flex:1;min-width:0;border:1px solid rgba(242,199,110,.5);border-radius:10px;background:rgba(0,0,0,.25);color:#fbf3dc;font:700 16px inherit;font-family:inherit;padding:7px 8px;text-align:center}
+.att-ov .att-cd .att-bt+.att-bt{margin-top:6px}
 .att-ov .att-cd b{font-size:15px}.att-ov .att-cd small{opacity:.8;font-size:12.5px}
 .att-ov .rar{padding:1px 8px;border-radius:99px;font-size:11px;font-weight:800;color:#2a1a2e}
 .att-ov .att-bt{border:0;border-radius:12px;padding:9px 12px;font:800 14px inherit;font-family:inherit;color:#2a1a2e;background:#f2c76e;cursor:pointer;width:100%;margin-top:auto}
@@ -11863,11 +11959,12 @@ body.orizz #pesca-pan{left:auto;right:136px;bottom:16px}
       const g = G();
       if (g) {
         g.su('stanza', () => { if (Pesca.attivo && a.stanza().id !== 'piazza') Pesca.fine(); if (Ruota.attiva && a.stanza().id !== 'piazza') Ruota.scendi(false); });
-        g.su('avvio', () => { merceRiposta(); setTimeout(() => controllaVendite(true), 4000); });
+        g.su('avvio', () => { merceRiposta(); restituisciBanco(); });
+        g.su('annunci', () => { if (Mercato.aperto >= 0 && ov.aperta() && BANCHI[Mercato.aperto].tema === 'carte' && !(document.activeElement && document.activeElement.tagName === 'INPUT')) Mercato.disegna(); });
         g.su('porta', p => { if (Pesca.attivo) { const bc = document.getElementById('btn-contesto'); if (bc) bc.hidden = true; } });
       }
       if (B.Eco) B.Eco.su(() => { if (Mercato.aperto >= 0 && ov.aperta()) Mercato.disegna(); });
-      setInterval(() => controllaVendite(false), 1000);
+      restituisciBanco();
     },
     stato: S, CF, SPECIE, apriCollezione, _W: W
   };
@@ -11879,7 +11976,7 @@ body.orizz #pesca-pan{left:auto;right:136px;bottom:16px}
 /* =====================================================================
    THE BORG 3D - BELINVERSE 2 (Set 001): elenco carte.
    Trascritte dal PDF "BELINVERSE2_regolamento_e_carte". Le immagini sono in
-   img/belinverse/<id>.jpg (nel file unico: window.BELIN_IMG).
+   img/belinverse/<id>.webp (500x700) (nel file unico: window.BELIN_IMG).
    t: C = Character, E = Equipaggiamento, V = Evento, L = Belinone, T = Tira
    Effetti (liste di operazioni):
      etb = quando entra, att = quando attacca (+Potenza nel combattimento),
@@ -13347,6 +13444,10 @@ body.bv-attivo #barra-alto,body.bv-attivo #controlli,body.bv-attivo #btn-contest
     // venditore della sala TCG: apre direttamente la schermata dei pacchetti
     negozio() { BV.apri(true); },
     collezione: () => Object.assign({}, SAV.coll), gratisOggi, carteDiverse,
+    // banco Belinverse TCG del mercatino: si vendono solo le copie che non servono al tuo mazzo e al Belinone scelto
+    vendibili(id) { const nm = mazzoValido(SAV.mazzo) ? SAV.mazzo.filter(x => x === id).length : 0; return Math.max(0, possiedi(id) - nm - (SAV.leader === id && !LEADER_BASE.includes(id) ? 1 : 0)); },
+    aggiungi(id, n) { if (!PER_ID[id] || PER_ID[id].t === 'T') return false; SAV.coll[id] = possiedi(id) + (n || 1); salva(); return true; },
+    vendi(id, n) { n = Math.min(n || 1, BV.vendibili(id)); if (n <= 0) return 0; SAV.coll[id] = possiedi(id) - n; if (!SAV.coll[id]) delete SAV.coll[id]; salva(); return n; },
     get mazzo() { return mazzoValido(SAV.mazzo) ? SAV.mazzo.slice() : null; },
     get leader() { return leaderOk(SAV.leader) ? SAV.leader : '101'; },
     _sav: SAV,
@@ -14491,6 +14592,18 @@ body.bv-attivo #barra-alto,body.bv-attivo #controlli,body.bv-attivo #btn-contest
 #zn-zoom{position:fixed;inset:0;z-index:80;background:rgba(10,6,18,.85);display:none;align-items:center;justify-content:center;padding:20px}
 #zn-zoom.on{display:flex}
 #zn-zoom img{max-width:min(92vw,420px);max-height:86vh;border-radius:14px;box-shadow:0 8px 30px #000}
+#zn-zoom.scorri{padding:0;flex-direction:column;background:rgba(10,6,18,.97)}
+#zn-zoom .zs-fila{display:flex;width:100%;flex:1 1 auto;overflow-x:auto;overflow-y:hidden;scroll-snap-type:x mandatory;scrollbar-width:none;-webkit-overflow-scrolling:touch;overscroll-behavior:contain}
+#zn-zoom .zs-fila::-webkit-scrollbar{display:none}
+#zn-zoom .zs-p{flex:0 0 100%;scroll-snap-align:center;scroll-snap-stop:always;display:flex;align-items:center;justify-content:center;padding:16px 18px 8px;box-sizing:border-box}
+#zn-zoom .zs-p img{max-width:min(86vw,420px);max-height:calc(100% - 8px);aspect-ratio:5/7;object-fit:contain}
+#zn-zoom .zs-p.fuori img{filter:saturate(.35) brightness(.55)}
+#zn-zoom .zs-giu{flex:0 0 auto;display:flex;align-items:center;justify-content:center;gap:14px;padding:6px 12px calc(env(safe-area-inset-bottom,0px) + 14px);color:var(--crema);font-size:14px;font-weight:700;text-align:center}
+#zn-zoom .zs-giu span{min-width:150px}
+#zn-zoom .zs-giu small{display:block;font-weight:600;color:var(--testo-tenue);font-size:12px}
+#zn-zoom .zs-fr{width:44px;height:44px;border-radius:22px;border:0;background:rgba(255,255,255,.14);color:var(--crema);font-size:22px;font-weight:900;cursor:pointer;font-family:inherit}
+#zn-zoom .zs-fr:disabled{opacity:.3;cursor:default}
+#zn-zoom .zs-x{position:absolute;top:calc(env(safe-area-inset-top,0px) + 10px);right:12px;width:40px;height:40px;border-radius:20px;border:0;background:rgba(255,255,255,.16);color:var(--crema);font-size:20px;font-weight:900;cursor:pointer;z-index:2}
 body.orizz #pagina-zaino .zn-carte{grid-template-columns:repeat(auto-fill,minmax(70px,1fr))}
 `;
 
@@ -14511,14 +14624,41 @@ body.orizz #pagina-zaino .zn-carte{grid-template-columns:repeat(auto-fill,minmax
     });
     const soldi = el('div', 'zn-soldi'); schede.before(soldi);
     document.getElementById('zaino-griglia').classList.add('zn-corpo');
-    const z = el('div'); z.id = 'zn-zoom'; z.addEventListener('click', () => z.classList.remove('on')); document.body.appendChild(z);
+    const z = el('div'); z.id = 'zn-zoom'; z.addEventListener('click', e => { if (!z.classList.contains('scorri') || e.target === z || e.target.classList.contains('zs-p') || e.target.classList.contains('zs-x')) chiudiZoom(); }); document.body.appendChild(z);
+    document.addEventListener('keydown', e => { if (!z.classList.contains('on') || !z.classList.contains('scorri')) return; if (e.key === 'Escape') chiudiZoom(); else if (e.key === 'ArrowRight' || e.key === 'ArrowLeft') { const f = z.querySelector('.zs-fila'); f.scrollBy({ left: (e.key === 'ArrowRight' ? 1 : -1) * f.clientWidth, behavior: 'smooth' }); } });
     // ridisegna ogni volta che la pagina si apre
     new MutationObserver(() => { if (!pagina.hidden) disegna(); }).observe(pagina, { attributes: true, attributeFilter: ['hidden'] });
     if (B.Eco) B.Eco.su(() => { if (!pagina.hidden) disegna(); });
     costruito = true; return true;
   }
 
-  function zoom(src) { const z = document.getElementById('zn-zoom'); z.innerHTML = ''; const i = new Image(); i.src = src; z.appendChild(i); z.classList.add('on'); }
+  function zoom(src) { const z = document.getElementById('zn-zoom'); z.innerHTML = ''; z.classList.remove('scorri'); const i = new Image(); i.src = src; z.appendChild(i); z.classList.add('on'); }
+  function chiudiZoom() { const z = document.getElementById('zn-zoom'); z.classList.remove('on', 'scorri'); z.innerHTML = ''; }
+  // carte a tutto schermo che si scorrono col dito (o con le frecce), partendo da quella toccata
+  function sfoglia(voci, da) {
+    const z = document.getElementById('zn-zoom'); z.innerHTML = ''; z.classList.add('on', 'scorri');
+    const x = el('button', 'zs-x', '✕'); x.type = 'button'; x.setAttribute('aria-label', 'Chiudi');
+    const fila = el('div', 'zs-fila'), giu = el('div', 'zs-giu');
+    const pr = el('button', 'zs-fr', '‹'), nx = el('button', 'zs-fr', '›'), info = el('span');
+    pr.type = nx.type = 'button'; giu.append(pr, info, nx);
+    voci.forEach((v, k) => {
+      const p = el('div', 'zs-p' + (v.fuori ? ' fuori' : '')), i = new Image(); i.alt = v.nome; i.draggable = false;
+      if (Math.abs(k - da) <= 2) i.src = v.src; else i.dataset.src = v.src;   // le altre si caricano mentre scorri
+      p.appendChild(i); fila.appendChild(p);
+    });
+    z.append(x, fila, giu);
+    let cur = -1;
+    const vai = k => fila.scrollTo({ left: k * fila.clientWidth, behavior: 'smooth' });
+    pr.addEventListener('click', () => vai(cur - 1)); nx.addEventListener('click', () => vai(cur + 1));
+    const agg = () => {
+      const k = Math.max(0, Math.min(voci.length - 1, Math.round(fila.scrollLeft / Math.max(1, fila.clientWidth)))); if (k === cur) return; cur = k;
+      for (let j = k - 2; j <= k + 2; j++) { const im = fila.children[j] && fila.children[j].firstChild; if (im && im.dataset.src) { im.src = im.dataset.src; delete im.dataset.src; } }
+      const v = voci[k]; info.innerHTML = esc(v.nome) + '<small>' + (k + 1) + ' / ' + voci.length + (v.sotto ? ' · ' + v.sotto : '') + '</small>';
+      pr.disabled = k === 0; nx.disabled = k === voci.length - 1;
+    };
+    fila.addEventListener('scroll', agg, { passive: true });
+    fila.scrollLeft = da * fila.clientWidth; requestAnimationFrame(() => { fila.scrollLeft = da * fila.clientWidth; agg(); }); agg();
+  }
   function vaiAlMondo(poi) {
     const t = document.querySelector('#tabbar [data-vai="mondo"]'); if (t) t.click();
     if (poi) setTimeout(poi, 60);
@@ -14627,14 +14767,18 @@ body.orizz #pagina-zaino .zn-carte{grid-template-columns:repeat(auto-fill,minmax
     else lista = BC.CARTE.filter(k => k.t === filtroCarte);
     if (!lista.length) { c.appendChild(vuoto(filtroCarte === 'tutte' ? 'Non hai ancora carte: apri il pacchetto gratis dal venditore nella sala TCG.' : 'Niente qui.')); return; }
     if (filtroCarte !== 'tutte' && filtroCarte !== 'mazzo') c.appendChild(el('p', 'zn-nota', 'Le carte scure non le hai ancora.'));
-    const g = el('div', 'zn-carte');
-    lista.forEach(k => {
+    const g = el('div', 'zn-carte'), NT = { C: 'Character', E: 'Equipaggiamento', V: 'Evento', L: 'Belinone' }, NR = { C: 'Comune', R: 'Rara', SR: 'Super rara' };
+    const voci = lista.map(k => {
+      const n = coll[k.id] | 0, mia = k.t === 'L' ? base.includes(k.id) || n : n;
+      return { src: img(k.id), nome: k.n, fuori: !mia, sotto: (k.t === 'L' ? (k.alt ? 'Belinone Alternative' : 'Belinone') : NT[k.t] + ' · ' + (NR[k.r] || '')) + (n ? ' · ne hai ' + n : mia ? '' : ' · non ce l\'hai') };
+    });
+    lista.forEach((k, idx) => {
       const n = filtroCarte === 'mazzo' ? inMazzo[k.id] : (coll[k.id] | 0), mia = k.t === 'L' ? base.includes(k.id) || coll[k.id] : coll[k.id];
       const b = el('button', 'zn-carta' + (mia ? '' : ' fuori')); b.type = 'button';
       const i = new Image(); i.src = img(k.id); i.alt = k.n; i.loading = 'lazy'; b.appendChild(i);
       if (n > 1 || (filtroCarte === 'mazzo' && n)) b.appendChild(el('span', 'n', '×' + n));
       if (k.t === 'L' && k.id === BV.leader) b.appendChild(el('span', 'n', '★'));
-      b.addEventListener('click', () => zoom(img(k.id)));
+      b.addEventListener('click', () => sfoglia(voci, idx));
       g.appendChild(b);
     });
     c.appendChild(g);
@@ -14715,7 +14859,8 @@ body.orizz #pagina-zaino .zn-carte{grid-template-columns:repeat(auto-fill,minmax
     if (!gioco || !io.av) return null;
     const dove = (B.Raid && B.Raid.attivo) ? 'raid' : (B.Paintball && B.Paintball.attivo) ? 'paintball' : (B.Kart && B.Kart.attivo) ? 'kart' : (B.Belinverse && B.Belinverse.attivo) ? 'carte' : luogo();
     return { v: 1, nick: testo(gioco.nick, 20), look: lookDa(gioco.look), s: dove, x: +io.x.toFixed(2), z: +io.z.toFixed(2), y: +io.y.toFixed(2), r: +io.yaw.toFixed(2),
-      vel: +Math.hypot(io.vx, io.vz).toFixed(2), sed: io.seduto ? (io.seduto.dorme ? 2 : 1) : 0, k: GIOCHI[dove] && GIOCHI[dove]().rete ? GIOCHI[dove]().rete() : null };
+      vel: +Math.hypot(io.vx, io.vz).toFixed(2), sed: io.seduto ? (io.seduto.dorme ? 2 : 1) : 0, k: GIOCHI[dove] && GIOCHI[dove]().rete ? GIOCHI[dove]().rete() : null,
+      mc: B.Mercato && B.Mercato.annunciRete ? B.Mercato.annunciRete() : null };
   }
   function invia(extra) {
     if (!room) return; const p = mia(); if (!p) return;
@@ -14757,6 +14902,7 @@ body.orizz #pagina-zaino .zn-carte{grid-template-columns:repeat(auto-fill,minmax
       }
     }
     riceviDm(a, pr); riceviEv(a, pr);
+    const mcK = JSON.stringify(pr.mc || null); if (mcK !== a.mcK) { a.mcK = mcK; G.emetti('annunci'); }
     if (pr.em && pr.em.n !== a.nEm) { a.nEm = pr.em.n; const e = EMOTE[pr.em.t]; if (e) { a.av.faiEmote(pr.em.t, e[1]); bolla(a, e[0], e[1] + 0.4); } }
   }
   const EMOTE = { saluta: ['Ciao!', 3], balla: ['♪', 5], ridi: ['Ahah!', 3], applaudi: ['Bravo!', 4], evviva: ['Evviva!', 3] };
@@ -14889,6 +15035,8 @@ body.orizz #pagina-zaino .zn-carte{grid-template-columns:repeat(auto-fill,minmax
       if (e.k === 'bussa') campanello(a);
       else if (bussato && stessoLuogo(bussato, a.nick) && e.k === 'apri' && e.c && typeof e.c === 'object') { bussato = null; entraDa(a, e.c); }
       else if (bussato && stessoLuogo(bussato, a.nick) && e.k === 'no') { bussato = null; G.emetti('toast', a.nick + ' non ha aperto la porta'); }
+      else if (e.k === 'compra') { const ok = !!(B.Mercato && B.Mercato.vendutoA(num(e.i, 0), testo(e.id, 4), num(e.p, 0), a.nick)); evento({ k: ok ? 'venduto' : 'esaurito', a: a.nick, i: num(e.i, 0) }); }
+      else if (e.k === 'venduto' || e.k === 'esaurito') esitoAcquisto(a.nick, num(e.i, 0), e.k === 'venduto');
     });
   }
   function bussa(a) {
@@ -14897,6 +15045,36 @@ body.orizz #pagina-zaino .zn-carte{grid-template-columns:repeat(auto-fill,minmax
     evento({ k: 'bussa', a: a.nick });
     G.emetti('toast', 'Hai bussato a casa di ' + a.nick + '. Aspetta che ti apra…');
   }
+  /* ---------- carte di Belinverse in vendita tra amici (banco Belinverse TCG del mercatino) ----------
+     Chi vende tiene i suoi annunci nella presenza (mc: [[n, carta, prezzo]]). Chi compra paga subito
+     e manda l'evento "compra"; il venditore toglie l'annuncio, incassa e risponde "venduto"
+     (allora la carta arriva al compratore) o "esaurito" (allora i coins tornano indietro). */
+  const inAttesa = new Map();   // "nick|n" -> { nick, i, id, p }
+  const chiaveA = (nick, i) => String(nick).toLowerCase() + '|' + i;
+  function annunciDi(a) {
+    const l = a.pr && Array.isArray(a.pr.mc) ? a.pr.mc.slice(0, 16) : [], BC = B.BELIN_CARTE, ok = id => BC && (BC.CARTE.some(c => c.id === id) || BC.LEADER.some(c => c.id === id && c.alt));
+    return l.filter(x => Array.isArray(x) && ok(testo(x[1], 4))).map(x => ({ nick: a.nick, i: num(x[0], 0), id: testo(x[1], 4), p: Math.max(1, Math.min(99999, Math.round(num(x[2], 0)))) }))
+      .map(x => Object.assign(x, { attesa: inAttesa.has(chiaveA(x.nick, x.i)) }));
+  }
+  function compra(nick, i) {
+    const a = [...amici.values()].find(x => stessoLuogo(x.nick, nick)); if (!a) return 'offline';
+    const l = annunciDi(a).find(x => x.i === i); if (!l) return 'esaurito';
+    if (l.attesa) return 'attesa';
+    if (!B.Eco || !B.Eco.spendi(l.p)) return 'soldi';
+    inAttesa.set(chiaveA(a.nick, i), { nick: a.nick, i, id: l.id, p: l.p });
+    evento({ k: 'compra', a: a.nick, i, id: l.id, p: l.p }); G.emetti('annunci');
+    return 'ok';
+  }
+  function esitoAcquisto(nick, i, ok) {
+    const k = chiaveA(nick, i), c = inAttesa.get(k); if (!c) return; inAttesa.delete(k);
+    const nome = ((B.BELIN_CARTE && B.BELIN_CARTE.PER_ID && B.BELIN_CARTE.PER_ID[c.id]) || {}).n || 'la carta';
+    if (ok && B.Belinverse && B.Belinverse.aggiungi(c.id)) { G.emetti('toast', '🃏 Hai comprato ' + nome + ' da ' + c.nick + ': la trovi nello zaino'); if (B.Miss) B.Miss.ev('mercato'); }
+    else { if (B.Eco) B.Eco.add(c.p); G.emetti('toast', ok ? 'Acquisto non riuscito: coins restituiti' : nome + ' era già stata venduta: ti tornano ' + c.p + ' coins'); }
+    G.emetti('annunci');
+  }
+  // se il venditore esce prima di rispondere, i coins tornano indietro
+  function rimborsaDi(nick) { inAttesa.forEach(c => { if (stessoLuogo(c.nick, nick)) esitoAcquisto(c.nick, c.i, false); }); }
+
   const GIOCO_NOME = { raid: 'nel raid', paintball: 'a paintball', kart: 'sui kart', carte: 'a Belinverse' };
   function visita(id) {
     const a = amicoDa(id);
@@ -14999,12 +15177,12 @@ body.orizz #pagina-zaino .zn-carte{grid-template-columns:repeat(auto-fill,minmax
   (CODICE ? Promise.resolve(stanzaPeer(CODICE)) : window.claude.use('room')).then(r => {
     if (!r) return; room = r;
     r.onPeers(ch => {
-      ch.left.forEach(p => { const a = amici.get(p.peer); if (a && G.stato.giocatore) G.emetti('toast', a.nick + ' è uscito'); togli(p.peer); });
+      ch.left.forEach(p => { const a = amici.get(p.peer); if (a && G.stato.giocatore) G.emetti('toast', a.nick + ' è uscito'); togli(p.peer); if (a) { rimborsaDi(a.nick); G.emetti('annunci'); } });
       ch.joined.concat(ch.updated).forEach(p => { if (!p.sameTab && p.kind === 'viewer') aggiorna(p.peer, p.presence); });
     }, () => { amici.forEach((a, k) => togli(k)); room = null; });
     ultimo = ''; invia();
   }).catch(() => { });
-  B.Online = { visita, raggiungi, stato: () => room && room.stato ? room.stato() : null, amici: () => [...amici.values()].map(a => ({ nick: a.nick, s: a.pr.s, x: a.x, z: a.z })) };
+  B.Online = { visita, raggiungi, compra, annunci: () => [...amici.values()].reduce((o, a) => o.concat(annunciDi(a)), []), inLinea: () => !!room, stato: () => room && room.stato ? room.stato() : null, amici: () => [...amici.values()].map(a => ({ nick: a.nick, s: a.pr.s, x: a.x, z: a.z })) };
   ciclo();
 })();
 
