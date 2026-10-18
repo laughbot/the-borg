@@ -276,6 +276,13 @@ button { cursor: pointer; border: 0; background: none; touch-action: manipulatio
 #pagina-messaggi #dm-form input { background: #f1effb; color: #2b2540; border: 1px solid #d9d5ee; }
 #pagina-messaggi #dm-form input::placeholder { color: #8a85a8; }
 #pagina-messaggi #dm-form button { background: #4a8df0; color: #fff; }
+.bolla { cursor: pointer; }
+.bolla.scelta { outline: 2px solid #e0564f; outline-offset: 2px; }
+.bolla-elimina { margin-top: -4px; padding: 7px 14px; border-radius: 99px; background: #e0564f; color: #fff; font-weight: 800; font-size: 13px; }
+.bolla-elimina.io { align-self: flex-end; }
+.bolla-elimina.altro { align-self: flex-start; }
+#pagina-messaggi #dm-elimina { color: #e0564f; }
+#pagina-messaggi #dm-elimina.conferma { background: #e0564f; color: #fff; border-radius: 99px; padding: 6px 12px; }
 #pagina-messaggi .pagina-testa h2 { color: #2b2540; }
 
 /* ---------- amici e zaino ---------- */
@@ -461,16 +468,17 @@ body.orizz #inizio-anteprima { width: 120px; height: 140px; }
       <header class="pagina-testa"><h2>Messaggi privati</h2><span class="tag-demo">DEMO</span></header>
       <p class="avviso">Dimostrazione: le conversazioni sono simulate dal tuo browser e le risposte sono automatiche. Nulla viene inviato o salvato su un server.</p>
       <div id="dm-lista"></div>
-      <p class="suggerimento">Per scrivere a qualcuno: in piazza tocca un personaggio, apri il suo profilo e scegli "Messaggio privato".</p>
+      <p class="suggerimento">I messaggi privati arrivano solo dagli amici veri collegati con il vostro codice amici. Per scrivere a un amico tocca il suo personaggio e scegli "Messaggio privato".</p>
     </div>
     <div id="dm-thread" class="vista" hidden>
       <header class="pagina-testa">
         <button id="dm-indietro" class="btn-tondo" aria-label="Torna all'elenco"><svg viewBox="0 0 24 24" class="ico"><path d="m15 6-6 6 6 6"/></svg></button>
         <canvas id="dm-avatar" width="88" height="104" class="mini-avatar"></canvas>
         <h2 id="dm-nome"></h2>
+        <button id="dm-elimina" class="btn-testo" type="button">Elimina chat</button>
         <button id="dm-profilo" class="btn-testo">Profilo</button>
       </header>
-      <p class="avviso">Risposte automatiche di prova. Il vero sistema salvera' la cronologia sul server.</p>
+      <p class="avviso">Tocca un messaggio per eliminarlo. L'eliminazione vale solo sul tuo telefono.</p>
       <div id="dm-messaggi"></div>
       <form id="dm-form" autocomplete="off">
         <input id="dm-input" maxlength="300" placeholder="Scrivi un messaggio privato…" enterkeyhint="send" autocomplete="off" autocapitalize="sentences">
@@ -10135,32 +10143,14 @@ body.pc #rd-hud .tasto,body.pc #rd-hud .base{display:none}
     return true;
   }
 
-  /* ---------- messaggi privati (simulati) ---------- */
-  function iniziaDM() {
-    Object.keys(CFG.messaggiIniziali).forEach(id => {
-      const msgs = CFG.messaggiIniziali[id].map(m => ({ da: m.da, testo: m.testo, ora: m.ora }));
-      stato.dm[id] = { msgs, nonLetti: CFG.messaggiIniziali[id].filter(m => m.nonLetto).length };
-    });
-  }
+  /* ---------- messaggi privati ----------
+     I bot non scrivono e non ricevono messaggi privati: arrivano solo dagli amici veri (online.js). */
   function conversazione(id) { return stato.dm[id] || (stato.dm[id] = { msgs: [], nonLetti: 0 }); }
   function totNonLetti() { return Object.keys(stato.dm).reduce((s, k) => s + (stato.bloccati.has(k) ? 0 : stato.dm[k].nonLetti), 0); }
   function segnaLetti(id) { const c = conversazione(id); if (c.nonLetti) { c.nonLetti = 0; emetti('dm', { id }); } }
-  function riceviDM(id, testo) {
-    if (stato.bloccati.has(id)) return;
-    const c = conversazione(id);
-    c.msgs.push({ da: id, testo, ora: ora() });
-    if (stato.dmAperto === id) emetti('dm', { id });
-    else { c.nonLetti++; emetti('dm', { id }); emetti('toast', 'Nuovo messaggio da ' + utente(id).nick); }
-  }
-  function inviaDM(id, testo) {
-    testo = (testo || '').trim().slice(0, 300);
-    if (!testo) return false;
-    if (stato.bloccati.has(id)) { emetti('toast', 'Hai bloccato questo utente (dimostrativo)'); return false; }
-    conversazione(id).msgs.push({ da: 'io', testo, ora: ora() });
-    emetti('dm', { id });
-    setTimeout(() => { if (!stato.bloccati.has(id)) riceviDM(id, pick(CFG.rispostePrivate)); }, rnd(1800, 3600));
-    return true;
-  }
+  function inviaDM() { emetti('toast', 'I messaggi privati si scambiano solo con gli amici veri'); return false; }
+  function eliminaConversazione(id) { if (!stato.dm[id]) return; delete stato.dm[id]; emetti('dm', { id }); }
+  function eliminaMessaggio(id, i) { const c = stato.dm[id]; if (!c || !c.msgs[i]) return; c.msgs.splice(i, 1); emetti('dm', { id }); }
   function blocca(id) { stato.bloccati.add(id); emetti('blocchi', { id }); }
   function sblocca(id) { stato.bloccati.delete(id); emetti('blocchi', { id }); }
   function segnala() { emetti('toast', 'Segnalazione registrata (dimostrativa: non viene inviato nulla)'); }
@@ -10182,22 +10172,19 @@ body.pc #rd-hud .tasto,body.pc #rd-hud .base{display:none}
         const c = inPiazza(); if (c.length) { const u = pick(c); aggiungiChat(u.id, u.nick, pick(CFG.frasiPiazza)); }
       }
     }
-    if (!stato.arrivoInviato && stato.t - stato.tInizio > CFG.messaggioInArrivo.dopoSecondi) {
-      stato.arrivoInviato = true; riceviDM(CFG.messaggioInArrivo.da, CFG.messaggioInArrivo.testo);
-    }
   }
 
   function avvia(nick, look) {
     stato.giocatore = { id: 'io', nick, look: Object.assign({}, look), io: true };
-    stato.chat = []; stato.dm = {}; stato.bloccati = new Set(); stato.arrivoInviato = false; stato.tInizio = stato.t; stato.dmAperto = null; stato.timerChat = 7;
-    iniziaDM(); salva();
+    stato.chat = []; stato.dm = {}; stato.bloccati = new Set(); stato.dmAperto = null; stato.timerChat = 7;
+    salva();
   }
   function nickValido(n) { return /^[A-Za-z0-9_]{3,14}$/.test(n); }
   function impostaAtmosfera(id) { stato.atmosfera = id; salva(); emetti('atmosfera', id); }
   function impostaGrafica(g) { stato.grafica = g; salva(); emetti('grafica', g); }
   function cambiaLook(look) { stato.giocatore.look = Object.assign({}, look); salva(); emetti('look', stato.giocatore.look); }
 
-  window.Gioco = { stato, su, emetti, avvia, tick, inviaChat, inviaDM, conversazione, totNonLetti, segnaLetti, blocca, sblocca, segnala,
+  window.Gioco = { stato, su, emetti, avvia, tick, inviaChat, inviaDM, eliminaConversazione, eliminaMessaggio, conversazione, totNonLetti, segnaLetti, blocca, sblocca, segnala,
     carica, salva, utente, nickValido, impostaAtmosfera, impostaGrafica, cambiaLook, inPiazza, botPiazza };
 })();
 
@@ -14161,8 +14148,22 @@ body.bv-attivo #barra-alto,body.bv-attivo #controlli,body.bv-attivo #btn-contest
     const c = G.conversazione(id), box = $('#dm-messaggi'), bloccato = G.stato.bloccati.has(id);
     box.innerHTML = '';
     if (!c.msgs.length) box.append(el('div', 'vuoto', 'Scrivi il primo messaggio a ' + G.utente(id).nick + '.'));
-    c.msgs.forEach(m => { const b = el('div', 'bolla ' + (m.da === 'io' ? 'io' : 'altro'), m.testo); b.append(el('small', null, m.ora)); box.append(b); });
+    c.msgs.forEach((m, i) => {
+      const b = el('div', 'bolla ' + (m.da === 'io' ? 'io' : 'altro'), m.testo); b.append(el('small', null, m.ora));
+      // tocca un messaggio per farti chiedere se eliminarlo
+      b.addEventListener('click', () => {
+        const aperto = box.querySelector('.bolla-elimina'); if (aperto) aperto.remove();
+        if (box.querySelector('.bolla.scelta') === b) { b.classList.remove('scelta'); return; }
+        box.querySelectorAll('.bolla.scelta').forEach(x => x.classList.remove('scelta'));
+        b.classList.add('scelta');
+        const x = el('button', 'bolla-elimina ' + (m.da === 'io' ? 'io' : 'altro'), 'Elimina messaggio'); x.type = 'button';
+        x.addEventListener('click', e => { e.stopPropagation(); G.eliminaMessaggio(id, i); UI.toast('Messaggio eliminato'); });
+        b.after(x);
+      });
+      box.append(b);
+    });
     box.scrollTop = box.scrollHeight;
+    const cest = $('#dm-elimina'); cest.classList.remove('conferma'); cest.textContent = 'Elimina chat';
     $('#dm-input').disabled = bloccato;
     $('#dm-input').placeholder = bloccato ? 'Utente bloccato (demo)' : 'Scrivi un messaggio privato…';
   }
@@ -14178,6 +14179,7 @@ body.bv-attivo #barra-alto,body.bv-attivo #controlli,body.bv-attivo #btn-contest
     $('#foglio-dove').textContent = u.dove || (u.online ? 'In piazza' : 'Non in linea');
     $('#foglio-tipo').textContent = u.amico ? 'Amico vero' : 'Utente dimostrativo';
     $('#foglio-amico').hidden = !u.amico;
+    $('#foglio-dm').hidden = !u.amico;   // ai bot non si scrivono messaggi privati
     aggiornaBottoneBlocco();
     $('#foglio').hidden = false;
   }
@@ -14194,10 +14196,8 @@ body.bv-attivo #barra-alto,body.bv-attivo #controlli,body.bv-attivo #btn-contest
       const t = el('div', 'amico-testo'), nome = el('div', 'amico-nome', u.nick);
       nome.prepend(el('span', 'stato-pt' + (u.online ? '' : ' off')));
       t.append(nome, el('div', 'amico-bio', bloccato ? 'Utente bloccato (demo)' : (u.online ? 'In piazza · ' : 'Non in linea · ') + u.bio));
-      const dm = el('button', 'btn-testo', 'Scrivi'); dm.type = 'button';
-      dm.addEventListener('click', e => { e.stopPropagation(); if (!G.stato.dm[u.id]) G.conversazione(u.id); apriPagina('messaggi'); apriThread(u.id); });
       b.addEventListener('click', () => apriFoglio(u.id));
-      b.append(cv, t, dm); box.append(b);
+      b.append(cv, t); box.append(b);
     });
   }
   function creaZaino() {
@@ -14330,6 +14330,18 @@ body.bv-attivo #barra-alto,body.bv-attivo #controlli,body.bv-attivo #btn-contest
 
     $('#dm-indietro').addEventListener('click', mostraElencoDM);
     $('#dm-profilo').addEventListener('click', () => { if (G.stato.dmAperto) apriFoglio(G.stato.dmAperto); });
+    // elimina tutta la conversazione: il primo tocco chiede conferma, il secondo elimina
+    let tConferma = 0;
+    $('#dm-elimina').addEventListener('click', () => {
+      const b = $('#dm-elimina'), id = G.stato.dmAperto; if (!id) return;
+      if (!b.classList.contains('conferma')) {
+        b.classList.add('conferma'); b.textContent = 'Sicuro?';
+        clearTimeout(tConferma); tConferma = setTimeout(() => { b.classList.remove('conferma'); b.textContent = 'Elimina chat'; }, 3000);
+        return;
+      }
+      clearTimeout(tConferma);
+      G.eliminaConversazione(id); UI.toast('Conversazione eliminata'); mostraElencoDM(); aggiornaBadgeDM();
+    });
     $('#dm-form').addEventListener('submit', e => {
       e.preventDefault(); const i = $('#dm-input'), id = G.stato.dmAperto;
       if (id && G.inviaDM(id, i.value)) i.value = '';
