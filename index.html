@@ -525,6 +525,7 @@ body.orizz #inizio-anteprima { width: 120px; height: 140px; }
       <h3 class="titolo-sezione">Grafica</h3>
       <div id="grafica" class="catene"></div>
       <button id="btn-esci" class="btn-secondario">Torna alla schermata iniziale</button>
+      <button id="btn-ricomincia" class="btn-secondario" style="margin-top:10px;color:#ffb3a8">Ricomincia da capo</button>
       <p class="versione" id="versione"></p>
     </div>
   </section>
@@ -10623,7 +10624,7 @@ body.arredando #joy,body.arredando #controlli,body.arredando #btn-contesto,body.
     if (ghost) { gCasa().remove(ghost); ghost = null; }
     ghostId = id; if (!id) { statoInMano = null; ui(); return; }
     aperta = false;
-    ghost = B.creaMobile(id); ghost.traverse(o => { if (o.isMesh) { o.material = o.material.clone(); o.material.transparent = true; o.material.opacity = 0.65; o.castShadow = false; } });
+    ghost = B.creaMobile(id); ghost.traverse(o => { if (o.isMesh) { const tr = m => { m = m.clone(); m.transparent = true; m.opacity = 0.65; return m; }; o.material = Array.isArray(o.material) ? o.material.map(tr) : tr(o.material); o.castShadow = false; } });   // il dado ha un materiale per faccia
     gCasa().add(ghost); inizioGhost(); aggPannello();
   }
   // posizione di partenza: davanti all'avatar, poi si trascina col dito
@@ -10635,7 +10636,7 @@ body.arredando #joy,body.arredando #controlli,body.arredando #btn-contesto,body.
     for (let k = 0; k < 2; k++) { const t = (y - ray.ray.origin.y) / ray.ray.direction.y; x = ray.ray.origin.x + ray.ray.direction.x * t; z = ray.ray.origin.z + ray.ray.direction.z * t; y = Arredo.alt(x, z); }
     return [x, z];
   }
-  function colora(ok) { if (!ghost) return; const c = ok ? 0x6bff9a : 0xff6b6b; ghost.traverse(o => { if (o.isMesh && o.material.emissive) { o.material.emissive.setHex(c); o.material.emissiveIntensity = 0.35; } }); }
+  function colora(ok) { if (!ghost) return; const c = ok ? 0x6bff9a : 0xff6b6b; ghost.traverse(o => { if (o.isMesh) [].concat(o.material).forEach(m => { if (m.emissive) { m.emissive.setHex(c); m.emissiveIntensity = 0.35; } }); }); }
   function ui() {
     const mano = !!ghostId, on = Arredo.attivo;
     if (pan) pan.classList.toggle('on', on && aperta && !mano);
@@ -14748,6 +14749,14 @@ body.bv-attivo #barra-alto,body.bv-attivo #controlli,body.bv-attivo #btn-contest
       gr.append(b);
     });
     $('#btn-esci').addEventListener('click', () => UI.fade(mostraInizio));
+    // ricomincia da capo: cancella i progressi su questo dispositivo (si tengono il codice amici e le impostazioni di audio e comandi)
+    { const b = $('#btn-ricomincia'); let sicuro = 0, tt = 0;
+      if (b) b.addEventListener('click', () => {
+        if (!sicuro) { sicuro = 1; b.textContent = 'Sicuro? Perdi coins, mobili e carte: tocca ancora'; clearTimeout(tt); tt = setTimeout(() => { sicuro = 0; b.textContent = 'Ricomincia da capo'; }, 4000); return; }
+        const tieni = ['borg_amici', 'theborg.musica', 'theborg.effetti', 'theborg.muto', 'theborg.comandi.v1', 'theborg.raid.vibra'];
+        try { Object.keys(localStorage).forEach(k => { if ((k.indexOf('borg') === 0 || k.indexOf('theborg') === 0 || k === CFG.chiaveSalvataggio) && tieni.indexOf(k) < 0) localStorage.removeItem(k); }); } catch (e) { /* ok */ }
+        location.reload();
+      }); }
 
     // eventi dal gioco
     G.su('toast', t => { if ((B.Kart && B.Kart.attivo) || (B.Paintball && B.Paintball.attivo) || (B.Raid && B.Raid.attivo)) return; UI.toast(t); });
