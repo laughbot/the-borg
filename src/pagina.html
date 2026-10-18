@@ -1,0 +1,374 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="The Borg">
+  <meta name="theme-color" content="#241a33">
+  <title>The Borg 3D</title>
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="apple-touch-icon" href="apple-touch-icon.png">
+  <link rel="icon" type="image/png" sizes="192x192" href="icona-192.png">
+  <script>
+  @@include(src/avvio/schermata-home.js)@@
+  </script>
+  <style>
+@@include(src/stile.css)@@
+
+</style>
+</head>
+<body>
+<div id="app">
+
+  <canvas id="mondo" aria-label="Mondo 3D di gioco"></canvas>
+
+  <!-- Elementi sopra il mondo (visibili solo durante il gioco) -->
+  <div id="hud" hidden>
+    <header id="barra-alto">
+      <div class="stanza-info">
+        <span id="nome-stanza"></span>
+        <div class="riga-sotto">
+          <span id="badge-stanza" class="badge"></span>
+          <span id="pill-coins" class="pill-coins"></span>
+          <button id="btn-miss" class="pill-miss" aria-label="Missioni">&#x1F4CB;<i></i></button>
+          <span class="tag-demo" title="Prototipo visivo 3D: nessun server, gli altri utenti sono simulati">DEMO</span>
+        </div>
+      </div>
+      <div id="minimappa-box">
+        <canvas id="minimappa" width="240" height="240" aria-label="Minimappa"></canvas>
+        <button class="btn-casa" id="btn-casa" aria-label="Vai a casa"><svg viewBox="0 0 24 24" class="ico"><path d="M3 11.5 12 4l9 7.5"/><path d="M5.5 10.5V20h13v-9.5"/><path d="M10 20v-5h4v5"/></svg></button>
+      </div>
+    </header>
+
+    <div id="controlli">
+      <button class="btn-mini" id="btn-rot-sx" aria-label="Ruota la visuale a sinistra">&#x21B6;</button>
+      <button class="btn-mini" id="btn-rot-dx" aria-label="Ruota la visuale a destra">&#x21B7;</button>
+      <button class="btn-mini" id="btn-zoom-piu" aria-label="Ingrandisci">+</button>
+      <button class="btn-mini" id="btn-zoom-meno" aria-label="Riduci zoom">&minus;</button>
+      <button class="btn-mini" id="btn-giu" aria-label="Abbassa la telecamera">&#x2B07;</button>
+      <button class="btn-mini" id="btn-su" aria-label="Alza la telecamera">&#x2B06;</button>
+      <button class="btn-mini" id="btn-musica" aria-label="Spegni la musica">&#x1F3B5;</button>
+      <button class="btn-mini" id="btn-audio" aria-label="Spegni gli effetti sonori">&#x1F50A;</button>
+      <button class="btn-mini" id="btn-bici" aria-label="Bicicletta: tira fuori o rimetti">&#x1F6B2;</button>
+      <button class="btn-mini" id="btn-cam" aria-label="Camera dietro all'avatar: attiva o disattiva">&#x1F3A5;</button>
+      <button class="btn-mini" id="btn-arreda" aria-label="Arreda la casa" style="display:none">&#x1F6CB;&#xFE0F;</button>
+      <button class="btn-mini" id="btn-emote" aria-label="Emote">&#x1F60A;</button>
+      <div id="menu-emote" hidden>
+        <button data-e="saluta">&#x1F44B; Saluta</button><button data-e="balla">&#x1F483; Balla</button><button data-e="ridi">&#x1F602; Ridi</button><button data-e="applaudi">&#x1F44F; Applaudi</button><button data-e="evviva">&#x1F389; Evviva</button>
+      </div>
+    </div>
+    <button id="btn-contesto" hidden></button>
+    <div id="joy" aria-label="Joystick di movimento"><div id="joy-manopola"></div></div>
+
+    <div id="chat" hidden>
+      <div class="chat-testa">
+        <svg viewBox="0 0 24 24" class="ico"><path d="M4 5.5h16a1.5 1.5 0 0 1 1.5 1.5v8A1.5 1.5 0 0 1 20 16.5h-8l-5 4v-4H4A1.5 1.5 0 0 1 2.5 15V7A1.5 1.5 0 0 1 4 5.5Z"/></svg>
+        <strong>Chat Piazza</strong>
+        <span class="tag-demo">DEMO</span>
+        <span id="chat-ultimo"></span>
+        <button id="chat-chiudi" class="btn-mini" aria-label="Riduci o apri la chat">
+          <svg viewBox="0 0 24 24" class="ico"><path d="m6 9 6 6 6-6"/></svg>
+        </button>
+      </div>
+      <div id="chat-lista"></div>
+      <form id="chat-form" autocomplete="off">
+        <input id="chat-input" maxlength="120" placeholder="Scrivi un messaggio…" enterkeyhint="send" autocomplete="off" autocapitalize="sentences">
+        <button type="submit" aria-label="Invia"><svg viewBox="0 0 24 24" class="ico"><path d="M21 3 10 14"/><path d="m21 3-7 18-4-7-7-4Z"/></svg></button>
+      </form>
+    </div>
+  </div>
+
+  <!-- Pagine a tutto schermo (sopra il mondo, sotto la barra) -->
+  <section id="pagina-messaggi" class="pagina" hidden>
+    <div id="dm-elenco" class="vista">
+      <header class="pagina-testa"><h2>Messaggi privati</h2><span class="tag-demo">DEMO</span></header>
+      <p class="avviso">Dimostrazione: le conversazioni sono simulate dal tuo browser e le risposte sono automatiche. Nulla viene inviato o salvato su un server.</p>
+      <div id="dm-lista"></div>
+      <p class="suggerimento">I messaggi privati arrivano solo dagli amici veri collegati con il vostro codice amici. Per scrivere a un amico tocca il suo personaggio e scegli "Messaggio privato".</p>
+    </div>
+    <div id="dm-thread" class="vista" hidden>
+      <header class="pagina-testa">
+        <button id="dm-indietro" class="btn-tondo" aria-label="Torna all'elenco"><svg viewBox="0 0 24 24" class="ico"><path d="m15 6-6 6 6 6"/></svg></button>
+        <canvas id="dm-avatar" width="88" height="104" class="mini-avatar"></canvas>
+        <h2 id="dm-nome"></h2>
+        <button id="dm-elimina" class="btn-testo" type="button">Elimina chat</button>
+        <button id="dm-profilo" class="btn-testo">Profilo</button>
+      </header>
+      <p class="avviso">Tocca un messaggio per eliminarlo. L'eliminazione vale solo sul tuo telefono.</p>
+      <div id="dm-messaggi"></div>
+      <form id="dm-form" autocomplete="off">
+        <input id="dm-input" maxlength="300" placeholder="Scrivi un messaggio privato…" enterkeyhint="send" autocomplete="off" autocapitalize="sentences">
+        <button type="submit">Invia</button>
+      </form>
+    </div>
+  </section>
+
+  <section id="pagina-amici" class="pagina" hidden>
+    <div class="vista scorri">
+      <header class="pagina-testa"><h2>Amici</h2><span class="tag-demo">DEMO</span></header>
+      <p class="avviso">Dimostrazione: questi sono utenti simulati. L'elenco amici vero e le richieste di amicizia arriveranno con gli account.</p>
+      <div id="amici-lista"></div>
+    </div>
+  </section>
+
+  <section id="pagina-zaino" class="pagina" hidden>
+    <div class="vista scorri">
+      <header class="pagina-testa"><h2>Zaino</h2></header>
+      <p class="avviso">Lo zaino non esiste ancora: qui andranno oggetti, mobili per la casa e, in futuro, le carte. Gli spazi sono vuoti apposta, per mostrare come sara' l'interfaccia.</p>
+      <div class="zaino-schede"><span class="catena sel">Oggetti</span><span class="catena">Mobili</span><span class="catena">Carte</span></div>
+      <div id="zaino-griglia"></div>
+    </div>
+  </section>
+
+  <section id="pagina-profilo" class="pagina" hidden>
+    <div class="vista scorri">
+      <header class="pagina-testa"><h2>Il mio profilo</h2></header>
+      <div class="profilo-testa">
+        <canvas id="profilo-anteprima" width="240" height="280"></canvas>
+        <div class="profilo-nome" id="profilo-nick"></div>
+        <div class="badge-riga"><span class="badge">Casa privata</span><span class="badge alt">Solo su questo dispositivo</span></div>
+      </div>
+      <h3 class="titolo-sezione">Aspetto</h3>
+      <div id="profilo-editor"></div>
+      <h3 class="titolo-sezione">Atmosfera (prova dei colori)</h3>
+      <div id="atmosfere" class="catene"></div>
+      <h3 class="titolo-sezione">Informazioni sul prototipo</h3>
+      <div class="info-box">
+        <p><strong>Funziona davvero (in locale):</strong> mondo 3D con joystick e collisioni, piazza con belvedere e scale, casa con terrazza, cambio stanza dalle porte, minimappa, avatar personalizzabile (capelli, colori, vestiti, accessori), nickname e aspetto salvati sul dispositivo, rotazione della visuale, zoom, atmosfere.</p>
+        <p><strong>Dimostrativo (simulato):</strong> gli altri abitanti, la chat della piazza, i messaggi privati e le risposte, il blocco e la segnalazione, Negozio, Caffetteria, Sala Giochi, Forno, Biblioteca e Torre (porte non ancora apribili), la lista amici, i posti per i mobili.</p>
+        <p><strong>Non esiste ancora:</strong> server, account, password, database e multiplayer reale.</p>
+      </div>
+      <h3 class="titolo-sezione">Grafica</h3>
+      <div id="grafica" class="catene"></div>
+      <button id="btn-esci" class="btn-secondario">Torna alla schermata iniziale</button>
+      <button id="btn-ricomincia" class="btn-secondario" style="margin-top:10px;color:#ffb3a8">Ricomincia da capo</button>
+      <p class="versione" id="versione"></p>
+    </div>
+  </section>
+
+  <nav id="tabbar" hidden>
+    <button data-vai="mondo"><svg viewBox="0 0 24 24" class="ico"><path d="M3 6.5 9 4l6 2.5L21 4v13.5L15 20l-6-2.5L3 20Z"/><path d="M9 4v13.5M15 6.5V20"/></svg><span>Mondo</span></button>
+    <button data-vai="messaggi"><svg viewBox="0 0 24 24" class="ico"><path d="M4 5.5h16a1.5 1.5 0 0 1 1.5 1.5v8A1.5 1.5 0 0 1 20 16.5h-8l-5 4v-4H4A1.5 1.5 0 0 1 2.5 15V7A1.5 1.5 0 0 1 4 5.5Z"/></svg><span>Chat</span><i id="badge-dm" hidden></i></button>
+    <button data-vai="amici"><svg viewBox="0 0 24 24" class="ico"><circle cx="9" cy="8.5" r="3.3"/><path d="M2.8 19.5c.6-3.4 3-5.2 6.2-5.2s5.6 1.8 6.2 5.2"/><circle cx="17" cy="9.5" r="2.5"/><path d="M17.5 14.3c2.2.2 3.4 1.7 3.8 4"/></svg><span>Amici</span></button>
+    <button data-vai="zaino"><svg viewBox="0 0 24 24" class="ico"><path d="M8 7V5.5A2.5 2.5 0 0 1 10.5 3h3A2.5 2.5 0 0 1 16 5.5V7"/><rect x="4.5" y="7" width="15" height="14" rx="4"/><path d="M9 14h6M9 11h6"/></svg><span>Zaino</span></button>
+    <button data-vai="profilo"><svg viewBox="0 0 24 24" class="ico"><circle cx="12" cy="8.5" r="3.8"/><path d="M4.5 20c.8-4 3.8-6 7.5-6s6.7 2 7.5 6"/></svg><span>Profilo</span></button>
+  </nav>
+
+  <div id="toast" role="status" aria-live="polite"></div>
+
+  <!-- Profilo di un altro utente (scheda dal basso) -->
+  <div id="foglio" hidden>
+    <div id="foglio-sfondo"></div>
+    <div id="foglio-corpo">
+      <button id="foglio-chiudi" class="btn-tondo" aria-label="Chiudi"><svg viewBox="0 0 24 24" class="ico"><path d="m6 6 12 12M18 6 6 18"/></svg></button>
+      <canvas id="foglio-avatar" width="200" height="236"></canvas>
+      <h2 id="foglio-nick"></h2>
+      <div class="badge-riga"><span class="badge alt" id="foglio-tipo">Utente dimostrativo</span><span class="badge" id="foglio-dove">In piazza</span></div>
+      <p id="foglio-bio"></p>
+      <div class="azioni">
+        <button id="foglio-dm" class="btn-primario">Messaggio privato</button>
+        <div class="azioni-riga" id="foglio-amico" hidden>
+          <button id="foglio-visita" class="btn-secondario">Visita casa</button>
+          <button id="foglio-raggiungi" class="btn-secondario">Raggiungi</button>
+        </div>
+        <div class="azioni-riga">
+          <button id="foglio-segnala" class="btn-secondario">Segnala</button>
+          <button id="foglio-blocca" class="btn-secondario">Blocca</button>
+        </div>
+      </div>
+      <p class="nota-piccola">Segnala e Blocca sono dimostrativi: mostrano come funzionera' l'interfaccia, ma non esiste ancora un servizio di moderazione.</p>
+    </div>
+  </div>
+
+  <!-- Schermata iniziale -->
+  <section id="inizio">
+    <div class="inizio-contenuto">
+      <img class="logo" id="logo-img" src="@@include(src/dati/logo-schermata.txt)@@" alt="The Borg">
+      <h1 id="titolo-app" class="solo-lettori">The Borg</h1>
+      <p class="sottotitolo">Un piccolo borgo da vivere insieme</p>
+
+      <div class="scheda">
+        <canvas id="inizio-anteprima" width="200" height="232"></canvas>
+        <label for="nick">Il tuo nickname</label>
+        <input id="nick" maxlength="14" placeholder="Es. Stella_7" autocomplete="off" autocapitalize="off" spellcheck="false">
+        <div id="nick-errore" class="errore" aria-live="polite"></div>
+        <div id="inizio-editor"></div>
+      </div>
+
+      <button id="btn-entra" class="btn-primario grande">Entra nel borgo</button>
+      <p class="nota">Prototipo visivo 3D per approvare il design. Non c'e' ancora nessun server: gli altri abitanti, la chat e i messaggi sono simulati. Nickname e aspetto restano solo su questo dispositivo.</p>
+    </div>
+  </section>
+
+  <div id="dissolvenza"></div>
+</div>
+
+<script>
+@@include(src/avvio/errori-telefono.js)@@
+</script>
+<script>
+@@include(src/librerie/three.js)@@
+
+</script>
+<script>
+@@include(src/borgo/configurazione.js)@@
+
+</script>
+<script>
+@@include(src/borgo/base.js)@@
+
+</script>
+<script>
+@@include(src/borgo/avatar.js)@@
+
+</script>
+<script>
+@@include(src/borgo/foto-avatar.js)@@
+
+</script>
+<script>
+@@include(src/borgo/ottimizza.js)@@
+
+</script>
+<script>
+@@include(src/borgo/piazza.js)@@
+
+</script>
+<script>
+@@include(src/borgo/casa.js)@@
+
+</script>
+<script>
+@@include(src/dati/logo-laughtale.js)@@
+
+</script>
+<script>
+@@include(src/negozi/laughtale-insegna.js)@@
+
+</script>
+<script>
+@@include(src/negozi/negozio-tcg.js)@@
+
+</script>
+<script>
+@@include(src/negozi/laughtale-interno.js)@@
+
+</script>
+<script>
+@@include(src/borgo/biblioteca-letture.js)@@
+
+</script>
+<script>
+@@include(src/borgo/biblioteca.js)@@
+
+</script>
+<script>
+@@include(src/borgo/sala-giochi.js)@@
+
+</script>
+<script>
+@@include(src/avvio/orientamento.js)@@
+
+</script>
+<script>
+@@include(src/borgo/suoni.js)@@
+
+</script>
+<script>
+@@include(src/minigiochi/go-kart/scenografia.js)@@
+
+</script>
+<script>
+@@include(src/minigiochi/go-kart/modello.js)@@
+
+</script>
+<script>
+@@include(src/minigiochi/go-kart/gioco.js)@@
+
+</script>
+<script>
+@@include(src/minigiochi/comandi-fps.js)@@
+
+</script>
+<script>
+@@include(src/minigiochi/paintball/gioco.js)@@
+
+</script>
+<script>
+@@include(src/minigiochi/cripta/modelli.js)@@
+
+</script>
+<script>
+@@include(src/minigiochi/cripta/ambienti.js)@@
+
+</script>
+<script>
+@@include(src/minigiochi/cripta/creature.js)@@
+
+</script>
+<script>
+@@include(src/minigiochi/cripta/gioco.js)@@
+
+</script>
+<script>
+@@include(src/borgo/logica.js)@@
+
+</script>
+<script>
+@@include(src/borgo/coins-arredi.js)@@
+
+</script>
+<script>
+@@include(src/borgo/mobili-interattivi.js)@@
+
+</script>
+<script>
+@@include(src/borgo/missioni.js)@@
+
+</script>
+<script>
+@@include(src/borgo/attivita-piazza.js)@@
+
+</script>
+<script>@@include(src/dati/belinverse-immagini.js)@@</script>
+<script>
+@@include(src/minigiochi/belinverse/carte.js)@@
+
+</script>
+<script>
+@@include(src/minigiochi/belinverse/gioco.js)@@
+
+</script>
+<script>
+@@include(src/borgo/programma-principale.js)@@
+
+</script>
+<script>
+@@include(src/borgo/interfaccia.js)@@
+
+</script>
+<script>
+@@include(src/borgo/tutorial.js)@@
+
+</script>
+<script>
+@@include(src/borgo/zaino.js)@@
+
+</script>
+<script>
+@@include(src/librerie/peerjs.js)@@
+
+</script>
+<script>
+@@include(server/client/nakama-stanza.js)@@
+
+</script>
+<script>
+@@include(src/online/amici.js)@@
+
+</script>
+</body>
+</html>
