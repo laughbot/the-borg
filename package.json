@@ -1,0 +1,14 @@
+{
+  "name": "the-borg",
+  "private": true,
+  "description": "The Borg - un piccolo borgo 3D da vivere insieme",
+  "type": "module",
+  "scripts": {
+    "build": "node strumenti/costruisci.mjs",
+    "controlla": "node strumenti/costruisci.mjs --controlla",
+    "test:server": "node server/test/stanza.test.mjs"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}

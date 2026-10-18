@@ -1,0 +1,4 @@
+/* se qualcosa si rompe sul telefono, mostra l'errore in basso (tocca per chiuderlo): serve a capire i problemi che capitano solo su iPhone */
+(function () { let n = 0; function mostra(t) { if (n++ > 2) return; const d = document.createElement('div'); d.textContent = 'Errore: ' + t; d.style.cssText = 'position:fixed;left:8px;right:8px;bottom:8px;z-index:99999;background:#7a1d1d;color:#fff;font:12px/1.35 system-ui,sans-serif;padding:8px 10px;border-radius:8px;white-space:pre-wrap'; d.onclick = () => d.remove(); (document.body || document.documentElement).appendChild(d); }
+  window.addEventListener('error', e => mostra((e.message || 'errore') + (e.filename ? ' (' + e.filename.split('/').pop() + ':' + e.lineno + ')' : '')));
+  window.addEventListener('unhandledrejection', e => mostra(String(e.reason && e.reason.message || e.reason))); })();

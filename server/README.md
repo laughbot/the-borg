@@ -35,10 +35,10 @@ node test/stanza.test.mjs          # tre giocatori finti: stanze, chat, ingressi
 |---|---|
 | `nakama/modules/the-borg.js` | Modulo del server: RPC `stanza_entra` (una sola partita per codice) e partita autoritativa `stanza` (presenze, anti-spam, limite 8 KB, chiusura delle stanze vuote) |
 | `nakama/local.yml` | Configurazione per il locale (le chiavi di produzione arrivano dalle variabili d'ambiente del server, mai dal repo) |
-| `client/nakama-stanza.js` | Client per il gioco: accesso anonimo con id del dispositivo, websocket, riconnessione automatica. **È copiato dentro `index.html`** prima del modulo online: se lo cambi, aggiorna anche la copia (il test lo controlla) |
+| `client/nakama-stanza.js` | Client per il gioco: accesso anonimo con id del dispositivo, websocket, riconnessione automatica. **Entra in `index.html` da qui** (lo include `strumenti/costruisci.mjs`, prima del modulo online): se lo cambi, ricostruisci il gioco con `node strumenti/costruisci.mjs` (il test controlla che `index.html` sia aggiornato) |
 | `test/stanza.test.mjs` | Prova automatica con lo stesso client del gioco |
 
-Nel gioco (`index.html`, modulo "ONLINE CON GLI AMICI") il server si sceglie così:
+Nel gioco (`src/online/amici.js`, modulo "ONLINE CON GLI AMICI") il server si sceglie così:
 
 1. `?server=host:porta` nel link (per le prove);
 2. altrimenti `B3.SERVER`, che verrà impostato all'indirizzo di produzione (es. `https://api.<dominio>`);
