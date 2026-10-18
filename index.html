@@ -256,6 +256,32 @@ button { cursor: pointer; border: 0; background: none; touch-action: manipulatio
 #chat-sussurro span { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 #chat-sussurro button { flex: none; width: 28px; height: 28px; border-radius: 50%; background: rgba(255,255,255,.16); font-size: 13px; }
 #chat.sussurra #chat-form input { border-color: #a58ef0; }
+/* frasi rapide, emoji, menzioni, reazioni, chat grande */
+#chat-form .btn-rapidi { width: 40px; height: 40px; border-radius: 50%; background: rgba(255,255,255,.1); color: inherit; font-size: 20px; }
+#chat-form .btn-rapidi[aria-expanded="true"] { background: rgba(242,199,110,.3); }
+#chat-vassoio { display: flex; flex-direction: column; gap: 6px; padding: 6px 8px 0; }
+#chat-vassoio[hidden], #chat.compatta #chat-vassoio, #chat-suggerimenti[hidden], #chat.compatta #chat-suggerimenti { display: none; }
+.vassoio-riga { display: flex; gap: 6px; overflow-x: auto; scrollbar-width: none; -webkit-overflow-scrolling: touch; }
+.vassoio-riga::-webkit-scrollbar { display: none; }
+.vassoio-riga button { flex: none; padding: 7px 12px; border-radius: 99px; background: rgba(255,255,255,.1); border: 1px solid rgba(255,255,255,.12); font-size: 14px; white-space: nowrap; }
+#chat-emoji button { padding: 4px 8px; font-size: 21px; background: none; border-color: transparent; }
+#chat-suggerimenti { display: flex; gap: 6px; padding: 6px 8px 0; overflow-x: auto; }
+#chat-suggerimenti button { flex: none; padding: 6px 12px; border-radius: 99px; background: rgba(74,141,240,.3); border: 1px solid rgba(74,141,240,.6); font-size: 14px; font-weight: 700; }
+.riga .cita { color: #8fc1ff; font-weight: 700; }
+.riga .cita.me { color: #1d1430; background: var(--ambra); border-radius: 6px; padding: 0 4px; }
+.riga.menzione { background: rgba(242,199,110,.13); border-radius: 10px; margin: 0 -6px; padding: 3px 6px; }
+.riga .corpo { cursor: pointer; }
+.riga .reaz-riga { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 3px; }
+.riga .reaz { padding: 1px 7px; border-radius: 99px; background: rgba(255,255,255,.12); font-size: 12px; text-shadow: none; }
+.riga .reaz.mia { background: rgba(242,199,110,.3); }
+.reaz-scegli { display: flex; gap: 4px; margin: 2px 0 4px 30px; }
+.reaz-scegli button { width: 38px; height: 34px; border-radius: 12px; background: rgba(255,255,255,.12); font-size: 19px; }
+#chat-grande { margin-left: auto; }
+#chat-grande + #chat-chiudi { margin-left: 6px; }
+#chat-grande[aria-pressed="true"] { background: rgba(242,199,110,.3); }
+#chat.grande #chat-lista { max-height: 290px; }
+#chat.compatta #chat-grande { display: none; }
+body.orizz #chat.grande #chat-lista { max-height: 150px; }
 .riga.sistema .link { color: var(--ambra); text-decoration: underline; font-style: normal; font-weight: 700; padding: 0 0 0 4px; font-size: inherit; }
 .sicurezza-box { padding: 12px 14px; display: flex; flex-direction: column; gap: 10px; }
 .sicurezza-box p { margin: 0; }
@@ -487,13 +513,22 @@ body.orizz #inizio-anteprima { width: 120px; height: 140px; }
         <strong id="chat-titolo">Chat</strong>
         <span class="tag-demo">DEMO</span>
         <span id="chat-ultimo"></span>
+        <button id="chat-grande" class="btn-mini" type="button" aria-label="Ingrandisci la chat" aria-pressed="false">
+          <svg viewBox="0 0 24 24" class="ico"><path d="M8 4H4v4M16 4h4v4M8 20H4v-4M16 20h4v-4"/></svg>
+        </button>
         <button id="chat-chiudi" class="btn-mini" aria-label="Riduci o apri la chat">
           <svg viewBox="0 0 24 24" class="ico"><path d="m6 9 6 6 6-6"/></svg>
         </button>
       </div>
       <div id="chat-lista"></div>
       <div id="chat-sussurro" hidden><span>🤫 Sussurri a <b id="chat-sussurro-nick"></b>: lo leggete solo voi due</span><button id="chat-sussurro-via" type="button" aria-label="Smetti di sussurrare">✕</button></div>
+      <div id="chat-suggerimenti" hidden role="listbox" aria-label="Persone da citare"></div>
+      <div id="chat-vassoio" hidden>
+        <div class="vassoio-riga" id="chat-frasi" aria-label="Frasi rapide"></div>
+        <div class="vassoio-riga" id="chat-emoji" aria-label="Emoji"></div>
+      </div>
       <form id="chat-form" autocomplete="off">
+        <button id="chat-rapidi" class="btn-rapidi" type="button" aria-label="Frasi rapide ed emoji" aria-expanded="false">😊</button>
         <input id="chat-input" maxlength="120" placeholder="Scrivi un messaggio…" enterkeyhint="send" autocomplete="off" autocapitalize="sentences">
         <button type="submit" aria-label="Invia"><svg viewBox="0 0 24 24" class="ico"><path d="M21 3 10 14"/><path d="m21 3-7 18-4-7-7-4Z"/></svg></button>
       </form>
@@ -10631,10 +10666,34 @@ body.pc #rd-hud .tasto,body.pc #rd-hud .base{display:none}
      sussurro: solo tu e chi lo riceve lo vedete; lontano: detto lontano da te (piu' tenue). */
   function aggiungiVoce(voce) {
     voce.stanza = voce.stanza || stato.chiaveChat || stato.stanzaId;
+    voce.reazioni = voce.reazioni || {};
+    if (!voce.io && stato.giocatore && citaNick(voce.testo, stato.giocatore.nick)) voce.menzione = true;
     stato.chat.push(voce); if (stato.chat.length > 150) stato.chat.shift();
     emetti('chat', voce);
+    if (voce.menzione) emetti('menzione', voce);
     return voce;
   }
+  // "@Nick" nel testo (maiuscole e minuscole non contano)
+  function citaNick(testo, nick) {
+    if (!nick) return false;
+    const re = new RegExp('@' + nick.replace(/[^A-Za-z0-9_]/g, '') + '(?![A-Za-z0-9_])', 'i');
+    return re.test(testo || '');
+  }
+
+  /* ---------- reazioni ai messaggi (❤️ 😂 👍 😮): un tocco mette o toglie la tua ----------
+     voce.reazioni = { emoji: [nick, ...] }. Con gli amici veri viaggiano con la chiave del messaggio (online/amici.js). */
+  const REAZIONI = ['❤️', '😂', '👍', '😮'];
+  const RISPOSTE_CITATO = ['Eccomi!', 'Dimmi tutto!', 'Ciao! 👋', 'Sì?', 'Ci sono!', 'Ahah, ciao!'];
+  function reagisci(voce, emoji, daNick, on) {
+    if (!voce || REAZIONI.indexOf(emoji) < 0) return;
+    const chi = daNick || (stato.giocatore && stato.giocatore.nick) || 'io', l = voce.reazioni[emoji] || (voce.reazioni[emoji] = []);
+    const i = l.findIndex(n => n.toLowerCase() === chi.toLowerCase()), metti = on === undefined ? i < 0 : on;
+    if (metti && i < 0) l.push(chi); else if (!metti && i >= 0) l.splice(i, 1);
+    else return;
+    if (!l.length) delete voce.reazioni[emoji];
+    emetti('reazione', { voce, emoji, on: metti, mia: !daNick });
+  }
+  function voceDaChiave(k) { for (let i = stato.chat.length - 1; i >= 0; i--) if (stato.chat[i].chiave === k) return stato.chat[i]; return null; }
   function aggiungiChat(id, nick, testo, io, extra) { return aggiungiVoce(Object.assign({ id, nick, testo, ora: ora(), io: !!io }, extra || {})); }
   function chatQui() { const k = stato.chiaveChat || stato.stanzaId; return stato.chat.filter(m => m.stanza === k); }
 
@@ -10653,7 +10712,13 @@ body.pc #rd-hud .tasto,body.pc #rd-hud .base{display:none}
   function inviaChat(testo) {
     testo = controllaMessaggio(testo, 'chat', 120);
     if (!testo) return false;
-    aggiungiChat('io', stato.giocatore.nick, testo, true);
+    const mia = aggiungiChat('io', stato.giocatore.nick, testo, true);
+    // abitanti dimostrativi: chi viene citato con @ risponde quasi sempre; ogni tanto qualcuno mette una reazione
+    if (stato.stanzaId === 'piazza') {
+      const citato = inPiazza().find(u => citaNick(testo, u.nick));
+      if (citato) { setTimeout(() => { if (!stato.bloccati.has(citato.id)) aggiungiChat(citato.id, citato.nick, '@' + stato.giocatore.nick + ' ' + pick(RISPOSTE_CITATO)); }, rnd(1400, 2600)); return true; }
+      if (Math.random() < 0.3) setTimeout(() => { const u = pick(inPiazza()); if (u) reagisci(mia, pick(REAZIONI), u.nick, true); }, rnd(1500, 3500));
+    }
     if (stato.stanzaId === 'piazza' && Math.random() < 0.55) {
       const cand = inPiazza();
       if (cand.length) setTimeout(() => { const u = pick(inPiazza().length ? inPiazza() : cand); aggiungiChat(u.id, u.nick, pick(CFG.rispostePiazza).replace('{nick}', stato.giocatore.nick)); }, rnd(1500, 3200));
@@ -10739,7 +10804,7 @@ body.pc #rd-hud .tasto,body.pc #rd-hud .base{display:none}
   function cambiaLook(look) { stato.giocatore.look = Object.assign({}, look); salva(); emetti('look', stato.giocatore.look); }
 
   window.Gioco = { stato, su, emetti, avvia, tick, inviaChat, inviaDM, eliminaConversazione, eliminaMessaggio, conversazione, totNonLetti, segnaLetti, blocca, sblocca, segnala,
-    segnalazioni, MOTIVI, elencoBloccati, controllaMessaggio, aggiungiVoce, chatQui, inviaSussurro, carica, salva, utente, nickValido, nickPermesso, impostaAtmosfera, impostaGrafica, cambiaLook, inPiazza, botPiazza };
+    segnalazioni, MOTIVI, elencoBloccati, controllaMessaggio, aggiungiVoce, chatQui, inviaSussurro, citaNick, REAZIONI, reagisci, voceDaChiave, carica, salva, utente, nickValido, nickPermesso, impostaAtmosfera, impostaGrafica, cambiaLook, inPiazza, botPiazza };
 })();
 
 </script>
@@ -15023,15 +15088,95 @@ body.bv-attivo #barra-alto,body.bv-attivo #controlli,body.bv-attivo #btn-contest
       { const n2 = parseInt(cb.slice(1), 16), lum = (0.299 * (n2 >> 16) + 0.587 * ((n2 >> 8) & 255) + 0.114 * (n2 & 255)); av.style.color = lum < 110 ? '#ffffff' : '#2b2230'; }
       const corpo = el('div', 'corpo');
       const n = el('button', 'nick', m.nick); n.type = 'button';
-      if (!m.io) n.addEventListener('click', () => apriFoglio(m.id));
-      if (m.sussurro) corpo.append(n, el('span', 'verso', m.io ? '🤫 a ' + m.aNick + ':' : '🤫'), document.createTextNode(m.testo), el('span', 'ora', m.ora));
-      else corpo.append(n, document.createTextNode(m.testo), el('span', 'ora', m.ora));
+      if (!m.io) n.addEventListener('click', e => { e.stopPropagation(); apriFoglio(m.id); });
+      if (m.sussurro) corpo.append(n, el('span', 'verso', m.io ? '🤫 a ' + m.aNick + ':' : '🤫'), testoConCitazioni(m.testo), el('span', 'ora', m.ora));
+      else corpo.append(n, testoConCitazioni(m.testo), el('span', 'ora', m.ora));
+      if (m.menzione) r.classList.add('menzione');
+      // reazioni gia' messe
+      const em = Object.keys(m.reazioni || {});
+      if (em.length) {
+        const rr = el('div', 'reaz-riga'), mio = (G.stato.giocatore && G.stato.giocatore.nick || '').toLowerCase();
+        em.forEach(e => { const l = m.reazioni[e], c = el('button', 'reaz' + (l.some(x => x.toLowerCase() === mio) ? ' mia' : ''), e + ' ' + l.length); c.type = 'button'; c.title = l.join(', ');
+          c.addEventListener('click', ev => { ev.stopPropagation(); G.reagisci(m, e); }); rr.append(c); });
+        corpo.append(rr);
+      }
+      // tocca un messaggio per reagire
+      corpo.addEventListener('click', () => sceltaReazione(r, m));
       r.append(av, corpo);
       lista.append(r);
     });
     lista.scrollTop = lista.scrollHeight;
     const ultimo = visibili[visibili.length - 1];
     $('#chat-ultimo').textContent = ultimo ? ultimo.nick + ': ' + ultimo.testo : '';
+    // la chat e' cresciuta o calata (nuove righe, chat grande): joystick e visuale si spostano con lei
+    const h = $('#chat').offsetHeight; if (h !== hChat) { hChat = h; UI.aggiornaArea(); }
+  }
+  let hChat = 0;
+
+  /* ---------- @menzioni nel testo: evidenziate (in giallo quando citano te) ---------- */
+  function testoConCitazioni(t) {
+    const f = document.createDocumentFragment(), mio = (G.stato.giocatore && G.stato.giocatore.nick || '').toLowerCase();
+    String(t).split(/(@[A-Za-z0-9_]{3,14})/).forEach((pz, i) => {
+      if (i % 2) f.append(el('span', 'cita' + (pz.slice(1).toLowerCase() === mio ? ' me' : ''), pz)); else if (pz) f.append(document.createTextNode(pz));
+    });
+    return f;
+  }
+  function sceltaReazione(riga, m) {
+    const lista = $('#chat-lista'), aperta = lista.querySelector('.reaz-scegli');
+    if (aperta) { const era = aperta.previousSibling === riga; aperta.remove(); if (era) return; }
+    const box = el('div', 'reaz-scegli');
+    G.REAZIONI.forEach(e => { const b = el('button', null, e); b.type = 'button'; b.setAttribute('aria-label', 'Reagisci con ' + e); b.addEventListener('click', () => G.reagisci(m, e)); box.append(b); });
+    riga.after(box);
+    if (riga === lista.lastElementChild.previousSibling) lista.scrollTop = lista.scrollHeight;
+  }
+
+  /* ---------- frasi rapide ed emoji (un tocco) ---------- */
+  const FRASI = ['Ciao a tutti! 👋', 'Chi gioca?', 'Andiamo a paintball?', 'Gara di kart?', 'Partita a Belinverse?', 'Arrivo!', 'Bravo! 👏', 'Grazie!', 'A dopo!', 'Ahah 😂'];
+  const EMOJI = ['😂', '😍', '😎', '🥳', '😮', '😢', '😡', '👍', '👏', '🙏', '❤️', '🔥', '🎉', '⭐', '🎮', '🃏'];
+  function inviaDaChat(testo) { return sussurroA ? G.inviaSussurro(sussurroA, testo) : G.inviaChat(testo); }
+  function vassoio(apri) {
+    const v = $('#chat-vassoio'), b = $('#chat-rapidi'); apri = apri === undefined ? v.hidden : apri;
+    v.hidden = !apri; b.setAttribute('aria-expanded', apri ? 'true' : 'false'); UI.aggiornaArea();
+  }
+  function creaVassoio() {
+    const fr = $('#chat-frasi'), em = $('#chat-emoji');
+    FRASI.forEach(t => { const b = el('button', null, t); b.type = 'button'; b.addEventListener('click', () => { if (inviaDaChat(t)) vassoio(false); }); fr.append(b); });
+    EMOJI.forEach(e => {
+      const b = el('button', null, e); b.type = 'button'; b.setAttribute('aria-label', e);
+      b.addEventListener('mousedown', ev => ev.preventDefault());
+      b.addEventListener('click', () => {
+        const i = $('#chat-input'), a = i.selectionStart == null ? i.value.length : i.selectionStart, z = i.selectionEnd == null ? a : i.selectionEnd;
+        if ((i.value.length - (z - a) + e.length) > 120) return;
+        i.value = i.value.slice(0, a) + e + i.value.slice(z); try { i.setSelectionRange(a + e.length, a + e.length); } catch (x) { /* ok */ }
+      });
+      em.append(b);
+    });
+  }
+
+  /* ---------- suggerimenti @nick: chi e' nel tuo stesso luogo ---------- */
+  function presentiQui() {
+    const l = (G.stato.stanzaId === 'piazza' ? G.inPiazza().map(u => ({ id: u.id, nick: u.nick })) : []).concat(B.Online && B.Online.qui ? B.Online.qui() : []);
+    return l.filter(u => !G.stato.bloccati.has(u.id));
+  }
+  function suggerisci() {
+    const i = $('#chat-input'), box = $('#chat-suggerimenti'), pos = i.selectionStart == null ? i.value.length : i.selectionStart;
+    const m = i.value.slice(0, pos).match(/(^|\s)@([A-Za-z0-9_]{0,14})$/);
+    box.innerHTML = '';
+    if (!m) { if (!box.hidden) { box.hidden = true; UI.aggiornaArea(); } return; }
+    const pre = m[2].toLowerCase(), l = presentiQui().filter(u => u.nick.toLowerCase().indexOf(pre) === 0).slice(0, 6);
+    if (!l.length) { if (!box.hidden) { box.hidden = true; UI.aggiornaArea(); } return; }
+    l.forEach(u => {
+      const b = el('button', null, '@' + u.nick); b.type = 'button'; b.setAttribute('role', 'option');
+      b.addEventListener('mousedown', ev => ev.preventDefault());
+      b.addEventListener('click', () => {
+        const ins = '@' + u.nick + ' ', inizio = pos - m[2].length - 1;
+        i.value = (i.value.slice(0, inizio) + ins + i.value.slice(pos)).slice(0, 120);
+        try { i.setSelectionRange(inizio + ins.length, inizio + ins.length); i.focus(); } catch (x) { /* ok */ }
+        box.hidden = true; UI.aggiornaArea();
+      });
+      box.append(b);
+    });
+    const era = box.hidden; box.hidden = false; if (era) UI.aggiornaArea();
   }
 
   /* ---------- sussurra (come Habbo): il messaggio lo legge solo chi scegli, nella stessa stanza ---------- */
@@ -15304,6 +15449,14 @@ body.bv-attivo #barra-alto,body.bv-attivo #controlli,body.bv-attivo #btn-contest
     $('#btn-contesto').addEventListener('click', () => { const p = B.app.portaVicina(); if (p) B.app.usaPorta(p); });
 
     $('#chat-chiudi').addEventListener('click', compattaChat);
+    $('#chat-grande').addEventListener('click', () => {
+      const g = !$('#chat').classList.contains('grande'); $('#chat').classList.toggle('grande', g);
+      $('#chat-grande').setAttribute('aria-pressed', g ? 'true' : 'false'); $('#chat-grande').setAttribute('aria-label', g ? 'Rimpicciolisci la chat' : 'Ingrandisci la chat');
+      rendiChat(); UI.aggiornaArea();
+    });
+    creaVassoio();
+    $('#chat-rapidi').addEventListener('click', () => vassoio());
+    $('#chat-input').addEventListener('input', suggerisci);
     $('#btn-casa').addEventListener('click', () => {
       chiudiPagine();
       const a = B.app, haCasa = a.stanza().id === 'casa';
@@ -15312,7 +15465,7 @@ body.bv-attivo #barra-alto,body.bv-attivo #controlli,body.bv-attivo #btn-contest
     aggiungiFrecce($('#inizio-anteprima')); aggiungiFrecce($('#profilo-anteprima')); creaZaino();
     $('#chat-form').addEventListener('submit', e => {
       e.preventDefault(); const i = $('#chat-input');
-      if (sussurroA ? G.inviaSussurro(sussurroA, i.value) : G.inviaChat(i.value)) i.value = '';
+      if (inviaDaChat(i.value)) { i.value = ''; $('#chat-suggerimenti').hidden = true; vassoio(false); }
     });
 
     $('#dm-indietro').addEventListener('click', mostraElencoDM);
@@ -15391,6 +15544,11 @@ body.bv-attivo #barra-alto,body.bv-attivo #controlli,body.bv-attivo #btn-contest
     G.su('stanza', aggiornaStanza);
     G.su('profilo', d => apriFoglio(d.id));
     G.su('chat', () => rendiChat());
+    G.su('reazione', () => rendiChat());
+    G.su('menzione', v => {
+      try { if (navigator.vibrate) navigator.vibrate(40); } catch (e) { /* ok */ }
+      if (!chatAperta || paginaAttiva) UI.toast('💬 ' + v.nick + ' ti ha citato in chat');
+    });
     G.su('blocchi', () => { if (sussurroA && G.stato.bloccati.has(sussurroA)) smettiSussurro(); rendiChat(); aggiornaBadgeDM(); if (paginaAttiva === 'profilo') aggiornaBloccati(); if (paginaAttiva === 'messaggi') { G.stato.dmAperto ? rendiThread() : mostraElencoDM(); } });
     G.su('dm', d => {
       ordineDM = [d.id].concat(ordineDM.filter(x => x !== d.id));
@@ -15419,7 +15577,7 @@ body.bv-attivo #barra-alto,body.bv-attivo #controlli,body.bv-attivo #btn-contest
         app.classList.remove('tastiera'); app.style.height = ''; UI.aggiornaArea(); window.scrollTo(0, 0);
       }, 350);
     });
-    ['#chat-form button', '#dm-form button'].forEach(sel => $(sel).addEventListener('mousedown', e => e.preventDefault()));
+    document.querySelectorAll('#chat-form button, #dm-form button').forEach(b => b.addEventListener('mousedown', e => e.preventDefault()));
     if (window.visualViewport) {
       let rafVV = 0;
       const adatta = () => { if (!rafVV) rafVV = requestAnimationFrame(() => { rafVV = 0; adattaOra(); }); };
@@ -16009,7 +16167,7 @@ body.orizz #pagina-zaino .zn-carte{grid-template-columns:repeat(auto-fill,minmax
     const dove = (B.Raid && B.Raid.attivo) ? 'raid' : (B.Paintball && B.Paintball.attivo) ? 'paintball' : (B.Kart && B.Kart.attivo) ? 'kart' : (B.Belinverse && B.Belinverse.attivo) ? 'carte' : luogo();
     return { v: 1, nick: testo(gioco.nick, 20), look: lookDa(gioco.look), s: dove, x: +io.x.toFixed(2), z: +io.z.toFixed(2), y: +io.y.toFixed(2), r: +io.yaw.toFixed(2),
       vel: +Math.hypot(io.vx, io.vz).toFixed(2), sed: io.seduto ? (io.seduto.dorme ? 2 : 1) : 0, bk: io.bici ? 1 : 0, k: GIOCHI[dove] && GIOCHI[dove]().rete ? GIOCHI[dove]().rete() : null,
-      mc: B.Mercato && B.Mercato.annunciRete ? B.Mercato.annunciRete() : null, mo: mieiMo.length ? { l: mieiMo } : undefined };
+      mc: B.Mercato && B.Mercato.annunciRete ? B.Mercato.annunciRete() : null, mo: mieiMo.length ? { l: mieiMo } : undefined, re: mieiRe.length ? { l: mieiRe } : undefined };
   }
   // q = numero progressivo (chi riceve scarta gli aggiornamenti vecchi arrivati in ritardo),
   // t = il mio orologio in ms e vx/vz = la velocita' vera tra un invio e l'altro: chi mi vede
@@ -16034,7 +16192,7 @@ body.orizz #pagina-zaino .zn-carte{grid-template-columns:repeat(auto-fill,minmax
     const nick = testo(pr.nick, 20) || 'Amico';
     const et = B.etichetta(nick, { sfondo: '#7fd6a4', colore: '#163322', altezza: 0.38 }); et.position.y = 2.52; av.root.add(et);
     app.scene.add(av.root);
-    const a = { peer, av, nick, lookK: JSON.stringify(look), x: num(pr.x, 0), z: num(pr.z, 0), y: num(pr.y, 0), r: num(pr.r, 0), vel: 0, bolla: null, durBolla: 0, nMsg: pr.msg ? pr.msg.n : 0, nEm: pr.em ? pr.em.n : 0, nDm: maxDm(pr), nEv: maxN(pr.ev), nMo: maxN(pr.mo), pr, q: null, off: null, buf: [], bk: null, vis: false };
+    const a = { peer, av, nick, lookK: JSON.stringify(look), x: num(pr.x, 0), z: num(pr.z, 0), y: num(pr.y, 0), r: num(pr.r, 0), vel: 0, bolla: null, durBolla: 0, nMsg: pr.msg ? pr.msg.n : 0, nEm: pr.em ? pr.em.n : 0, nDm: maxDm(pr), nEv: maxN(pr.ev), nMo: maxN(pr.mo), nRe: maxN(pr.re), pr, q: null, off: null, buf: [], bk: null, vis: false };
     noti.set(nick.toLowerCase(), { nick, look });
     amici.set(peer, a); return a;
   }
@@ -16078,7 +16236,7 @@ body.orizz #pagina-zaino .zn-carte{grid-template-columns:repeat(auto-fill,minmax
     let a = amici.get(peer);
     // arrivato in ritardo dopo uno piu' nuovo: si butta (ogni aggiornamento contiene gia' tutto)
     if (a && a.q != null && typeof pr.q === 'number' && pr.q <= a.q && !(typeof pr.t === 'number' && pr.t < a.tm - 2000)) return;   // t molto piu' piccolo: ha ricaricato la pagina
-    if (a && (JSON.stringify(lookDa(pr.look)) !== a.lookK || (testo(pr.nick, 20) || 'Amico') !== a.nick)) { const vecchio = a; togli(peer); a = crea(peer, pr); a.nMsg = vecchio.nMsg; a.nEm = vecchio.nEm; a.nDm = vecchio.nDm; a.nEv = vecchio.nEv; a.nMo = vecchio.nMo; }
+    if (a && (JSON.stringify(lookDa(pr.look)) !== a.lookK || (testo(pr.nick, 20) || 'Amico') !== a.nick)) { const vecchio = a; togli(peer); a = crea(peer, pr); a.nMsg = vecchio.nMsg; a.nEm = vecchio.nEm; a.nDm = vecchio.nDm; a.nEv = vecchio.nEv; a.nMo = vecchio.nMo; a.nRe = vecchio.nRe; }
     if (!a) {
       a = crea(peer, pr);
       if (G.stato.giocatore) G.emetti('toast', a.nick + ' è online');
@@ -16093,11 +16251,11 @@ body.orizz #pagina-zaino .zn-carte{grid-template-columns:repeat(auto-fill,minmax
       a.nMsg = pr.msg.n; const t = filtra(testo(pr.msg.t, 120)), dest = testo(pr.msg.a, 20);
       if (t && stessoLuogo(pr.s, luogo()) && !bloccato(a) && (!dest || stessoLuogo(dest, mioNick()))) {
         const lontano = !dest && Math.hypot(a.x - app.io.x, a.z - app.io.z) > 14;
-        G.aggiungiVoce({ id: idAmico(a.nick), nick: a.nick, testo: t, ora: oraOra(), io: false, amico: true, sussurro: !!dest, lontano });
+        G.aggiungiVoce({ id: idAmico(a.nick), nick: a.nick, testo: t, ora: oraOra(), io: false, amico: true, sussurro: !!dest, lontano, chiave: a.nick.toLowerCase() + ':' + num(pr.msg.n, 0) });
         bolla(a, dest ? '🤫 ' + t : t, 4.5, dest ? 'sussurro' : null);
       }
     }
-    riceviDm(a, pr); riceviEv(a, pr); riceviMo(a, pr);
+    riceviDm(a, pr); riceviEv(a, pr); riceviMo(a, pr); riceviRe(a, pr);
     const mcK = JSON.stringify(pr.mc || null); if (mcK !== a.mcK) { a.mcK = mcK; G.emetti('annunci'); }
     if (pr.em && pr.em.n !== a.nEm) { a.nEm = pr.em.n; const e = EMOTE[pr.em.t]; if (e && !bloccato(a)) { a.av.faiEmote(pr.em.t, e[1]); bolla(a, e[0], e[1] + 0.4); } }
   }
@@ -16335,8 +16493,24 @@ body.orizz #pagina-zaino .zn-carte{grid-template-columns:repeat(auto-fill,minmax
   G.su('chat', v => {
     if (!v.io || v.amico) return;
     if (v.sussurro && String(v.aId || '').indexOf('amico:') !== 0) return;   // sussurro a un abitante dimostrativo: resta qui
-    nMsg++; invia({ msg: { n: nMsg, t: testo(v.testo, 120), a: v.sussurro ? testo(v.aNick, 20) : undefined } });
+    nMsg++; v.chiave = mioNick().toLowerCase() + ':' + nMsg;
+    invia({ msg: { n: nMsg, t: testo(v.testo, 120), a: v.sussurro ? testo(v.aNick, 20) : undefined } });
   });
+  /* ---------- reazioni ai messaggi: le ultime 6 restano nella presenza (re), con la chiave "nick:numero" del messaggio ---------- */
+  let nRe = 0, mieiRe = [];
+  G.su('reazione', r => {
+    if (!r.mia || !r.voce.chiave) return;
+    nRe++; mieiRe = mieiRe.concat({ n: nRe, k: r.voce.chiave, e: r.emoji, on: r.on ? 1 : 0 }).slice(-6); invia();
+  });
+  function riceviRe(a, pr) {
+    if (!pr.re || !Array.isArray(pr.re.l)) return;
+    pr.re.l.slice(-6).forEach(e => {
+      if (!e || num(e.n, 0) <= a.nRe) return;
+      a.nRe = num(e.n, 0);
+      if (bloccato(a) || G.REAZIONI.indexOf(e.e) < 0) return;
+      const v = G.voceDaChiave(testo(e.k, 40).toLowerCase()); if (v) G.reagisci(v, e.e, a.nick, !!e.on);
+    });
+  }
   const emoteOrig = app.emote;
   app.emote = function (tipo) { emoteOrig(tipo); if (EMOTE[tipo] && !app.io.seduto) { nEm++; invia({ em: { n: nEm, t: tipo } }); } };
 
@@ -16430,7 +16604,9 @@ body.orizz #pagina-zaino .zn-carte{grid-template-columns:repeat(auto-fill,minmax
     }, () => { amici.forEach((a, k) => togli(k)); room = null; });
     ultimo = ''; invia();
   }).catch(() => { });
-  B.Online = { visita, raggiungi, compra, annunci: () => [...amici.values()].reduce((o, a) => o.concat(annunciDi(a)), []), inLinea: () => !!room, stato: () => room && room.stato ? room.stato() : null, amici: () => [...amici.values()].map(a => ({ nick: a.nick, s: a.pr.s, x: a.x, z: a.z, bici: !!a.bk })) };
+  // chi e' nel tuo stesso luogo (per i suggerimenti delle @menzioni)
+  const qui = () => [...amici.values()].filter(a => stessoLuogo(a.pr.s, luogo()) && !bloccato(a)).map(a => ({ id: idAmico(a.nick), nick: a.nick }));
+  B.Online = { visita, raggiungi, compra, qui, annunci: () => [...amici.values()].reduce((o, a) => o.concat(annunciDi(a)), []), inLinea: () => !!room, stato: () => room && room.stato ? room.stato() : null, amici: () => [...amici.values()].map(a => ({ nick: a.nick, s: a.pr.s, x: a.x, z: a.z, bici: !!a.bk })) };
   ciclo();
 })();
 

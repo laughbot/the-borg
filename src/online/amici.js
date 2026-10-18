@@ -49,7 +49,7 @@
     const dove = (B.Raid && B.Raid.attivo) ? 'raid' : (B.Paintball && B.Paintball.attivo) ? 'paintball' : (B.Kart && B.Kart.attivo) ? 'kart' : (B.Belinverse && B.Belinverse.attivo) ? 'carte' : luogo();
     return { v: 1, nick: testo(gioco.nick, 20), look: lookDa(gioco.look), s: dove, x: +io.x.toFixed(2), z: +io.z.toFixed(2), y: +io.y.toFixed(2), r: +io.yaw.toFixed(2),
       vel: +Math.hypot(io.vx, io.vz).toFixed(2), sed: io.seduto ? (io.seduto.dorme ? 2 : 1) : 0, bk: io.bici ? 1 : 0, k: GIOCHI[dove] && GIOCHI[dove]().rete ? GIOCHI[dove]().rete() : null,
-      mc: B.Mercato && B.Mercato.annunciRete ? B.Mercato.annunciRete() : null, mo: mieiMo.length ? { l: mieiMo } : undefined };
+      mc: B.Mercato && B.Mercato.annunciRete ? B.Mercato.annunciRete() : null, mo: mieiMo.length ? { l: mieiMo } : undefined, re: mieiRe.length ? { l: mieiRe } : undefined };
   }
   // q = numero progressivo (chi riceve scarta gli aggiornamenti vecchi arrivati in ritardo),
   // t = il mio orologio in ms e vx/vz = la velocita' vera tra un invio e l'altro: chi mi vede
@@ -74,7 +74,7 @@
     const nick = testo(pr.nick, 20) || 'Amico';
     const et = B.etichetta(nick, { sfondo: '#7fd6a4', colore: '#163322', altezza: 0.38 }); et.position.y = 2.52; av.root.add(et);
     app.scene.add(av.root);
-    const a = { peer, av, nick, lookK: JSON.stringify(look), x: num(pr.x, 0), z: num(pr.z, 0), y: num(pr.y, 0), r: num(pr.r, 0), vel: 0, bolla: null, durBolla: 0, nMsg: pr.msg ? pr.msg.n : 0, nEm: pr.em ? pr.em.n : 0, nDm: maxDm(pr), nEv: maxN(pr.ev), nMo: maxN(pr.mo), pr, q: null, off: null, buf: [], bk: null, vis: false };
+    const a = { peer, av, nick, lookK: JSON.stringify(look), x: num(pr.x, 0), z: num(pr.z, 0), y: num(pr.y, 0), r: num(pr.r, 0), vel: 0, bolla: null, durBolla: 0, nMsg: pr.msg ? pr.msg.n : 0, nEm: pr.em ? pr.em.n : 0, nDm: maxDm(pr), nEv: maxN(pr.ev), nMo: maxN(pr.mo), nRe: maxN(pr.re), pr, q: null, off: null, buf: [], bk: null, vis: false };
     noti.set(nick.toLowerCase(), { nick, look });
     amici.set(peer, a); return a;
   }
@@ -118,7 +118,7 @@
     let a = amici.get(peer);
     // arrivato in ritardo dopo uno piu' nuovo: si butta (ogni aggiornamento contiene gia' tutto)
     if (a && a.q != null && typeof pr.q === 'number' && pr.q <= a.q && !(typeof pr.t === 'number' && pr.t < a.tm - 2000)) return;   // t molto piu' piccolo: ha ricaricato la pagina
-    if (a && (JSON.stringify(lookDa(pr.look)) !== a.lookK || (testo(pr.nick, 20) || 'Amico') !== a.nick)) { const vecchio = a; togli(peer); a = crea(peer, pr); a.nMsg = vecchio.nMsg; a.nEm = vecchio.nEm; a.nDm = vecchio.nDm; a.nEv = vecchio.nEv; a.nMo = vecchio.nMo; }
+    if (a && (JSON.stringify(lookDa(pr.look)) !== a.lookK || (testo(pr.nick, 20) || 'Amico') !== a.nick)) { const vecchio = a; togli(peer); a = crea(peer, pr); a.nMsg = vecchio.nMsg; a.nEm = vecchio.nEm; a.nDm = vecchio.nDm; a.nEv = vecchio.nEv; a.nMo = vecchio.nMo; a.nRe = vecchio.nRe; }
     if (!a) {
       a = crea(peer, pr);
       if (G.stato.giocatore) G.emetti('toast', a.nick + ' è online');
@@ -133,11 +133,11 @@
       a.nMsg = pr.msg.n; const t = filtra(testo(pr.msg.t, 120)), dest = testo(pr.msg.a, 20);
       if (t && stessoLuogo(pr.s, luogo()) && !bloccato(a) && (!dest || stessoLuogo(dest, mioNick()))) {
         const lontano = !dest && Math.hypot(a.x - app.io.x, a.z - app.io.z) > 14;
-        G.aggiungiVoce({ id: idAmico(a.nick), nick: a.nick, testo: t, ora: oraOra(), io: false, amico: true, sussurro: !!dest, lontano });
+        G.aggiungiVoce({ id: idAmico(a.nick), nick: a.nick, testo: t, ora: oraOra(), io: false, amico: true, sussurro: !!dest, lontano, chiave: a.nick.toLowerCase() + ':' + num(pr.msg.n, 0) });
         bolla(a, dest ? '🤫 ' + t : t, 4.5, dest ? 'sussurro' : null);
       }
     }
-    riceviDm(a, pr); riceviEv(a, pr); riceviMo(a, pr);
+    riceviDm(a, pr); riceviEv(a, pr); riceviMo(a, pr); riceviRe(a, pr);
     const mcK = JSON.stringify(pr.mc || null); if (mcK !== a.mcK) { a.mcK = mcK; G.emetti('annunci'); }
     if (pr.em && pr.em.n !== a.nEm) { a.nEm = pr.em.n; const e = EMOTE[pr.em.t]; if (e && !bloccato(a)) { a.av.faiEmote(pr.em.t, e[1]); bolla(a, e[0], e[1] + 0.4); } }
   }
@@ -375,8 +375,24 @@
   G.su('chat', v => {
     if (!v.io || v.amico) return;
     if (v.sussurro && String(v.aId || '').indexOf('amico:') !== 0) return;   // sussurro a un abitante dimostrativo: resta qui
-    nMsg++; invia({ msg: { n: nMsg, t: testo(v.testo, 120), a: v.sussurro ? testo(v.aNick, 20) : undefined } });
+    nMsg++; v.chiave = mioNick().toLowerCase() + ':' + nMsg;
+    invia({ msg: { n: nMsg, t: testo(v.testo, 120), a: v.sussurro ? testo(v.aNick, 20) : undefined } });
   });
+  /* ---------- reazioni ai messaggi: le ultime 6 restano nella presenza (re), con la chiave "nick:numero" del messaggio ---------- */
+  let nRe = 0, mieiRe = [];
+  G.su('reazione', r => {
+    if (!r.mia || !r.voce.chiave) return;
+    nRe++; mieiRe = mieiRe.concat({ n: nRe, k: r.voce.chiave, e: r.emoji, on: r.on ? 1 : 0 }).slice(-6); invia();
+  });
+  function riceviRe(a, pr) {
+    if (!pr.re || !Array.isArray(pr.re.l)) return;
+    pr.re.l.slice(-6).forEach(e => {
+      if (!e || num(e.n, 0) <= a.nRe) return;
+      a.nRe = num(e.n, 0);
+      if (bloccato(a) || G.REAZIONI.indexOf(e.e) < 0) return;
+      const v = G.voceDaChiave(testo(e.k, 40).toLowerCase()); if (v) G.reagisci(v, e.e, a.nick, !!e.on);
+    });
+  }
   const emoteOrig = app.emote;
   app.emote = function (tipo) { emoteOrig(tipo); if (EMOTE[tipo] && !app.io.seduto) { nEm++; invia({ em: { n: nEm, t: tipo } }); } };
 
@@ -470,6 +486,8 @@
     }, () => { amici.forEach((a, k) => togli(k)); room = null; });
     ultimo = ''; invia();
   }).catch(() => { });
-  B.Online = { visita, raggiungi, compra, annunci: () => [...amici.values()].reduce((o, a) => o.concat(annunciDi(a)), []), inLinea: () => !!room, stato: () => room && room.stato ? room.stato() : null, amici: () => [...amici.values()].map(a => ({ nick: a.nick, s: a.pr.s, x: a.x, z: a.z, bici: !!a.bk })) };
+  // chi e' nel tuo stesso luogo (per i suggerimenti delle @menzioni)
+  const qui = () => [...amici.values()].filter(a => stessoLuogo(a.pr.s, luogo()) && !bloccato(a)).map(a => ({ id: idAmico(a.nick), nick: a.nick }));
+  B.Online = { visita, raggiungi, compra, qui, annunci: () => [...amici.values()].reduce((o, a) => o.concat(annunciDi(a)), []), inLinea: () => !!room, stato: () => room && room.stato ? room.stato() : null, amici: () => [...amici.values()].map(a => ({ nick: a.nick, s: a.pr.s, x: a.x, z: a.z, bici: !!a.bk })) };
   ciclo();
 })();

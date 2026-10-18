@@ -170,15 +170,95 @@
       { const n2 = parseInt(cb.slice(1), 16), lum = (0.299 * (n2 >> 16) + 0.587 * ((n2 >> 8) & 255) + 0.114 * (n2 & 255)); av.style.color = lum < 110 ? '#ffffff' : '#2b2230'; }
       const corpo = el('div', 'corpo');
       const n = el('button', 'nick', m.nick); n.type = 'button';
-      if (!m.io) n.addEventListener('click', () => apriFoglio(m.id));
-      if (m.sussurro) corpo.append(n, el('span', 'verso', m.io ? '🤫 a ' + m.aNick + ':' : '🤫'), document.createTextNode(m.testo), el('span', 'ora', m.ora));
-      else corpo.append(n, document.createTextNode(m.testo), el('span', 'ora', m.ora));
+      if (!m.io) n.addEventListener('click', e => { e.stopPropagation(); apriFoglio(m.id); });
+      if (m.sussurro) corpo.append(n, el('span', 'verso', m.io ? '🤫 a ' + m.aNick + ':' : '🤫'), testoConCitazioni(m.testo), el('span', 'ora', m.ora));
+      else corpo.append(n, testoConCitazioni(m.testo), el('span', 'ora', m.ora));
+      if (m.menzione) r.classList.add('menzione');
+      // reazioni gia' messe
+      const em = Object.keys(m.reazioni || {});
+      if (em.length) {
+        const rr = el('div', 'reaz-riga'), mio = (G.stato.giocatore && G.stato.giocatore.nick || '').toLowerCase();
+        em.forEach(e => { const l = m.reazioni[e], c = el('button', 'reaz' + (l.some(x => x.toLowerCase() === mio) ? ' mia' : ''), e + ' ' + l.length); c.type = 'button'; c.title = l.join(', ');
+          c.addEventListener('click', ev => { ev.stopPropagation(); G.reagisci(m, e); }); rr.append(c); });
+        corpo.append(rr);
+      }
+      // tocca un messaggio per reagire
+      corpo.addEventListener('click', () => sceltaReazione(r, m));
       r.append(av, corpo);
       lista.append(r);
     });
     lista.scrollTop = lista.scrollHeight;
     const ultimo = visibili[visibili.length - 1];
     $('#chat-ultimo').textContent = ultimo ? ultimo.nick + ': ' + ultimo.testo : '';
+    // la chat e' cresciuta o calata (nuove righe, chat grande): joystick e visuale si spostano con lei
+    const h = $('#chat').offsetHeight; if (h !== hChat) { hChat = h; UI.aggiornaArea(); }
+  }
+  let hChat = 0;
+
+  /* ---------- @menzioni nel testo: evidenziate (in giallo quando citano te) ---------- */
+  function testoConCitazioni(t) {
+    const f = document.createDocumentFragment(), mio = (G.stato.giocatore && G.stato.giocatore.nick || '').toLowerCase();
+    String(t).split(/(@[A-Za-z0-9_]{3,14})/).forEach((pz, i) => {
+      if (i % 2) f.append(el('span', 'cita' + (pz.slice(1).toLowerCase() === mio ? ' me' : ''), pz)); else if (pz) f.append(document.createTextNode(pz));
+    });
+    return f;
+  }
+  function sceltaReazione(riga, m) {
+    const lista = $('#chat-lista'), aperta = lista.querySelector('.reaz-scegli');
+    if (aperta) { const era = aperta.previousSibling === riga; aperta.remove(); if (era) return; }
+    const box = el('div', 'reaz-scegli');
+    G.REAZIONI.forEach(e => { const b = el('button', null, e); b.type = 'button'; b.setAttribute('aria-label', 'Reagisci con ' + e); b.addEventListener('click', () => G.reagisci(m, e)); box.append(b); });
+    riga.after(box);
+    if (riga === lista.lastElementChild.previousSibling) lista.scrollTop = lista.scrollHeight;
+  }
+
+  /* ---------- frasi rapide ed emoji (un tocco) ---------- */
+  const FRASI = ['Ciao a tutti! 👋', 'Chi gioca?', 'Andiamo a paintball?', 'Gara di kart?', 'Partita a Belinverse?', 'Arrivo!', 'Bravo! 👏', 'Grazie!', 'A dopo!', 'Ahah 😂'];
+  const EMOJI = ['😂', '😍', '😎', '🥳', '😮', '😢', '😡', '👍', '👏', '🙏', '❤️', '🔥', '🎉', '⭐', '🎮', '🃏'];
+  function inviaDaChat(testo) { return sussurroA ? G.inviaSussurro(sussurroA, testo) : G.inviaChat(testo); }
+  function vassoio(apri) {
+    const v = $('#chat-vassoio'), b = $('#chat-rapidi'); apri = apri === undefined ? v.hidden : apri;
+    v.hidden = !apri; b.setAttribute('aria-expanded', apri ? 'true' : 'false'); UI.aggiornaArea();
+  }
+  function creaVassoio() {
+    const fr = $('#chat-frasi'), em = $('#chat-emoji');
+    FRASI.forEach(t => { const b = el('button', null, t); b.type = 'button'; b.addEventListener('click', () => { if (inviaDaChat(t)) vassoio(false); }); fr.append(b); });
+    EMOJI.forEach(e => {
+      const b = el('button', null, e); b.type = 'button'; b.setAttribute('aria-label', e);
+      b.addEventListener('mousedown', ev => ev.preventDefault());
+      b.addEventListener('click', () => {
+        const i = $('#chat-input'), a = i.selectionStart == null ? i.value.length : i.selectionStart, z = i.selectionEnd == null ? a : i.selectionEnd;
+        if ((i.value.length - (z - a) + e.length) > 120) return;
+        i.value = i.value.slice(0, a) + e + i.value.slice(z); try { i.setSelectionRange(a + e.length, a + e.length); } catch (x) { /* ok */ }
+      });
+      em.append(b);
+    });
+  }
+
+  /* ---------- suggerimenti @nick: chi e' nel tuo stesso luogo ---------- */
+  function presentiQui() {
+    const l = (G.stato.stanzaId === 'piazza' ? G.inPiazza().map(u => ({ id: u.id, nick: u.nick })) : []).concat(B.Online && B.Online.qui ? B.Online.qui() : []);
+    return l.filter(u => !G.stato.bloccati.has(u.id));
+  }
+  function suggerisci() {
+    const i = $('#chat-input'), box = $('#chat-suggerimenti'), pos = i.selectionStart == null ? i.value.length : i.selectionStart;
+    const m = i.value.slice(0, pos).match(/(^|\s)@([A-Za-z0-9_]{0,14})$/);
+    box.innerHTML = '';
+    if (!m) { if (!box.hidden) { box.hidden = true; UI.aggiornaArea(); } return; }
+    const pre = m[2].toLowerCase(), l = presentiQui().filter(u => u.nick.toLowerCase().indexOf(pre) === 0).slice(0, 6);
+    if (!l.length) { if (!box.hidden) { box.hidden = true; UI.aggiornaArea(); } return; }
+    l.forEach(u => {
+      const b = el('button', null, '@' + u.nick); b.type = 'button'; b.setAttribute('role', 'option');
+      b.addEventListener('mousedown', ev => ev.preventDefault());
+      b.addEventListener('click', () => {
+        const ins = '@' + u.nick + ' ', inizio = pos - m[2].length - 1;
+        i.value = (i.value.slice(0, inizio) + ins + i.value.slice(pos)).slice(0, 120);
+        try { i.setSelectionRange(inizio + ins.length, inizio + ins.length); i.focus(); } catch (x) { /* ok */ }
+        box.hidden = true; UI.aggiornaArea();
+      });
+      box.append(b);
+    });
+    const era = box.hidden; box.hidden = false; if (era) UI.aggiornaArea();
   }
 
   /* ---------- sussurra (come Habbo): il messaggio lo legge solo chi scegli, nella stessa stanza ---------- */
@@ -451,6 +531,14 @@
     $('#btn-contesto').addEventListener('click', () => { const p = B.app.portaVicina(); if (p) B.app.usaPorta(p); });
 
     $('#chat-chiudi').addEventListener('click', compattaChat);
+    $('#chat-grande').addEventListener('click', () => {
+      const g = !$('#chat').classList.contains('grande'); $('#chat').classList.toggle('grande', g);
+      $('#chat-grande').setAttribute('aria-pressed', g ? 'true' : 'false'); $('#chat-grande').setAttribute('aria-label', g ? 'Rimpicciolisci la chat' : 'Ingrandisci la chat');
+      rendiChat(); UI.aggiornaArea();
+    });
+    creaVassoio();
+    $('#chat-rapidi').addEventListener('click', () => vassoio());
+    $('#chat-input').addEventListener('input', suggerisci);
     $('#btn-casa').addEventListener('click', () => {
       chiudiPagine();
       const a = B.app, haCasa = a.stanza().id === 'casa';
@@ -459,7 +547,7 @@
     aggiungiFrecce($('#inizio-anteprima')); aggiungiFrecce($('#profilo-anteprima')); creaZaino();
     $('#chat-form').addEventListener('submit', e => {
       e.preventDefault(); const i = $('#chat-input');
-      if (sussurroA ? G.inviaSussurro(sussurroA, i.value) : G.inviaChat(i.value)) i.value = '';
+      if (inviaDaChat(i.value)) { i.value = ''; $('#chat-suggerimenti').hidden = true; vassoio(false); }
     });
 
     $('#dm-indietro').addEventListener('click', mostraElencoDM);
@@ -538,6 +626,11 @@
     G.su('stanza', aggiornaStanza);
     G.su('profilo', d => apriFoglio(d.id));
     G.su('chat', () => rendiChat());
+    G.su('reazione', () => rendiChat());
+    G.su('menzione', v => {
+      try { if (navigator.vibrate) navigator.vibrate(40); } catch (e) { /* ok */ }
+      if (!chatAperta || paginaAttiva) UI.toast('💬 ' + v.nick + ' ti ha citato in chat');
+    });
     G.su('blocchi', () => { if (sussurroA && G.stato.bloccati.has(sussurroA)) smettiSussurro(); rendiChat(); aggiornaBadgeDM(); if (paginaAttiva === 'profilo') aggiornaBloccati(); if (paginaAttiva === 'messaggi') { G.stato.dmAperto ? rendiThread() : mostraElencoDM(); } });
     G.su('dm', d => {
       ordineDM = [d.id].concat(ordineDM.filter(x => x !== d.id));
@@ -566,7 +659,7 @@
         app.classList.remove('tastiera'); app.style.height = ''; UI.aggiornaArea(); window.scrollTo(0, 0);
       }, 350);
     });
-    ['#chat-form button', '#dm-form button'].forEach(sel => $(sel).addEventListener('mousedown', e => e.preventDefault()));
+    document.querySelectorAll('#chat-form button, #dm-form button').forEach(b => b.addEventListener('mousedown', e => e.preventDefault()));
     if (window.visualViewport) {
       let rafVV = 0;
       const adatta = () => { if (!rafVV) rafVV = requestAnimationFrame(() => { rafVV = 0; adattaOra(); }); };
