@@ -248,16 +248,67 @@
     const s = new T.Sprite(new T.SpriteMaterial({ map: tex(cv), transparent: true, depthTest: false }));
     const h = o.altezza || 0.42; s.scale.set(h * w / 68, h, 1); s.renderOrder = 20; return s;
   }
-  function fumetto(testo) {
-    const [c0, x0] = tela(8, 8); x0.font = '36px sans-serif';
-    const w = Math.ceil(x0.measureText(testo).width) + 44, [cv, x] = tela(w, 86);
-    rr(x, 2, 2, w - 4, 62, 24); x.fillStyle = '#ffffff'; x.fill(); x.lineWidth = 3; x.strokeStyle = '#2a1a2e'; x.stroke();
-    x.beginPath(); x.moveTo(w / 2 - 10, 62); x.lineTo(w / 2, 82); x.lineTo(w / 2 + 10, 62); x.fillStyle = '#fff'; x.fill();
-    x.font = '36px sans-serif'; x.textAlign = 'center'; x.textBaseline = 'middle'; x.fillStyle = '#2a1a2e'; x.fillText(testo, w / 2, 34);
-    const s = new T.Sprite(new T.SpriteMaterial({ map: tex(cv), transparent: true, depthTest: false }));
-    s.scale.set(0.5 * w / 86, 0.5, 1); s.renderOrder = 21; return s;
+  /* ---------- fumetti (come Habbo) ----------
+     Il testo lungo va a capo (al massimo 3 righe). stile: 'sussurro' = fumetto chiaro, tratteggiato e in corsivo. */
+  const F_FONT = 36, F_RIGA = 42, F_MAXW = 470, F_RIGHE = 3;
+  function righeFumetto(x, testo) {
+    const parole = String(testo).split(' '), righe = []; let r = '';
+    const larga = t => x.measureText(t).width > F_MAXW;
+    parole.forEach(p => {
+      while (larga(p)) {                                   // parola lunghissima: si spezza
+        let k = p.length; while (k > 1 && larga((r ? r + ' ' : '') + p.slice(0, k))) k--;
+        if (k <= 1 && r) { righe.push(r); r = ''; continue; }
+        righe.push((r ? r + ' ' : '') + p.slice(0, k)); r = ''; p = p.slice(k);
+      }
+      const prova = r ? r + ' ' + p : p;
+      if (larga(prova) && r) { righe.push(r); r = p; } else r = prova;
+    });
+    if (r) righe.push(r);
+    if (righe.length > F_RIGHE) { righe.length = F_RIGHE; let u = righe[F_RIGHE - 1]; while (u && larga(u + '…')) u = u.slice(0, -1); righe[F_RIGHE - 1] = u + '…'; }
+    return righe;
   }
+  function fumetto(testo, stile) {
+    const sus = stile === 'sussurro', font = (sus ? 'italic ' : '') + F_FONT + 'px sans-serif';
+    const [c0, x0] = tela(8, 8); x0.font = font;
+    const righe = righeFumetto(x0, testo), larg = Math.max(...righe.map(r => x0.measureText(r).width), 20);
+    const w = Math.ceil(larg) + 44, hc = righe.length * F_RIGA + 22, h = hc + 24, [cv, x] = tela(w, h);
+    rr(x, 2, 2, w - 4, hc - 2, 24); x.fillStyle = sus ? '#ece6f7' : '#ffffff'; x.fill();
+    x.lineWidth = 3; x.strokeStyle = sus ? '#7a62c8' : '#2a1a2e'; if (sus) x.setLineDash([9, 7]); x.stroke(); x.setLineDash([]);
+    x.beginPath(); x.moveTo(w / 2 - 10, hc); x.lineTo(w / 2, h - 4); x.lineTo(w / 2 + 10, hc); x.fillStyle = sus ? '#ece6f7' : '#fff'; x.fill();
+    x.font = font; x.textAlign = 'center'; x.textBaseline = 'middle'; x.fillStyle = sus ? '#4b3a72' : '#2a1a2e';
+    righe.forEach((r, i) => x.fillText(r, w / 2, 13 + F_RIGA / 2 + i * F_RIGA));
+    const s = new T.Sprite(new T.SpriteMaterial({ map: tex(cv), transparent: true, depthTest: false }));
+    s.scale.set(0.5 * w / 86, 0.5 * h / 86, 1); s.renderOrder = 21; s.center.set(0.5, 0); return s;
+  }
+  /* fumetti impilati sopra la testa: il nuovo in basso, i precedenti salgono e sbiadiscono (al massimo 3).
+     ent ha av.root; si usa Bolle.mostra / aggiorna (ogni fotogramma) / pulisci / finisci. */
+  const BOLLE_MAX = 3, BOLLE_Y = 2.78;
+  function bollaVia(root, b) { root.remove(b.s); if (b.s.material) { if (b.s.material.map) b.s.material.map.dispose(); b.s.material.dispose(); } }
+  const Bolle = {
+    mostra(ent, testo, sec, stile) {
+      const root = ent.av.root, l = ent.bolle || (ent.bolle = []), s = fumetto(testo, stile);
+      s.position.y = BOLLE_Y - 0.25; root.add(s);
+      l.push({ s, dur: sec || 4.5, y: BOLLE_Y - 0.25 });
+      while (l.length > BOLLE_MAX) bollaVia(root, l.shift());
+      ent.bolla = s;
+    },
+    aggiorna(ent, dt) {
+      const l = ent.bolle; if (!l || !l.length) return;
+      for (let i = l.length - 1; i >= 0; i--) { l[i].dur -= dt; if (l[i].dur <= 0) { bollaVia(ent.av.root, l[i]); l.splice(i, 1); } }
+      // sdraiato (a letto) l'avatar e' ruotato: i fumetti salgono lungo il suo asse z
+      const sdr = !!ent.bolleSdraiato; let y = sdr ? 1.65 : BOLLE_Y;
+      for (let i = l.length - 1; i >= 0; i--) {
+        const b = l[i]; b.y += (y - b.y) * Math.min(1, dt * 12);
+        if (sdr) b.s.position.set(0, 0.5, b.y); else b.s.position.set(0, b.y, 0);
+        b.s.material.opacity = Math.min(1, b.dur / 0.35) * (i === l.length - 1 ? 1 : 0.78);
+        y += b.s.scale.y + 0.06;
+      }
+      ent.bolla = l.length ? l[l.length - 1].s : null;
+    },
+    pulisci(ent) { (ent.bolle || []).forEach(b => bollaVia(ent.av.root, b)); ent.bolle = []; ent.bolla = null; },
+    finisci(ent) { const l = ent.bolle; if (l && l.length) l[l.length - 1].dur = Math.min(l[l.length - 1].dur, 0.3); }
+  };
 
-  window.B3 = { T, CFG, M, eCache, Mluce, finestreMat, linea, lineaBox, mesh, tela, tex, rnd, rr, etichetta, fumetto,
+  window.B3 = { T, CFG, M, eCache, Mluce, finestreMat, linea, lineaBox, mesh, tela, tex, rnd, rr, etichetta, fumetto, Bolle,
     texSelciato, texTegole, texParquet, texTerracotta, texTappeto, texMosaico, texAlone, texOrologio, texLancette, texQuadro, texBacheca, texRighe, texFestone, texInsegna, texStendardo, texLuna, texCielo, texCerchio, COLORE_LINEA };
 })();

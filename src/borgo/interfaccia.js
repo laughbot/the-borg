@@ -130,6 +130,8 @@
     $('#nome-stanza').textContent = info.def.nome;
     const b = $('#badge-stanza'); b.textContent = info.def.pubblica ? 'Pubblica' : 'Privata'; b.className = 'badge' + (info.def.pubblica ? ' pubblica' : '');
     $('#chat').hidden = !info.def.pubblica && info.id !== 'casa';   // in casa: per chiacchierare con gli amici in visita
+    $('#chat-titolo').textContent = info.id === 'casa' ? 'Chat di casa' : info.def.nome;   // ogni luogo ha la sua chat
+    smettiSussurro();
     $('#btn-casa').setAttribute('aria-label', info.id === 'casa' ? 'Vai in piazza' : 'Vai a casa');
     $('#btn-casa').title = info.id === 'casa' ? 'Vai in piazza' : 'Vai a casa';
     $('#btn-contesto').hidden = true;
@@ -160,21 +162,37 @@
     const lista = $('#chat-lista'); lista.innerHTML = '';
     const benv = el('div', 'riga sistema', 'Benvenuto! Rispetta tutti e non scrivere mai dati personali.'), lr = el('button', 'link', 'Regole');
     lr.type = 'button'; lr.addEventListener('click', () => mostraRegole()); benv.append(lr); lista.append(benv);
-    const visibili = G.stato.chat.filter(m => !G.stato.bloccati.has(m.id));
+    const visibili = G.chatQui().filter(m => !G.stato.bloccati.has(m.id));
     visibili.forEach(m => {
-      const r = el('div', 'riga' + (m.io ? ' io' : ''));
+      const r = el('div', 'riga' + (m.io ? ' io' : '') + (m.sussurro ? ' sussurro' : '') + (m.lontano ? ' lontano' : ''));
+      if (m.lontano) r.title = 'Detto lontano da te';
       const av = el('span', 'av', m.nick.charAt(0).toUpperCase()), cb = coloreAvatar(m.id); av.style.background = cb;
       { const n2 = parseInt(cb.slice(1), 16), lum = (0.299 * (n2 >> 16) + 0.587 * ((n2 >> 8) & 255) + 0.114 * (n2 & 255)); av.style.color = lum < 110 ? '#ffffff' : '#2b2230'; }
       const corpo = el('div', 'corpo');
       const n = el('button', 'nick', m.nick); n.type = 'button';
       if (!m.io) n.addEventListener('click', () => apriFoglio(m.id));
-      corpo.append(n, document.createTextNode(m.testo), el('span', 'ora', m.ora));
+      if (m.sussurro) corpo.append(n, el('span', 'verso', m.io ? '🤫 a ' + m.aNick + ':' : '🤫'), document.createTextNode(m.testo), el('span', 'ora', m.ora));
+      else corpo.append(n, document.createTextNode(m.testo), el('span', 'ora', m.ora));
       r.append(av, corpo);
       lista.append(r);
     });
     lista.scrollTop = lista.scrollHeight;
     const ultimo = visibili[visibili.length - 1];
     $('#chat-ultimo').textContent = ultimo ? ultimo.nick + ': ' + ultimo.testo : '';
+  }
+
+  /* ---------- sussurra (come Habbo): il messaggio lo legge solo chi scegli, nella stessa stanza ---------- */
+  let sussurroA = null;
+  function sussurra(id) {
+    const u = G.utente(id); if (!u) return;
+    sussurroA = id; $('#chat-sussurro-nick').textContent = u.nick; $('#chat-sussurro').hidden = false; $('#chat').classList.add('sussurra');
+    $('#chat-input').placeholder = 'Sussurra a ' + u.nick + '…';
+    if (!chatAperta) compattaChat();
+    UI.aggiornaArea(); setTimeout(() => { try { $('#chat-input').focus(); } catch (e) { /* ok */ } }, 60);
+  }
+  function smettiSussurro() {
+    sussurroA = null; $('#chat-sussurro').hidden = true; $('#chat').classList.remove('sussurra');
+    $('#chat-input').placeholder = 'Scrivi un messaggio…'; UI.aggiornaArea();
   }
 
   /* ---------- messaggi privati ---------- */
@@ -242,6 +260,7 @@
     $('#foglio-tipo').textContent = u.amico ? 'Amico vero' : 'Utente dimostrativo';
     $('#foglio-amico').hidden = !u.amico;
     $('#foglio-dm').hidden = !u.amico;   // ai bot non si scrivono messaggi privati
+    $('#foglio-sussurra').hidden = G.stato.bloccati.has(id) || !u.online;
     aggiornaBottoneBlocco();
     $('#foglio').hidden = false;
   }
@@ -440,7 +459,7 @@
     aggiungiFrecce($('#inizio-anteprima')); aggiungiFrecce($('#profilo-anteprima')); creaZaino();
     $('#chat-form').addEventListener('submit', e => {
       e.preventDefault(); const i = $('#chat-input');
-      if (G.inviaChat(i.value)) i.value = '';
+      if (sussurroA ? G.inviaSussurro(sussurroA, i.value) : G.inviaChat(i.value)) i.value = '';
     });
 
     $('#dm-indietro').addEventListener('click', mostraElencoDM);
@@ -470,6 +489,8 @@
       apriPagina('messaggi'); apriThread(id);
     });
     $('#foglio-segnala').addEventListener('click', () => apriSegnala(idFoglio));
+    $('#foglio-sussurra').addEventListener('click', () => { const id = idFoglio; chiudiFoglio(); chiudiPagine(); sussurra(id); });
+    $('#chat-sussurro-via').addEventListener('click', smettiSussurro);
     $('#segnala-annulla').addEventListener('click', chiudiSegnala);
     $('#segnala .fc-sfondo').addEventListener('click', chiudiSegnala);
     $('#segnala-invia').addEventListener('click', inviaSegnala);
@@ -517,7 +538,7 @@
     G.su('stanza', aggiornaStanza);
     G.su('profilo', d => apriFoglio(d.id));
     G.su('chat', () => rendiChat());
-    G.su('blocchi', () => { rendiChat(); aggiornaBadgeDM(); if (paginaAttiva === 'profilo') aggiornaBloccati(); if (paginaAttiva === 'messaggi') { G.stato.dmAperto ? rendiThread() : mostraElencoDM(); } });
+    G.su('blocchi', () => { if (sussurroA && G.stato.bloccati.has(sussurroA)) smettiSussurro(); rendiChat(); aggiornaBadgeDM(); if (paginaAttiva === 'profilo') aggiornaBloccati(); if (paginaAttiva === 'messaggi') { G.stato.dmAperto ? rendiThread() : mostraElencoDM(); } });
     G.su('dm', d => {
       ordineDM = [d.id].concat(ordineDM.filter(x => x !== d.id));
       if (G.stato.dmAperto === d.id) { G.segnaLetti(d.id); rendiThread(); }

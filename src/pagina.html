@@ -66,7 +66,7 @@
     <div id="chat" hidden>
       <div class="chat-testa">
         <svg viewBox="0 0 24 24" class="ico"><path d="M4 5.5h16a1.5 1.5 0 0 1 1.5 1.5v8A1.5 1.5 0 0 1 20 16.5h-8l-5 4v-4H4A1.5 1.5 0 0 1 2.5 15V7A1.5 1.5 0 0 1 4 5.5Z"/></svg>
-        <strong>Chat Piazza</strong>
+        <strong id="chat-titolo">Chat</strong>
         <span class="tag-demo">DEMO</span>
         <span id="chat-ultimo"></span>
         <button id="chat-chiudi" class="btn-mini" aria-label="Riduci o apri la chat">
@@ -74,6 +74,7 @@
         </button>
       </div>
       <div id="chat-lista"></div>
+      <div id="chat-sussurro" hidden><span>🤫 Sussurri a <b id="chat-sussurro-nick"></b>: lo leggete solo voi due</span><button id="chat-sussurro-via" type="button" aria-label="Smetti di sussurrare">✕</button></div>
       <form id="chat-form" autocomplete="off">
         <input id="chat-input" maxlength="120" placeholder="Scrivi un messaggio…" enterkeyhint="send" autocomplete="off" autocapitalize="sentences">
         <button type="submit" aria-label="Invia"><svg viewBox="0 0 24 24" class="ico"><path d="M21 3 10 14"/><path d="m21 3-7 18-4-7-7-4Z"/></svg></button>
@@ -176,6 +177,7 @@
       <p id="foglio-bio"></p>
       <div class="azioni">
         <button id="foglio-dm" class="btn-primario">Messaggio privato</button>
+        <button id="foglio-sussurra" class="btn-secondario">🤫 Sussurra in chat</button>
         <div class="azioni-riga" id="foglio-amico" hidden>
           <button id="foglio-visita" class="btn-secondario">Visita casa</button>
           <button id="foglio-raggiungi" class="btn-secondario">Raggiungi</button>

@@ -51,11 +51,29 @@
     return r.testo;
   }
 
-  /* ---------- chat pubblica (simulata) ---------- */
-  function aggiungiChat(id, nick, testo, io) {
-    const voce = { id, nick, testo, ora: ora(), io: !!io };
-    stato.chat.push(voce); if (stato.chat.length > 80) stato.chat.shift();
+  /* ---------- chat pubblica (simulata) ----------
+     Ogni voce ricorda il luogo (stanza): ogni luogo ha la sua chat, come le stanze di Habbo.
+     sussurro: solo tu e chi lo riceve lo vedete; lontano: detto lontano da te (piu' tenue). */
+  function aggiungiVoce(voce) {
+    voce.stanza = voce.stanza || stato.chiaveChat || stato.stanzaId;
+    stato.chat.push(voce); if (stato.chat.length > 150) stato.chat.shift();
     emetti('chat', voce);
+    return voce;
+  }
+  function aggiungiChat(id, nick, testo, io, extra) { return aggiungiVoce(Object.assign({ id, nick, testo, ora: ora(), io: !!io }, extra || {})); }
+  function chatQui() { const k = stato.chiaveChat || stato.stanzaId; return stato.chat.filter(m => m.stanza === k); }
+
+  // sussurro a un abitante dimostrativo (quelli degli amici veri li gestisce online/amici.js)
+  const SUSSURRI = ['Psst! Ciao {nick} 😄', 'Shh, è un segreto!', 'Ahah, ok!', 'Non lo dico a nessuno 🤫', 'Ci vediamo alla fontana?', 'Hehe 😉'];
+  function inviaSussurro(id, testo) {
+    const u = utenteDi(id); if (!u) return false;
+    if (stato.bloccati.has(id)) { emetti('toast', 'Hai bloccato questo utente'); return false; }
+    if (stato.stanzaId !== 'piazza' || !inPiazza().some(b => b.id === id)) { emetti('toast', u.nick + ' non è qui: non puoi sussurrargli'); return false; }
+    testo = controllaMessaggio(testo, 'chat', 120);
+    if (!testo) return false;
+    aggiungiChat('io', stato.giocatore.nick, testo, true, { sussurro: true, aId: id, aNick: u.nick });
+    if (Math.random() < 0.6) setTimeout(() => { if (!stato.bloccati.has(id) && stato.stanzaId === 'piazza') aggiungiChat(id, u.nick, pick(SUSSURRI).replace('{nick}', stato.giocatore.nick), false, { sussurro: true }); }, rnd(1800, 3500));
+    return true;
   }
   function inviaChat(testo) {
     testo = controllaMessaggio(testo, 'chat', 120);
@@ -146,5 +164,5 @@
   function cambiaLook(look) { stato.giocatore.look = Object.assign({}, look); salva(); emetti('look', stato.giocatore.look); }
 
   window.Gioco = { stato, su, emetti, avvia, tick, inviaChat, inviaDM, eliminaConversazione, eliminaMessaggio, conversazione, totNonLetti, segnaLetti, blocca, sblocca, segnala,
-    segnalazioni, MOTIVI, elencoBloccati, controllaMessaggio, carica, salva, utente, nickValido, nickPermesso, impostaAtmosfera, impostaGrafica, cambiaLook, inPiazza, botPiazza };
+    segnalazioni, MOTIVI, elencoBloccati, controllaMessaggio, aggiungiVoce, chatQui, inviaSussurro, carica, salva, utente, nickValido, nickPermesso, impostaAtmosfera, impostaGrafica, cambiaLook, inPiazza, botPiazza };
 })();

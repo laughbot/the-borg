@@ -127,15 +127,9 @@
   }
 
   /* ---------- fumetti e nomi ---------- */
-  const viaBolla = (r, b) => { r.remove(b); if (b.material) { if (b.material.map) b.material.map.dispose(); b.material.dispose(); } };   // il fumetto ha texture e materiale suoi: vanno liberati
-  function mostraBolla(ent, testo, sec) {
-    if (ent.bolla) viaBolla(ent.av.root, ent.bolla);
-    ent.bolla = B.fumetto(testo); ent.bolla.position.y = 3.05; ent.av.root.add(ent.bolla); ent.durBolla = sec || 4.5;
-  }
-  function aggBolla(ent, dt) {
-    if (!ent.bolla) return; ent.durBolla -= dt;
-    if (ent.durBolla <= 0) { viaBolla(ent.av.root, ent.bolla); ent.bolla = null; }
-  }
+  // fumetti impilati come in Habbo (B3.Bolle, in base.js): ogni fumetto ha texture e materiale suoi, Bolle li libera
+  function mostraBolla(ent, testo, sec, stile) { B.Bolle.mostra(ent, testo, sec || 4.5, stile); }
+  function aggBolla(ent, dt) { B.Bolle.aggiorna(ent, dt); }
 
   /* ---------- giocatore ---------- */
   const io = { av: null, x: 0, z: 38.6, y: 0, vx: 0, vz: 0, yaw: PI, st: stanze.piazza, bolla: null, nick: '' };
@@ -223,9 +217,15 @@
     if (vel > 0.2) o.yaw += angDiff(o.yaw, Math.atan2(o.vx, o.vz)) * Math.min(1, dt * 9);
     o.av.root.position.set(o.x, 0, o.z); o.av.root.rotation.y = o.yaw; if (!o.lontano) o.av.aggiorna(dt, vel, t);
   }
+  // RAGGIO_ASCOLTO: oltre questa distanza un messaggio arriva "da lontano" (piu' tenue in chat, come in Habbo)
+  const RAGGIO_ASCOLTO = 14;
   G.su('chat', v => {
-    if (v.io) { if (io.av) mostraBolla(io, v.testo, 4.5); return; }
-    const o = npc.find(n => n.id === v.id); if (o && !G.stato.bloccati.has(v.id) && stanza.id === 'piazza') mostraBolla(o, v.testo, 4.5);
+    if (v.io) { if (io.av) mostraBolla(io, v.sussurro ? '🤫 ' + v.testo : v.testo, 4.5, v.sussurro ? 'sussurro' : null); return; }
+    const o = npc.find(n => n.id === v.id);
+    if (o && !G.stato.bloccati.has(v.id) && stanza.id === 'piazza') {
+      if (!v.sussurro && Math.hypot(o.x - io.x, o.z - io.z) > RAGGIO_ASCOLTO) v.lontano = true;
+      mostraBolla(o, v.sussurro ? '🤫 ' + v.testo : v.testo, 4.5, v.sussurro ? 'sussurro' : null);
+    }
   });
 
   /* ---------- camera isometrica ortogonale ---------- */
@@ -269,7 +269,8 @@
     C.azT = C.az = stanza.az === undefined ? PI / 4 : stanza.az; impostaZoom(stanza.zoom); if (stanza.elev) { C.elev = stanza.elev; C.elevAuto = true; } else if (C.elevAuto) { C.elev = 28; C.elevAuto = false; } C.tx = io.x; C.tz = io.z; C.ty = 1.0 + io.y;
     { const fuori = id === 'piazza'; if (!fuori) setBici(false); const bb = $('#btn-bici'); if (bb) bb.style.display = fuori ? '' : 'none'; }
     assegnaLuci(); ultimaPorta = undefined;
-    if (io.bolla) { viaBolla(io.av.root, io.bolla); io.bolla = null; }
+    B.Bolle.pulisci(io);
+    G.stato.chiaveChat = id === 'ospite' ? 'casa:' + String(stanza.ospite || '').toLowerCase() : id;   // ogni luogo ha la sua chat
     if (B.Arredo) B.Arredo.stanzaCambiata(id);
     G.emetti('stanza', { id, def: { nome: stanza.nome, pubblica: stanza.pubblica } });
   }
@@ -281,7 +282,8 @@
   }
   function alzati() {
     const s = io.seduto; if (!s) return; io.seduto = null;
-    if (s.dorme && io.bolla) io.durBolla = 0;
+    if (s.dorme) B.Bolle.finisci(io);
+    io.bolleSdraiato = false;
     if (s.esci) { io.x = s.esci.x; io.z = s.esci.z; }
     else {
       // cerca il primo punto libero attorno al posto: davanti, poi di lato, dietro, poi sempre piu' lontano (evita di restare incastrati in siepi o ostacoli)
@@ -399,7 +401,7 @@
       else {
         const s = io.seduto, k = Math.min(1, dt * 10);
         io.x += (s.x - io.x) * k; io.z += (s.z - io.z) * k; io.y += (s.y - io.y) * k; io.yaw += angDiff(io.yaw, s.yaw) * k; io.vx = io.vz = 0;
-        io.av.sedT = io.seduto.dorme ? 0 : 1; io.av.sdrT = io.seduto.dorme ? 1 : 0; io.av.root.rotation.order = 'YXZ'; io.av.root.rotation.x = -PI / 2 * io.av.sdr; if (io.seduto.dorme && io.bolla) io.bolla.position.set(0, 0.5, 1.9); io.av.root.position.set(io.x, io.y, io.z); io.av.root.rotation.y = io.yaw; B.pos = { x: io.x, z: io.z };
+        io.av.sedT = io.seduto.dorme ? 0 : 1; io.av.sdrT = io.seduto.dorme ? 1 : 0; io.av.root.rotation.order = 'YXZ'; io.av.root.rotation.x = -PI / 2 * io.av.sdr; io.bolleSdraiato = !!io.seduto.dorme; io.av.root.position.set(io.x, io.y, io.z); io.av.root.rotation.y = io.yaw; B.pos = { x: io.x, z: io.z };
         return 0;
       }
     }

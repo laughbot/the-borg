@@ -78,7 +78,7 @@
     noti.set(nick.toLowerCase(), { nick, look });
     amici.set(peer, a); return a;
   }
-  function togli(peer) { aiGiochi(peer, null, null); const a = amici.get(peer); if (!a) return; bici(a, false); app.scene.remove(a.av.root); B.liberaAvatar(a.av); amici.delete(peer); }
+  function togli(peer) { aiGiochi(peer, null, null); const a = amici.get(peer); if (!a) return; bici(a, false); B.Bolle.pulisci(a); app.scene.remove(a.av.root); B.liberaAvatar(a.av); amici.delete(peer); }
   // la bici dell'amico: la stessa che usa lui, montata sotto il suo avatar
   function bici(a, on) {
     if (on && !a.bk && app.creaBici) { a.bk = app.creaBici(); a.av.root.add(a.bk); }
@@ -128,12 +128,13 @@
     aiGiochi(peer, a.nick, pr);   // nei minigiochi: il suo stato di gioco
     // messaggio nuovo in chat: entra nella chat pubblica e appare nel fumetto
     // (passa dal filtro anche qui: il telefono di chi scrive si puo' manomettere; chi e' bloccato non si legge)
+    // msg.a = nick di chi riceve un sussurro: gli altri telefoni lo ignorano
     if (pr.msg && pr.msg.n !== a.nMsg) {
-      a.nMsg = pr.msg.n; const t = filtra(testo(pr.msg.t, 120));
-      if (t && stessoLuogo(pr.s, luogo()) && !bloccato(a)) {
-        const d = new Date(), voce = { id: idAmico(a.nick), nick: a.nick, testo: t, ora: String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0'), io: false, amico: true };
-        G.stato.chat.push(voce); if (G.stato.chat.length > 80) G.stato.chat.shift(); G.emetti('chat', voce);
-        bolla(a, t, 4.5);
+      a.nMsg = pr.msg.n; const t = filtra(testo(pr.msg.t, 120)), dest = testo(pr.msg.a, 20);
+      if (t && stessoLuogo(pr.s, luogo()) && !bloccato(a) && (!dest || stessoLuogo(dest, mioNick()))) {
+        const lontano = !dest && Math.hypot(a.x - app.io.x, a.z - app.io.z) > 14;
+        G.aggiungiVoce({ id: idAmico(a.nick), nick: a.nick, testo: t, ora: oraOra(), io: false, amico: true, sussurro: !!dest, lontano });
+        bolla(a, dest ? '🤫 ' + t : t, 4.5, dest ? 'sussurro' : null);
       }
     }
     riceviDm(a, pr); riceviEv(a, pr); riceviMo(a, pr);
@@ -143,8 +144,8 @@
   const filtra = t => (t && window.FiltroChat ? window.FiltroChat.ricevuto(t) : t);
   const bloccato = a => G.stato.bloccati.has(idAmico(a.nick));
   const EMOTE = { saluta: ['Ciao!', 3], balla: ['♪', 5], ridi: ['Ahah!', 3], applaudi: ['Bravo!', 4], evviva: ['Evviva!', 3] };
-  const viaBolla = (r, b) => { r.remove(b); if (b.material) { if (b.material.map) b.material.map.dispose(); b.material.dispose(); } };
-  function bolla(a, t, sec) { if (a.bolla) viaBolla(a.av.root, a.bolla); a.bolla = B.fumetto(t); a.bolla.position.y = 3.05; a.av.root.add(a.bolla); a.durBolla = sec; }
+  function bolla(a, t, sec, stile) { B.Bolle.mostra(a, t, sec, stile); }
+  const oraOra = () => { const d = new Date(); return String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0'); };
 
   /* ---------- ogni fotogramma: seguono la loro posizione, si vedono solo nella tua stessa stanza ---------- */
   let prima = performance.now(), tBadge = 0;
@@ -169,7 +170,7 @@
       a.av.root.position.set(a.x, a.y, a.z); a.av.root.rotation.y = a.r;
       a.av.aggiorna(dt, vel, ora / 1000);
       if (a.bk) { a.bk.userData.ruote.forEach(r => { r.rotation.x += vel * dt / 0.27; }); a.bk.userData.pedali.rotation.x = -a.av.fb; }
-      if (a.bolla) { a.durBolla -= dt; if (a.durBolla <= 0) { viaBolla(a.av.root, a.bolla); a.bolla = null; } }
+      B.Bolle.aggiorna(a, dt);
     });
     tBadge -= dt; if (tBadge <= 0) { tBadge = 0.5; badge(amici.size); }
   }
@@ -211,7 +212,18 @@
     });
   }
   const NOMI = { piazza: 'In piazza', raid: 'Nel raid', paintball: 'A paintball', kart: 'Sui kart', carte: 'A Belinverse', casa: 'A casa sua' };
-  const utenteOrig = G.utente, inviaOrig = G.inviaDM;
+  const utenteOrig = G.utente, inviaOrig = G.inviaDM, sussurroOrig = G.inviaSussurro;
+  // sussurro a un amico: deve essere nel tuo stesso luogo; parte con la chat (msg.a), lo legge solo lui
+  G.inviaSussurro = function (id, t) {
+    if (typeof id !== 'string' || id.indexOf('amico:') !== 0) return sussurroOrig(id, t);
+    if (G.stato.bloccati.has(id)) { G.emetti('toast', 'Hai bloccato questo utente'); return false; }
+    const a = amicoDa(id);
+    if (!a || !stessoLuogo(a.pr.s, luogo())) { G.emetti('toast', G.utente(id).nick + ' non è qui: usa un messaggio privato'); return false; }
+    t = G.controllaMessaggio(t, 'chat', 120);
+    if (!t) return false;
+    G.aggiungiVoce({ id: 'io', nick: mioNick(), testo: t, ora: oraOra(), io: true, sussurro: true, aId: id, aNick: a.nick });
+    return true;
+  };
   G.utente = function (id) {
     if (typeof id !== 'string' || id.indexOf('amico:') !== 0) return utenteOrig(id);
     const a = amicoDa(id), n = noti.get(id.slice(6).toLowerCase()) || { nick: id.slice(6), look: {} };
@@ -360,7 +372,11 @@
   B.amiciToccabili = () => [...amici.values()].filter(a => a.av.root.visible).map(a => ({ obj: a.av.proxy, tipo: 'npc', id: idAmico(a.nick) }));
 
   /* ---------- i miei messaggi e le mie emote partono per tutti ---------- */
-  G.su('chat', v => { if (v.io && !v.amico) { nMsg++; invia({ msg: { n: nMsg, t: testo(v.testo, 120) } }); } });
+  G.su('chat', v => {
+    if (!v.io || v.amico) return;
+    if (v.sussurro && String(v.aId || '').indexOf('amico:') !== 0) return;   // sussurro a un abitante dimostrativo: resta qui
+    nMsg++; invia({ msg: { n: nMsg, t: testo(v.testo, 120), a: v.sussurro ? testo(v.aNick, 20) : undefined } });
+  });
   const emoteOrig = app.emote;
   app.emote = function (tipo) { emoteOrig(tipo); if (EMOTE[tipo] && !app.io.seduto) { nEm++; invia({ em: { n: nEm, t: tipo } }); } };
 
