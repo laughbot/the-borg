@@ -2,7 +2,7 @@
 <html lang="it">
 <head>
   <meta charset="utf-8">
-  <meta name="versione" content="f027abf08eab">
+  <meta name="versione" content="e489909aa7e5">
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="mobile-web-app-capable" content="yes">
@@ -8651,10 +8651,12 @@ float rumoreC(vec3 x) { vec3 i = floor(x); vec3 f = fract(x); f = f * f * (3.0 -
   const SENS_T = 0.0062, SENS_M = 0.0024;
   // progressi: dalla v2 c'e' la Soglia come primo incontro (i vecchi indici scalano di uno)
   let completati = {}; try { const v2 = localStorage.getItem('theborg.raid.v2'); if (v2) completati = JSON.parse(v2); else { const v1 = JSON.parse(localStorage.getItem('theborg.raid') || '{}'); Object.keys(v1).forEach(k => { completati[+k + 1] = v1[k]; }); } } catch (e) { }
-  // difficolta': piu' nemici per ondata, ondate piu' fitte, nemici piu' resistenti e cattivi
-  const LIVELLI = [['Facile', { n: 1.3, int: 1, cap: 16, dmg: 1, hp: 1 }], ['Medio', { n: 1.9, int: 0.85, cap: 20, dmg: 1.0, hp: 1.1 }], ['Difficile', { n: 2.5, int: 0.7, cap: 26, dmg: 1.15, hp: 1.2 }]];
-  let liv = 0; try { liv = clamp(+localStorage.getItem('theborg.raid.liv') || 0, 0, 2); } catch (e) { }
-  let D = LIVELLI[liv][1];
+  // una sola difficolta' (decisione del 20/10/2026): la Cripta e' difficile e va imparata.
+  // n: nemici per ondata, int: ritmo delle ondate, cap: nemici in campo, dmg/hp: danno e resistenza dei nemici
+  const D = { n: 2.5, int: 0.7, cap: 26, dmg: 1.15, hp: 1.2 };
+  /* Modalita' prova (solo per chi la attiva con ?prova nell'indirizzo; ?prova=0 la spegne):
+     si sceglie qualsiasi stanza, anche i percorsi, senza premi e senza toccare i salvataggi. */
+  let PROVA = false; try { const q = new URLSearchParams(location.search).get('prova'); if (q !== null) localStorage.setItem('theborg.raid.prova', q === '0' ? '0' : '1'); PROVA = localStorage.getItem('theborg.raid.prova') === '1'; } catch (e) { }
   const salvaProgressi = () => { try { localStorage.setItem('theborg.raid.v2', JSON.stringify(completati)); } catch (e) { } };
   // armi: tre a disposizione, se ne portano due e si alternano in partita (danno al secondo simile, ritmo diverso)
   const ARMI = {
@@ -9631,7 +9633,7 @@ float rumoreC(vec3 x) { vec3 i = floor(x); vec3 f = fract(x); f = f * f * (3.0 -
     if (P && P.length) {   // la sala ha porte vere: escono dal buio della porta e camminano dentro
       const i0 = Math.floor(Math.random() * P.length), usate = new Set();
       for (let k = 0; k < quanti; k++) {
-        const i = liv > 0 && k % 2 ? (i0 + 1 + Math.floor(Math.random() * (P.length - 1))) % P.length : i0, p = P[i];   // dal Medio arrivano da piu' porte insieme
+        const i = k % 2 ? (i0 + 1 + Math.floor(Math.random() * (P.length - 1))) % P.length : i0, p = P[i];   // arrivano da piu' porte insieme
         const lat = ((k >> 1) % 3 - 1) * p.w * 0.8 + rnd(-0.2, 0.2), x = p.x - p.dz * lat, z = p.z + p.dx * lat;
         const e = nemico(tipi[k % tipi.length], x, z); e.pos.y = p.y || 0; e.entra = { x: x + p.dx * rnd(3.5, 6), z: z + p.dz * rnd(3.5, 6) }; e.entraT = 4;
         if (!usate.has(i)) { usate.add(i); scoppio(new T.Vector3(p.x, (p.y || 0) + 1.4, p.z), 0x8affa8, 10, 2.5); if (ambiente && ambiente.varco) ambiente.varco(i); }
@@ -9640,7 +9642,7 @@ float rumoreC(vec3 x) { vec3 i = floor(x); vec3 f = fract(x); f = f * f * (3.0 -
     }
     const x0 = xs[Math.floor(Math.random() * xs.length)];
     for (let k = 0; k < quanti; k++) {
-      const x = liv > 0 && k % 2 ? xs[(xs.indexOf(x0) + 1) % xs.length] : x0;   // dal Medio arrivano da piu' lati insieme
+      const x = k % 2 ? xs[(xs.indexOf(x0) + 1) % xs.length] : x0;   // arrivano da piu' lati insieme
       nemico(tipi[k % tipi.length], x + (x < 0 ? 1.5 : -1.5) + rnd(-0.5, 0.5), rnd(zr[0], zr[1]));
     }
   }
@@ -10301,6 +10303,15 @@ float rumoreC(vec3 x) { vec3 i = floor(x); vec3 f = fract(x); f = f * f * (3.0 -
     return E;
   }
   const NOMI_INC = ['La Soglia delle Lanterne', 'Il Portale Sigillato', 'Gran Officiante', 'Bruthak l\'Insaziabile'];
+  // tutte le stanze in ordine, percorsi compresi (per la modalita' prova)
+  const STANZE = []; NOMI_INC.forEach((n, k) => { if (PERCORSI[k]) STANZE.push({ n: PERCORSI[k].nome, k, p: 1 }); STANZE.push({ n, k }); });
+  // partita vera: si riparte dalla prima sala non ancora superata (finite tutte, si ricomincia da capo)
+  const partenzaSalvata = () => { let k = 0; while (k < INCONTRI.length && completati[k]) k++; return k >= INCONTRI.length ? 0 : k; };
+  const nomePartenza = () => PROVA ? (STANZE[SQ.pa] || STANZE[0]).n : (PERCORSI[partenzaSalvata()] ? PERCORSI[partenzaSalvata()].nome : NOMI_INC[partenzaSalvata()]);
+  const STORIA = '<p>Il Re senza Luce è nato nelle profondità sotto il borgo, dove la luce non è mai arrivata. Quando la cometa è caduta e gli Starlight hanno illuminato il borgo, quella luce è filtrata giù dal Cratere fino al suo regno, e il Re l\'ha voluta tutta per sé.</p>' +
+    '<p>Una notte i suoi servitori sono saliti dal Cratere e hanno rubato gran parte degli Starlight. Nelle profondità più oscure il Re ha costruito la sua Cripta e con la luce rubata alimenta il suo trono. Da allora il borgo si sta spegnendo: i lampioni tremano, i colori sbiadiscono, la cometa nel Cratere è quasi fredda.</p>' +
+    '<p>Una vecchia leggenda parla dei <b>Portatori di Lanterna</b>, guerrieri che scendono nel buio e riportano indietro la luce. Ora tocca a voi: ogni sala liberata restituisce un frammento di luce al borgo.</p>';
+  function storia() { pannello('<div class="kick">La Cripta del Re senza Luce</div><h2>La storia</h2>' + STORIA + '<div class="pul"><button id="rd-menu">Indietro</button></div>'); ui.pan.querySelector('#rd-menu').onclick = () => menu(); }
 
   /* =====================================================================
      FLUSSO: menu, introduzione, partita, wipe, completamento
@@ -10317,14 +10328,14 @@ float rumoreC(vec3 x) { vec3 i = floor(x); vec3 f = fract(x); f = f * f * (3.0 -
   /* ---------- stanza d'attesa: la squadra privata ----------
      Come il raid vero: si gioca solo con un gruppo di amici (quelli collegati con il vostro codice amici),
      niente sconosciuti. Ognuno entra nella Cripta con la sua squadra da 1; si invita o ci si unisce alla
-     squadra di un amico. Il capo sceglie da dove partire e la difficolta', gli altri dicono "pronto".
+     squadra di un amico. Si parte dall'ultima sala salvata del capo (in modalita' prova da qualsiasi stanza), gli altri dicono "pronto".
      I posti liberi (fino a 6) li prendono i Custodi bot. */
   const testoComandi = () => '<p class="com">' + (B.touch ? (CF ? 'Sinistra: muoviti (spingi in avanti fino in fondo per correre). Destra: trascina per guardare. Tasti: fuoco (anche a sinistra), mirino, salto, accovacciati (in corsa: scivolata; tieni premuto: a terra), ricarica, granata, cambia arma. In pausa trovi Comandi per sensibilità, fuoco automatico e posizione dei tasti.' : 'Sinistra: muoviti. Destra: trascina per guardare. Tasto rosso: spara (mira assistita). Tasto ▲: salta. Tasto ⇄: cambia arma.') : '<b>WASD</b> per muoverti, <b>clic</b> per catturare il mouse, poi muovi il mouse per guardare e tieni premuto per sparare. <b>Spazio</b> salta, <b>Maiusc</b> corre, <b>Q</b> o <b>rotella</b> cambia arma.' + (CF ? ' <b>Tasto destro</b> mirino, <b>R</b> ricarica, <b>G</b> granata, <b>C</b> accovacciati o scivola, <b>Z</b> a terra.' : '')) + '</p>';
   function menu() {
     if (SEGUI) { lascia(); return; }
     ON = null; stato = 'menu'; if (!scena || !enc) prepara(0);
     const capo = SQ.capo, cR = capo ? null : capoR(), mem = capo ? membri() : [], tutti = capo ? mem : membriDi(cR);
-    const pa = capo ? SQ.pa : clamp(cR ? nnum(cR.d.pa, 0) | 0 : 0, 0, INCONTRI.length - 1), lv = capo ? liv : clamp(cR ? nnum(cR.d.lv, 0) | 0 : 0, 0, 2);
+    const paTxt = cR && typeof cR.d.pa === 'string' ? cR.d.pa.slice(0, 60) : NOMI_INC[clamp(cR ? nnum(cR.d.pa, 0) | 0 : 0, 0, INCONTRI.length - 1)];
     // i 6 posti: capo, amici, poi i Custodi bot
     const posti = [];
     if (capo) { posti.push({ n: nickMio() + ' (tu)', capo: 1, pr: 1 }); mem.forEach(r => posti.push({ n: r.nick, pr: !!r.d.pr, id: r.d.id })); }
@@ -10332,13 +10343,17 @@ float rumoreC(vec3 x) { vec3 i = floor(x); vec3 f = fract(x); f = f * f * (3.0 -
     const nAmici = posti.length - 1;
     for (let i = 0; i < 5 - nAmici; i++) posti.push({ n: nomeBot(i), bot: 1 });
     const slot = q => '<div class="slot' + (q.bot ? ' bot' : '') + '"><span class="nome">' + (q.capo ? '👑 ' : q.bot ? '🤖 ' : '') + esc(q.n) + '</span><small>' + (q.bot ? 'Custode bot' : q.capo ? 'capo squadra' : q.pr ? '<i class="ok">pronto</i>' : 'non ancora pronto') + '</small>' + (capo && q.id ? '<button class="togli" data-id="' + esc(q.id) + '" aria-label="Togli ' + esc(q.n) + ' dalla squadra">Togli</button>' : '') + '</div>';
-    // da dove partire e difficolta': li sceglie il capo
+    // da dove partire: dall'ultimo salvataggio del capo; in modalita' prova il capo sceglie qualsiasi stanza
     let scelte;
-    if (capo) {
-      const lista = NOMI_INC.map((n, i) => '<button class="inc' + (i === pa ? ' on' : '') + '" data-i="' + i + '" aria-pressed="' + (i === pa) + '"><b>' + (i + 1) + '</b>' + n + (completati[i] ? ' <span class="ok">completato</span>' : '') + '</button>').join('');
-      scelte = '<div class="kick">Da dove partite</div><div class="lista">' + lista + '</div>' +
-        '<div class="livs" role="group" aria-label="Difficoltà"><span>Difficoltà</span>' + LIVELLI.map((l, i) => '<button class="lv' + (i === lv ? ' on' : '') + '" data-l="' + i + '">' + l[0] + '</button>').join('') + '</div>';
-    } else scelte = '<p class="sotto">Partenza: <b>' + NOMI_INC[pa] + '</b> · Difficoltà: <b>' + LIVELLI[lv][0] + '</b><br>Le sceglie ' + esc(cR ? cR.nick : 'il capo') + '.</p>';
+    if (capo && PROVA) {
+      const lista = STANZE.map((st, i) => '<button class="inc' + (i === SQ.pa ? ' on' : '') + '" data-i="' + i + '" aria-pressed="' + (i === SQ.pa) + '"><b>' + (i + 1) + '</b>' + st.n + (st.p ? ' <span class="ok">percorso</span>' : '') + '</button>').join('');
+      scelte = '<div class="kick">Modalità prova · scegli la stanza</div><div class="lista">' + lista + '</div>' +
+        '<p class="sotto">In prova non si guadagnano Starlight e i salvataggi non cambiano.</p><div class="pul"><button class="sec" id="rd-noprova">Esci dalla prova</button></div>';
+    } else if (capo) {
+      const fatti = NOMI_INC.filter((n, i) => completati[i]).length;
+      scelte = '<p class="sotto">Partenza: <b>' + nomePartenza() + '</b> (ultimo salvataggio)<br>Sale superate: ' + fatti + ' di ' + INCONTRI.length + '</p>' +
+        (fatti ? '<div class="pul"><button class="sec" id="rd-zero">Ricomincia da zero</button></div>' : '');
+    } else scelte = '<p class="sotto">Partenza: <b>' + esc(paTxt) + '</b><br>La decide ' + esc(cR ? cR.nick : 'il capo') + '.</p>';
     const armi = Object.keys(ARMI).map(k => '<button class="ar' + (scelta.includes(k) ? ' on' : '') + '" data-a="' + k + '" aria-pressed="' + scelta.includes(k) + '">' + ARMI[k].nome + '<small>' + ARMI[k].tipo + '</small></button>').join('');
     const nonPronti = mem.filter(r => !r.d.pr).map(r => r.nick);
     const azioni = capo
@@ -10346,7 +10361,7 @@ float rumoreC(vec3 x) { vec3 i = floor(x); vec3 f = fract(x); f = f * f * (3.0 -
       : '<button id="rd-pronto">' + (SQ.pronto ? 'Non sono più pronto' : 'Sono pronto') + '</button><button class="sec" id="rd-lascia">Lascia la squadra</button>';
     pannello('<div class="lobby"><div class="col"><div class="kick">Raid · squadra privata</div><h2>La Cripta del Re Senza Luce</h2>' +
       '<p class="sotto">' + (capo ? (nAmici ? 'La tua squadra' : 'Sei capo squadra. Invita gli amici o parti con i Custodi bot.') : 'Sei nella squadra di <b>' + esc(cR ? cR.nick : '…') + '</b>.') + '</p>' +
-      '<div class="slots">' + posti.map(slot).join('') + '</div><div class="pul">' + azioni + '</div>' + scelte + '</div>' +
+      '<div class="slots">' + posti.map(slot).join('') + '</div><div class="pul">' + azioni + '</div>' + scelte + '<div class="pul"><button class="sec" id="rd-storia">La storia</button></div></div>' +
       '<div class="col">' + htmlAmici() +
       '<div class="livs armi" role="group" aria-label="Armi"><span>Le tue armi (2 su 3)</span>' + armi + '</div>' +
       '<div class="livs" role="group" aria-label="Vibrazione"><span>Vibrazione</span><button class="lv vb' + (vibra ? ' on' : '') + '" data-v="1">Sì</button><button class="lv vb' + (vibra ? '' : ' on') + '" data-v="0">No</button></div>' +
@@ -10357,16 +10372,23 @@ float rumoreC(vec3 x) { vec3 i = floor(x); vec3 f = fract(x); f = f * f * (3.0 -
     ui.pan.querySelectorAll('.unisciti').forEach(b => b.onclick = () => { const r = [...amiciR.values()].find(x => String(x.d.id) === b.dataset.id); if (r) entraIn(r); });
     ui.pan.querySelectorAll('.ar').forEach(b => b.onclick = () => { const k = b.dataset.a; if (scelta.includes(k)) return; scelta = [scelta[1], k]; ia = 0; try { localStorage.setItem('theborg.raid.armi', JSON.stringify(scelta)); } catch (e) { } mostraArma(); menu(); });
     ui.pan.querySelectorAll('.vb').forEach(b => b.onclick = () => { vibra = b.dataset.v === '1'; try { localStorage.setItem('theborg.raid.vibra', vibra ? '1' : '0'); } catch (e) { } if (vibra) { tVibra = -9; vibrazione(false); } menu(); });
-    ui.pan.querySelectorAll('.lv:not(.vb)').forEach(b => b.onclick = () => { liv = +b.dataset.l; D = LIVELLI[liv][1]; try { localStorage.setItem('theborg.raid.liv', liv); } catch (e) { } menu(); });
     const on = (id, f) => { const b = ui.pan.querySelector(id); if (b) b.onclick = f; };
     on('#rd-x2', () => R.esci());
     on('#rd-inizia', () => iniziaSquadra());
+    on('#rd-storia', () => storia());
+    on('#rd-zero', () => {
+      const fatti = NOMI_INC.filter((n, i) => completati[i]).length;
+      pannello('<div class="kick male">Ricomincia da zero</div><h2>Perdi il salvataggio?</h2><p class="sotto">Hai superato ' + fatti + ' sale su ' + INCONTRI.length + '. Ripartendo dalla prima sala il salvataggio si cancella e non si può recuperare.</p><div class="pul"><button id="rd-zero-si">Sì, ricomincia</button><button class="sec" id="rd-menu">No, torna indietro</button></div>');
+      ui.pan.querySelector('#rd-zero-si').onclick = () => { completati = {}; salvaProgressi(); menu(); toast('Salvataggio cancellato: si riparte dalla prima sala', '', true); };
+      ui.pan.querySelector('#rd-menu').onclick = () => menu();
+    });
+    on('#rd-noprova', () => { PROVA = false; SQ.pa = 0; try { localStorage.setItem('theborg.raid.prova', '0'); } catch (e) { } menu(); });
     on('#rd-pronto', () => { SQ.pronto = !SQ.pronto; menu(); });
     on('#rd-lascia', () => { esciDaSquadra(); menu(); });
   }
   function intro(i) {
     audio(); prepara(i); stato = 'intro';
-    pannello('<div class="kick">Incontro ' + (i + 1) + ' di ' + INCONTRI.length + ' · ' + enc.luogo + ' · ' + LIVELLI[liv][0] + '</div><h2>' + enc.nome + '</h2><ul>' + enc.guida.map(g => '<li>' + g + '</li>').join('') + '</ul><div class="pul"><button id="rd-via">Combatti</button><button class="sec" id="rd-menu">Stanza d\'attesa</button></div>');
+    pannello('<div class="kick">Incontro ' + (i + 1) + ' di ' + INCONTRI.length + ' · ' + enc.luogo + (PROVA ? ' · prova' : '') + '</div><h2>' + enc.nome + '</h2><ul>' + enc.guida.map(g => '<li>' + g + '</li>').join('') + '</ul><div class="pul"><button id="rd-via">Combatti</button><button class="sec" id="rd-menu">Stanza d\'attesa</button></div>');
     ui.pan.querySelector('#rd-via').onclick = () => { pannello(''); stato = 'gioco'; audio(); };
     ui.pan.querySelector('#rd-menu').onclick = () => menu();
   }
@@ -10378,17 +10400,17 @@ float rumoreC(vec3 x) { vec3 i = floor(x); vec3 f = fract(x); f = f * f * (3.0 -
   }
   function avviaPercorso(k) { if (!PERCORSI[k]) return intro(k); audio(); prepara(k, true); pannello(''); stato = 'gioco'; toast(enc.nome + ': raggiungi ' + NOMI_INC[k]); }
   // premio in moneta del borgo per un incontro completato: di piu' a difficolta' alta e per l'ultimo incontro
-  function premioCripta(i) { if (!B.Eco || !B.Eco.premioGioco) return 0; return B.Eco.premioGioco('cripta', [1, 1.25, 1.5][liv] * (i === INCONTRI.length - 1 ? 1.3 : 1)); }
+  function premioCripta(i) { if (!B.Eco || !B.Eco.premioGioco) return 0; return B.Eco.premioGioco('cripta', 1.5 * (i === INCONTRI.length - 1 ? 1.3 : 1)); }
   function completa() {
     if (stato !== 'gioco') return;
     if (enc.percorso) { intro(encI); return; }   // fine del percorso: si entra nel prossimo incontro
-    if (enc.fatto) return; enc.fatto = true; completati[encI] = 1; salvaProgressi();
-    const pr = premioCripta(encI), prT = pr ? ' · +' + B.Eco.fmt(pr) : ''; if (ON) ON.fz = [(ON.fz ? ON.fz[0] : 0) + 1, encI];   // gli ospiti ricevono il premio con il prossimo fotogramma
+    if (enc.fatto) return; enc.fatto = true; if (!PROVA) { completati[encI] = 1; salvaProgressi(); }   // in prova non si salva
+    const pr = PROVA ? 0 : premioCripta(encI), prT = pr ? ' · +' + B.Eco.fmt(pr) : ''; if (ON && !PROVA) ON.fz = [(ON.fz ? ON.fz[0] : 0) + 1, encI];   // gli ospiti ricevono il premio con il prossimo fotogramma
     const t = Math.floor(tEnc / 60) + ':' + String(Math.floor(tEnc % 60)).padStart(2, '0'), ultimo = encI === INCONTRI.length - 1;
     if (!ultimo) { toast('Incontro completato in ' + t + prT + '. Avanti verso ' + NOMI_INC[encI + 1], 'bene'); tPassa = 3; return; }   // si prosegue a piedi
     stato = 'fatto'; sparo = false;
     pannello('<div class="kick bene">Incontro completato · ' + t + prT + '</div><h2>' + enc.nome + '</h2>' +
-      (ultimo ? '<p class="sotto">Hai superato i primi quattro passi del raid. Le Gemelle del Velo e il Re Senza Luce in persona ti aspettano nella prossima versione.</p>' : '<p class="sotto">Prossimo: <b>' + NOMI_INC[encI + 1] + '</b></p>') +
+      (ultimo ? '<p class="sotto">Bruthak è caduto e un po\' di luce torna nel borgo. Ma le Gemelle del Velo e il Re senza Luce aspettano ancora più in profondità: arriveranno nella prossima versione.</p>' : '<p class="sotto">Prossimo: <b>' + NOMI_INC[encI + 1] + '</b></p>') +
       '<div class="pul">' + (ultimo ? '<button id="rd-menu">Stanza d\'attesa</button>' : '<button id="rd-avanti">Avanti</button><button class="sec" id="rd-menu">Stanza d\'attesa</button>') + '</div>');
     const av = ui.pan.querySelector('#rd-avanti'); if (av) av.onclick = () => intro(encI + 1);
     ui.pan.querySelector('#rd-menu').onclick = () => menu();
@@ -10707,7 +10729,7 @@ body.pc #rd-hud .tasto,body.pc #rd-hud .base{display:none}
     const ne = nemici.filter(e => e.vivo).sort((a, b) => (b.boss ? 1 : 0) - (a.boss ? 1 : 0)).slice(0, 26)
       .map(e => [e.id, TIPIK.indexOf(e.tipo), f2(e.pos.x), f2(e.pos.y), f2(e.pos.z), f2(e.yaw), Math.round(e.hp), e.max, e.imm ? 1 : 0, e.camm ? 1 : 0, e.anN || 0, e.anK || '']);
     const tp = {}; umani().forEach(u => { if (u.remoto && ON.tp[u.k]) tp[u.k] = ON.tp[u.k]; });
-    const o = { id: mioId, st: 'raid', g: ON.g, ru: 'h', mem: ON.mem || [], sto: stato, ei: encI, pe: enc && enc.percorso ? 1 : 0, pn: prepN, lv: liv, wm: ON.wm, sq, ne, pj: ON.pj, to: ON.to, tp, ra: radioRete, fz: ON.fz || null, es: enc && enc.foto ? enc.foto() : null };
+    const o = { id: mioId, st: 'raid', g: ON.g, ru: 'h', mem: ON.mem || [], sto: stato, ei: encI, pe: enc && enc.percorso ? 1 : 0, pn: prepN, lv: 2, wm: ON.wm, sq, ne, pj: ON.pj, to: ON.to, tp, ra: radioRete, fz: ON.fz || null, es: enc && enc.foto ? enc.foto() : null };
     if (JSON.stringify(o).length > 3500) { o.pj = ON.pj.slice(-3); o.to = ON.to.slice(-2); o.ra = radioRete.slice(-2); o.ne = ne.slice(0, 16); }
     return o;
   }
@@ -10738,7 +10760,7 @@ body.pc #rd-hud .tasto,body.pc #rd-hud .base{display:none}
     const n = esc(SEGUI.r.nick), d = SEGUI.r.d, esci = '<div class="pul"><button class="sec" id="rd-lascia">Lascia la squadra</button></div>';
     const lasciaSq = () => { esciDaSquadra(); lascia(); };
     let h;
-    if (sto === 'intro') h = '<div class="kick">' + (enc.percorso ? 'Percorso' : 'Incontro ' + (encI + 1) + ' di ' + INCONTRI.length) + ' · ' + enc.luogo + ' · ' + LIVELLI[liv][0] + ' · con ' + n + '</div><h2>' + enc.nome + '</h2>' + (enc.guida ? '<ul>' + enc.guida.map(g => '<li>' + g + '</li>').join('') + '</ul>' : '') + '<p class="sotto">Aspetta che ' + n + ' inizi lo scontro.</p>';
+    if (sto === 'intro') h = '<div class="kick">' + (enc.percorso ? 'Percorso' : 'Incontro ' + (encI + 1) + ' di ' + INCONTRI.length) + ' · ' + enc.luogo + ' · con ' + n + '</div><h2>' + enc.nome + '</h2>' + (enc.guida ? '<ul>' + enc.guida.map(g => '<li>' + g + '</li>').join('') + '</ul>' : '') + '<p class="sotto">Aspetta che ' + n + ' inizi lo scontro.</p>';
     else if (sto === 'wipe') h = '<div class="kick male">Squadra annientata</div><h2>' + enc.nome + '</h2><p class="sotto">' + esc(d.wm || '') + ' Aspetta che ' + n + ' riprovi.</p>';
     else if (sto === 'fatto') h = '<div class="kick bene">Incontro completato</div><h2>' + enc.nome + '</h2><p class="sotto">Avete superato i primi quattro passi del raid. Aspetta che ' + n + ' scelga cosa fare.</p>';
     else h = '<div class="kick">Pausa</div><h2>' + enc.nome + '</h2><p class="sotto">' + n + ' ha messo in pausa.</p>';
@@ -10795,11 +10817,11 @@ body.pc #rd-hud .tasto,body.pc #rd-hud .base{display:none}
     if (!fresco(r) || d.ru !== 'h' || d.sto === 'menu') return lascia(fresco(r) ? r.nick + ' vi ha riportati nella stanza d\'attesa' : r.nick + ' non è più nella Cripta');
     if (d.g !== SEGUI.g) { SEGUI.g = d.g; SEGUI.pn = -1; }
     if (d.pn !== SEGUI.pn) {
-      SEGUI.pn = d.pn; liv = clamp(d.lv | 0, 0, 2); D = LIVELLI[liv][1];
+      SEGUI.pn = d.pn;
       liberaFantasmi(); prepara(clamp(d.ei | 0, 0, INCONTRI.length - 1), !!d.pe); SEGUI.rp = -1; SEGUI.d = null; SEGUI.pan = ''; stato = 'intro';
     }
     if (SEGUI.d !== d) { SEGUI.d = d; seguiDati(d); }
-    if (Array.isArray(d.fz) && nnum(d.fz[0], 0) > SEGUI.fzN) { SEGUI.fzN = nnum(d.fz[0], 0); const i = clamp(nnum(d.fz[1], 0) | 0, 0, INCONTRI.length - 1); completati[i] = 1; salvaProgressi(); const pr = premioCripta(i); if (pr) toast(NOMI_INC[i] + ' completato · +' + B.Eco.fmt(pr), 'bene', true); }
+    if (Array.isArray(d.fz) && nnum(d.fz[0], 0) > SEGUI.fzN) { SEGUI.fzN = nnum(d.fz[0], 0); const i = clamp(nnum(d.fz[1], 0) | 0, 0, INCONTRI.length - 1); /* si prende il salvataggio del capo */ for (let k = 0; k <= i; k++) completati[k] = 1; salvaProgressi(); const pr = premioCripta(i); if (pr) toast(NOMI_INC[i] + ' completato · +' + B.Eco.fmt(pr), 'bene', true); }
     pannelloOspite(String(d.sto));
     // muovo compagni e nemici verso dove li vede lui
     const k = Math.min(1, dt * 10);
@@ -10829,7 +10851,7 @@ body.pc #rd-hud .tasto,body.pc #rd-hud .base{display:none}
     if (SEGUI) return { id: mioId, st: 'raid', hb, g: SEGUI.g, ru: 'o', x: f2(io.pos.x), y: f2(io.pos.y), z: f2(io.pos.z), r: f2(io.yaw + PI), v: f1(Math.min(SEGUI.v, 12)), rp: SEGUI.rp, h: gHit };
     if (ON) return Object.assign(reteHostDati(), { hb });
     if (stato === 'menu') {
-      if (SQ.capo) { const ora2 = performance.now(); return { id: mioId, st: 'raid', hb, ru: 'L', g: SQ.g, mem: membri().map(r => String(r.d.id)), lv: liv, pa: SQ.pa, inv: Object.keys(SQ.inv).filter(k => ora2 - SQ.inv[k] < 60000), out: Object.keys(SQ.out) }; }
+      if (SQ.capo) { const ora2 = performance.now(); return { id: mioId, st: 'raid', hb, ru: 'L', g: SQ.g, mem: membri().map(r => String(r.d.id)), lv: 2, pa: nomePartenza(), inv: Object.keys(SQ.inv).filter(k => ora2 - SQ.inv[k] < 60000), out: Object.keys(SQ.out) }; }
       return { id: mioId, st: 'raid', hb, ru: 'M', g: SQ.g, pr: SQ.pronto ? 1 : 0 };
     }
     return { id: mioId, st: 'raid', hb, ru: 'G', g: SQ.g };   // in partita con i bot
@@ -10877,7 +10899,8 @@ body.pc #rd-hud .tasto,body.pc #rd-hud .base{display:none}
   function iniziaSquadra() {
     const m = membri(); if (m.some(r => !r.d.pr)) return;
     if (m.length) { nuovoON(); ON.g = SQ.g; ON.mem = m.map(r => String(r.d.id)); }
-    intro(SQ.pa);
+    if (PROVA) { const st = STANZE[SQ.pa] || STANZE[0]; if (st.p) avviaPercorso(st.k); else intro(st.k); }
+    else avviaPercorso(partenzaSalvata());   // con il percorso prima della sala, se c'e'
   }
   // da membro: il capo c'e' ancora? mi tiene? e' partito?
   function controllaCapo(dt) {
@@ -10925,7 +10948,6 @@ body.pc #rd-hud .tasto,body.pc #rd-hud .base{display:none}
   R._nemico = (tipo, x, z, opz) => nemico(tipo, x, z, opz);   // per le prove automatiche
   R._s = () => ({ stato, enc, io, bots, nemici, bersagli, squadra, proiettili, encI, arma: scelta[ia], scelta });
   R._suolo = suolo; R._percorso = k => { if (!pronto) R.avvia(); avviaPercorso(k); };
-  R._liv = i => { liv = i; D = LIVELLI[i][1]; };
   R._vai = (i, subito) => { if (!pronto) R.avvia(); intro(i); if (subito) { pannello(''); stato = 'gioco'; } };
 })();
 
