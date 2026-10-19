@@ -445,9 +445,9 @@ body.orizz #inizio-anteprima { width: 120px; height: 140px; }
 #btn-bici.attivo { background: #d8453b; border-color: #fff; }
 #btn-cam.attivo { background: #3b7fd6; border-color: #fff; }
 
-/* ---------- STARLIGHT, la moneta del borgo: bastoncino luminoso verde (come quelli da pesca) ---------- */
-.sl-ico{display:inline-block;position:relative;width:.42em;height:1.08em;border-radius:.22em;vertical-align:-.16em;margin:0 .22em 0 .12em;transform:rotate(32deg);
-  background:linear-gradient(90deg,rgba(178,255,106,.85),#f2ffd6 42%,#c8ff8a 58%,rgba(120,232,58,.9));
-  box-shadow:0 0 .32em rgba(150,255,70,.95),0 0 .7em rgba(120,240,50,.55),inset 0 0 .08em rgba(255,255,255,.9)}
-.sl-ico::before,.sl-ico::after{content:'';position:absolute;left:.05em;right:.05em;height:.1em;border-radius:.05em;background:rgba(235,255,210,.75)}
-.sl-ico::before{top:.16em}.sl-ico::after{bottom:.16em}
+/* ---------- LA MONETA DEL BORGO: un cristallo della cometa che brilla come la luce del giorno ---------- */
+.sl-ico{display:inline-block;position:relative;width:.62em;height:1em;vertical-align:-.14em;margin:0 .2em 0 .1em;
+  clip-path:polygon(50% 0,100% 28%,100% 72%,50% 100%,0 72%,0 28%);
+  background:linear-gradient(115deg,#fffdf2 0 30%,#ffe9a6 31% 55%,#ffcf5c 56% 80%,#f2b440 81%);
+  filter:drop-shadow(0 0 .18em rgba(255,214,110,.95)) drop-shadow(0 0 .4em rgba(255,236,170,.6))}
+.sl-ico::after{content:'';position:absolute;left:44%;top:12%;width:12%;height:76%;background:rgba(255,255,255,.85);border-radius:.05em}
