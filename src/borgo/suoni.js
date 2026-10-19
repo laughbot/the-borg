@@ -139,6 +139,8 @@
     n.connect(f); f.connect(g); g.connect(effG); n.start(t); n.stop(t + 0.2);
   };
 
+  const avvisi = [];
+  A.alCambioEffetti = f => avvisi.push(f);       // per aggiornare i tasti del suono dei minigiochi
   /* ---------- due tasti: musica (🎵) ed effetti (🔊) ---------- */
   function tasti() {
     const bm = document.getElementById('btn-musica'), be = document.getElementById('btn-audio');
@@ -149,7 +151,9 @@
     agg();
     const avvisa = t => { if (window.Gioco) window.Gioco.emetti('toast', t); };
     if (bm) bm.addEventListener('click', () => { init(); mutaMusica = !mutaMusica; try { localStorage.setItem('theborg.musica', mutaMusica ? '0' : '1'); } catch (e) { } agg(); avvisa(mutaMusica ? 'Musica spenta (gli effetti restano)' : 'Musica accesa'); });
-    if (be) be.addEventListener('click', () => { init(); mutaEffetti = !mutaEffetti; try { localStorage.setItem('theborg.effetti', mutaEffetti ? '0' : '1'); } catch (e) { } if (effG) effG.gain.setTargetAtTime(mutaEffetti ? 0 : 1, ctx.currentTime, 0.05); agg(); avvisa(mutaEffetti ? 'Effetti sonori spenti' : 'Effetti sonori accesi'); });
+    // accende/spegne gli effetti (usato anche dal tasto 🔊 dentro i minigiochi): tutti i tasti restano allineati
+    A.cambiaEffetti = () => { init(); mutaEffetti = !mutaEffetti; try { localStorage.setItem('theborg.effetti', mutaEffetti ? '0' : '1'); } catch (e) { } if (effG) effG.gain.setTargetAtTime(mutaEffetti ? 0 : 1, ctx.currentTime, 0.05); agg(); avvisi.forEach(f => { try { f(mutaEffetti); } catch (e) { } }); return mutaEffetti; };
+    if (be) be.addEventListener('click', () => { A.cambiaEffetti(); avvisa(mutaEffetti ? 'Effetti sonori spenti' : 'Effetti sonori accesi'); });
   }
   tasti();
 })();

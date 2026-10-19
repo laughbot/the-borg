@@ -116,6 +116,8 @@ body.kart-attivo #kart-hud{display:block}
 #kart-hud #k-giro{left:12px;top:calc(env(safe-area-inset-top,0px) + 66px);font-size:14px}
 #kart-hud #k-tempo{left:12px;top:calc(env(safe-area-inset-top,0px) + 104px);font-size:14px;font-variant-numeric:tabular-nums}
 #kart-hud #k-esci{right:12px;pointer-events:auto;border:0;color:#fff8e8;font:inherit;font-weight:800;cursor:pointer}
+#kart-hud #k-suono{right:12px;top:calc(env(safe-area-inset-top,0px) + 186px);width:46px;height:46px;padding:0;font-size:22px;pointer-events:auto;border:0;cursor:pointer;-webkit-tap-highlight-color:transparent}
+#kart-hud.scelta #k-suono{display:none}
 #kart-hud #k-mini{position:absolute;right:12px;top:calc(env(safe-area-inset-top,0px) + 64px);width:112px;height:112px;border-radius:16px;background:rgba(30,18,50,.6)}
 #kart-hud #k-grande{position:absolute;left:0;right:0;top:34%;text-align:center;font-size:96px;font-weight:900;text-shadow:0 4px 0 #7a2fd6,0 0 18px #000;opacity:0}
 #kart-hud #k-aiuto{position:absolute;left:0;right:0;top:250px;text-align:center;font-size:15px;font-weight:700;text-shadow:0 1px 3px #000;padding:0 28px}
@@ -125,6 +127,7 @@ body.kart-attivo #kart-hud{display:block}
 #kart-hud #k-vel .bar{height:6px;border-radius:4px;background:rgba(255,255,255,.18);overflow:hidden}
 #kart-hud #k-vel i{display:block;height:100%;width:0;background:linear-gradient(90deg,#5ad6c4,#ffd36a,#e05a6d)}
 #kart-hud #k-bt{position:absolute;right:16px;bottom:calc(var(--h-tab,64px) + 22px);display:flex;flex-direction:column;align-items:flex-end;gap:12px;pointer-events:auto;touch-action:none}
+#kart-hud #k-bt,#kart-hud #k-sterzo,#kart-hud #k-bt button,#kart-hud #k-sterzo button{-webkit-user-select:none;user-select:none;-webkit-touch-callout:none;-webkit-tap-highlight-color:transparent}
 body.kart-attivo #joy{display:none!important}
 body.kart-attivo #tabbar{display:none!important}
 body.kart-attivo #app{--h-tab:0px;transition:none}
@@ -175,9 +178,12 @@ body.kart-attivo #kart-hud #k-fine ol{max-height:30vh}
 #kart-hud #k-fine button.s{background:#5a4a7a;color:#fff8e8}`;
     document.head.appendChild(st);
     hud = document.createElement('div'); hud.id = 'kart-hud';
-    hud.innerHTML = '<div class="kb" id="k-pos">1°/4</div><div class="kb" id="k-giro">Giro 1/5</div><div class="kb" id="k-tempo">0:00.00</div><button class="kb" id="k-esci">✕ Esci</button><canvas id="k-mini" width="224" height="224"></canvas><div id="k-grande"></div><div id="k-aiuto"></div><div id="k-vel"><b>0</b><small>km/h</small><div class="bar"><i></i></div></div><div id="k-fine"></div><div id="k-scelta"><h3>Personalizza il tuo pilota</h3><div id="k-tabs"><button data-t="pista">Pista</button><button data-t="kart">Kart</button><button data-t="tuta">Tuta</button><button data-t="casco">Casco</button></div><div id="k-pat"></div><div id="k-num"></div><div id="k-liv"></div><div id="k-cols"></div><div id="k-amici"></div><button id="k-via">Via!</button></div><div id="k-bt"><button data-b="fr" class="f">STOP</button><button data-b="gas" class="g">GAS</button></div><div id="k-sterzo"><button data-b="sx">&#x25C0;</button><button data-b="dx">&#x25B6;</button></div>';
+    hud.innerHTML = '<div class="kb" id="k-pos">1°/4</div><div class="kb" id="k-giro">Giro 1/5</div><div class="kb" id="k-tempo">0:00.00</div><button class="kb" id="k-esci">✕ Esci</button><button class="kb" id="k-suono" aria-label="Togli il suono">🔊</button><canvas id="k-mini" width="224" height="224"></canvas><div id="k-grande"></div><div id="k-aiuto"></div><div id="k-vel"><b>0</b><small>km/h</small><div class="bar"><i></i></div></div><div id="k-fine"></div><div id="k-scelta"><h3>Personalizza il tuo pilota</h3><div id="k-tabs"><button data-t="pista">Pista</button><button data-t="kart">Kart</button><button data-t="tuta">Tuta</button><button data-t="casco">Casco</button></div><div id="k-pat"></div><div id="k-num"></div><div id="k-liv"></div><div id="k-cols"></div><div id="k-amici"></div><button id="k-via">Via!</button></div><div id="k-bt"><button data-b="fr" class="f">STOP</button><button data-b="gas" class="g">GAS</button></div><div id="k-sterzo"><button data-b="sx">&#x25C0;</button><button data-b="dx">&#x25B6;</button></div>';
     document.getElementById('hud').appendChild(hud);
-    ['pos', 'giro', 'tempo', 'esci', 'mini', 'grande', 'aiuto', 'vel', 'fine', 'scelta', 'cols', 'via', 'tabs', 'pat', 'num', 'liv', 'amici'].forEach(k => { ui[k] = hud.querySelector('#k-' + k); });
+    ['pos', 'giro', 'tempo', 'esci', 'mini', 'grande', 'aiuto', 'vel', 'fine', 'scelta', 'cols', 'via', 'tabs', 'pat', 'num', 'liv', 'amici', 'suono'].forEach(k => { ui[k] = hud.querySelector('#k-' + k); });
+    const aggSuono = muto => { ui.suono.textContent = muto ? '🔇' : '🔊'; ui.suono.setAttribute('aria-label', muto ? 'Rimetti il suono' : 'Togli il suono'); };
+    aggSuono(B.Audio.effettiMuti()); B.Audio.alCambioEffetti(aggSuono);
+    ui.suono.addEventListener('click', () => B.Audio.cambiaEffetti());
     ui.esci.addEventListener('click', () => K.esci());
     ui.tabs.querySelectorAll('button').forEach(b => b.addEventListener('click', () => { tab = b.dataset.t; menu(); }));
     ui.num.appendChild(document.createTextNode('Kart in gara:')); [4, 6, 8, 10].forEach(n => { const b = document.createElement('button'); b.textContent = n; b.dataset.n = n; b.addEventListener('click', () => { sel.n = n; salva(); cambiaPista(sel.pista | 0); }); ui.num.appendChild(b); });
@@ -185,6 +191,11 @@ body.kart-attivo #kart-hud #k-fine ol{max-height:30vh}
     PATT.forEach((n, i) => { const b = document.createElement('button'); b.textContent = n; b.dataset.p = i; b.addEventListener('click', () => { sel.patt = i; applica(); }); ui.pat.appendChild(b); });
     ui.via.addEventListener('click', () => premiVia());
     hud.querySelectorAll('button[data-b]').forEach(b => { const n = b.dataset.b; const on = e => { bt[n] = true; b.classList.add('on'); try { b.setPointerCapture(e.pointerId); } catch (x) { } e.preventDefault(); }, off = e => { bt[n] = false; b.classList.remove('on'); }; b.addEventListener('pointerdown', on); ['pointerup', 'pointercancel', 'lostpointercapture'].forEach(ev => b.addEventListener(ev, off)); });
+    // telefono: niente lente d'ingrandimento (pressione lunga), zoom con doppio tocco, menu o selezione sui comandi
+    [hud.querySelector('#k-bt'), hud.querySelector('#k-sterzo')].forEach(z => {
+      ['touchstart', 'touchmove', 'touchend'].forEach(ev => z.addEventListener(ev, e => { if (e.cancelable) e.preventDefault(); }, { passive: false }));
+      ['contextmenu', 'selectstart', 'dblclick'].forEach(ev => z.addEventListener(ev, e => e.preventDefault()));
+    });
     window.addEventListener('keydown', e => { tasti[e.key.toLowerCase()] = true; if (K.attivo && ['arrowleft', 'arrowright', 'arrowup', 'arrowdown'].includes(e.key.toLowerCase())) e.preventDefault(); });
     window.addEventListener('keyup', e => { tasti[e.key.toLowerCase()] = false; });
   }
