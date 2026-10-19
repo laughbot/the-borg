@@ -188,7 +188,12 @@
     const bx = finestra('<div style="font-size:30px">📋</div><b>Cosa scrivi sul cartello?</b><input maxlength="40" enterkeyhint="done"><small>Lo leggono gli amici che vengono a trovarti</small><button>Scrivi</button><button class="sec">Annulla</button>');
     const inp = bx.querySelector('input'), [ok, no] = bx.querySelectorAll('button');
     inp.value = attuale || ''; setTimeout(() => { try { inp.focus(); inp.select(); } catch (e) { /* ok */ } }, 50);
-    const salva = () => { const t = pulito(inp.value, 40); inp.blur(); chiudi(); fatto(t || 'Benvenuti!'); };
+    // il cartello lo leggono gli altri: passa dallo stesso filtro della chat
+    const salva = () => {
+      const t = pulito(inp.value, 40), r = t && window.FiltroChat ? window.FiltroChat.controlla(t) : { ok: true, testo: t };
+      if (!r.ok) { toast(r.avviso); return; }
+      inp.blur(); chiudi(); fatto(r.testo || 'Benvenuti!');
+    };
     ok.addEventListener('click', salva); inp.addEventListener('keydown', e => { if (e.key === 'Enter') salva(); if (e.key === 'Escape') chiudi(); });
     no.addEventListener('click', () => { inp.blur(); chiudi(); });
   }
@@ -263,10 +268,11 @@
         scriviCartello(m.s.t, t => esegui(st, m, t));
       },
       applica(st, m, v) { m.s.t = v; },
-      stato: true, valida: (v, st, nick) => (st.id === 'ospite' && String(nick).toLowerCase() === String(st.ospite).toLowerCase() ? pulito(v, 40) || 'Benvenuti!' : undefined)
+      stato: true, valida: (v, st, nick) => (st.id === 'ospite' && String(nick).toLowerCase() === String(st.ospite).toLowerCase() ? cartelloPulito(pulito(v, 40)) : undefined)
     }
   };
 
+  const cartelloPulito = t => (t && window.FiltroChat ? window.FiltroChat.ricevuto(t) : t) || 'Benvenuti!';
   function luceVista(m) {
     const p = m.g.userData.paralume; if (!p) return; const mt = p.material;
     if (!p.userData.col) p.userData.col = mt.color.getHex();

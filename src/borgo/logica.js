@@ -1,7 +1,9 @@
 /* =====================================================================
    BORGO LUME 3D - LOGICA DEL GIOCO (locale e SIMULATA)
-   Chat della piazza, messaggi privati, blocco, salvataggio del profilo.
+   Chat della piazza, messaggi privati, blocco, segnalazioni, salvataggio del profilo.
    Non disegna nulla: emette eventi. In futuro qui parlera' il server vero.
+   Ogni messaggio passa da controllaMessaggio(): filtro (src/chat/filtro.js)
+   e modalita' lenta. Chi invia messaggi bloccati di continuo resta muto per un po'.
    ===================================================================== */
 (function () {
   'use strict';
@@ -24,6 +26,31 @@
   const botPiazza = () => CFG.utentiDemo.filter(u => u.online).slice(0, CFG.maxBotPiazza || 99);
   const inPiazza = () => botPiazza().filter(u => !stato.bloccati.has(u.id));
 
+  /* ---------- sicurezza: filtro, modalita' lenta, silenzio dopo troppi messaggi bloccati ---------- */
+  const FC = window.FiltroChat;
+  const limiti = { chat: FC.creaLimitatore(), dm: FC.creaLimitatore({ massimo: 8 }) };
+  const MUTO_DOPO = 3, MUTO_FINESTRA = 120000, MUTO_DURATA = 60000;   // 3 messaggi bloccati in 2 minuti -> 1 minuto di silenzio
+  let bloccatiDi = [], mutoFino = 0;
+  // tipo: 'chat' o 'dm'. Restituisce il testo da inviare (gia' ripulito) oppure null, dopo aver avvisato il giocatore.
+  function controllaMessaggio(testo, tipo, max) {
+    testo = FC.sistema(testo).slice(0, max || 120);
+    if (!testo) return null;
+    const ora = Date.now();
+    if (ora < mutoFino) { emetti('toast', 'Chat in pausa: potrai scrivere tra ' + Math.ceil((mutoFino - ora) / 1000) + ' secondi'); return null; }
+    const lim = limiti[tipo] || limiti.chat, no = lim.prova(testo, ora);
+    if (no) { emetti('toast', no); return null; }
+    const r = FC.controlla(testo);
+    if (!r.ok) {
+      bloccatiDi = bloccatiDi.filter(t => ora - t < MUTO_FINESTRA).concat(ora);
+      if (bloccatiDi.length >= MUTO_DOPO) { mutoFino = ora + MUTO_DURATA; bloccatiDi = []; emetti('toast', 'Troppi messaggi non permessi: chat in pausa per un minuto'); }
+      else emetti('toast', r.avviso);
+      emetti('bloccato', r);
+      return null;
+    }
+    lim.registra(r.testo, ora);
+    return r.testo;
+  }
+
   /* ---------- chat pubblica (simulata) ---------- */
   function aggiungiChat(id, nick, testo, io) {
     const voce = { id, nick, testo, ora: ora(), io: !!io };
@@ -31,11 +58,8 @@
     emetti('chat', voce);
   }
   function inviaChat(testo) {
-    testo = (testo || '').trim().slice(0, 120);
+    testo = controllaMessaggio(testo, 'chat', 120);
     if (!testo) return false;
-    const adesso = performance.now();
-    if (adesso - stato.ultimoMsgChat < 700) { emetti('toast', 'Piano, un messaggio alla volta'); return false; }
-    stato.ultimoMsgChat = adesso;
     aggiungiChat('io', stato.giocatore.nick, testo, true);
     if (stato.stanzaId === 'piazza' && Math.random() < 0.55) {
       const cand = inPiazza();
@@ -52,9 +76,44 @@
   function inviaDM() { emetti('toast', 'I messaggi privati si scambiano solo con gli amici veri'); return false; }
   function eliminaConversazione(id) { if (!stato.dm[id]) return; delete stato.dm[id]; emetti('dm', { id }); }
   function eliminaMessaggio(id, i) { const c = stato.dm[id]; if (!c || !c.msgs[i]) return; c.msgs.splice(i, 1); emetti('dm', { id }); }
-  function blocca(id) { stato.bloccati.add(id); emetti('blocchi', { id }); }
-  function sblocca(id) { stato.bloccati.delete(id); emetti('blocchi', { id }); }
-  function segnala() { emetti('toast', 'Segnalazione registrata (dimostrativa: non viene inviato nulla)'); }
+  /* ---------- blocchi: restano salvati su questo telefono ---------- */
+  const CHIAVE_BLOCCHI = 'theborg.bloccati.v1', CHIAVE_SEGNALAZIONI = 'theborg.segnalazioni.v1';
+  const nomiBloccati = {};   // id -> nick, per l'elenco nel profilo
+  function caricaBlocchi() {
+    try { const l = JSON.parse(localStorage.getItem(CHIAVE_BLOCCHI) || '[]'); l.forEach(b => { stato.bloccati.add(b.id); nomiBloccati[b.id] = b.nick; }); } catch (e) { /* niente */ }
+  }
+  function salvaBlocchi() {
+    try { localStorage.setItem(CHIAVE_BLOCCHI, JSON.stringify([...stato.bloccati].map(id => ({ id, nick: nomiBloccati[id] || (utenteDi(id) || {}).nick || id })))); } catch (e) { /* storage non disponibile */ }
+  }
+  const utenteDi = id => (window.Gioco && window.Gioco.utente ? window.Gioco.utente(id) : utente(id));
+  function blocca(id) { nomiBloccati[id] = (utenteDi(id) || {}).nick || nomiBloccati[id] || id; stato.bloccati.add(id); salvaBlocchi(); emetti('blocchi', { id }); }
+  function sblocca(id) { stato.bloccati.delete(id); salvaBlocchi(); emetti('blocchi', { id }); }
+  function elencoBloccati() { return [...stato.bloccati].map(id => ({ id, nick: nomiBloccati[id] || (utenteDi(id) || {}).nick || id })); }
+
+  /* ---------- segnalazioni ----------
+     Restano in coda su questo telefono, con gli ultimi messaggi di quella persona come prova:
+     quando ci sara' il server (fase 2) partiranno verso i moderatori. */
+  const MOTIVI = [
+    ['insulti', 'Insulti, bullismo o prese in giro'],
+    ['sessuale', 'Messaggi o richieste a sfondo sessuale'],
+    ['dati', 'Mi chiede dati personali, foto o di vederci'],
+    ['minacce', 'Minacce o violenza'],
+    ['spam', 'Spam o pubblicità'],
+    ['imbroglio', 'Imbrogli o scambi scorretti'],
+    ['nick', 'Nickname o aspetto offensivo'],
+    ['altro', 'Altro']
+  ];
+  function segnalazioni() { try { return JSON.parse(localStorage.getItem(CHIAVE_SEGNALAZIONI) || '[]'); } catch (e) { return []; } }
+  function segnala(id, motivo, nota) {
+    const u = utenteDi(id) || { nick: id }, conv = stato.dm[id];
+    const prove = stato.chat.filter(m => m.id === id).slice(-10).map(m => ({ dove: 'chat', ora: m.ora, testo: m.testo }))
+      .concat(conv ? conv.msgs.filter(m => m.da === id).slice(-10).map(m => ({ dove: 'privato', ora: m.ora, testo: m.testo })) : []);
+    const s = { quando: new Date().toISOString(), id, nick: u.nick, motivo: MOTIVI.some(m => m[0] === motivo) ? motivo : 'altro',
+      nota: FC.sistema(nota || '').slice(0, 300), stanza: stato.stanzaId, prove, inviata: false };
+    try { localStorage.setItem(CHIAVE_SEGNALAZIONI, JSON.stringify(segnalazioni().concat(s).slice(-50))); } catch (e) { /* storage non disponibile */ }
+    emetti('segnalazione', s);
+    return s;
+  }
 
   /* ---------- salvataggio locale (solo su questo dispositivo) ---------- */
   function carica() { try { return JSON.parse(localStorage.getItem(CFG.chiaveSalvataggio) || 'null'); } catch (e) { return null; } }
@@ -78,13 +137,14 @@
   function avvia(nick, look) {
     stato.giocatore = { id: 'io', nick, look: Object.assign({}, look), io: true };
     stato.chat = []; stato.dm = {}; stato.bloccati = new Set(); stato.dmAperto = null; stato.timerChat = 7;
-    salva();
+    caricaBlocchi(); salva();
   }
   function nickValido(n) { return /^[A-Za-z0-9_]{3,14}$/.test(n); }
+  function nickPermesso(n) { return FC.nickOk(n); }
   function impostaAtmosfera(id) { stato.atmosfera = id; salva(); emetti('atmosfera', id); }
   function impostaGrafica(g) { stato.grafica = g; salva(); emetti('grafica', g); }
   function cambiaLook(look) { stato.giocatore.look = Object.assign({}, look); salva(); emetti('look', stato.giocatore.look); }
 
   window.Gioco = { stato, su, emetti, avvia, tick, inviaChat, inviaDM, eliminaConversazione, eliminaMessaggio, conversazione, totNonLetti, segnaLetti, blocca, sblocca, segnala,
-    carica, salva, utente, nickValido, impostaAtmosfera, impostaGrafica, cambiaLook, inPiazza, botPiazza };
+    segnalazioni, MOTIVI, elencoBloccati, controllaMessaggio, carica, salva, utente, nickValido, nickPermesso, impostaAtmosfera, impostaGrafica, cambiaLook, inPiazza, botPiazza };
 })();

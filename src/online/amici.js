@@ -127,9 +127,10 @@
     punto(a, pr);
     aiGiochi(peer, a.nick, pr);   // nei minigiochi: il suo stato di gioco
     // messaggio nuovo in chat: entra nella chat pubblica e appare nel fumetto
+    // (passa dal filtro anche qui: il telefono di chi scrive si puo' manomettere; chi e' bloccato non si legge)
     if (pr.msg && pr.msg.n !== a.nMsg) {
-      a.nMsg = pr.msg.n; const t = testo(pr.msg.t, 120);
-      if (t && stessoLuogo(pr.s, luogo())) {
+      a.nMsg = pr.msg.n; const t = filtra(testo(pr.msg.t, 120));
+      if (t && stessoLuogo(pr.s, luogo()) && !bloccato(a)) {
         const d = new Date(), voce = { id: idAmico(a.nick), nick: a.nick, testo: t, ora: String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0'), io: false, amico: true };
         G.stato.chat.push(voce); if (G.stato.chat.length > 80) G.stato.chat.shift(); G.emetti('chat', voce);
         bolla(a, t, 4.5);
@@ -137,8 +138,10 @@
     }
     riceviDm(a, pr); riceviEv(a, pr); riceviMo(a, pr);
     const mcK = JSON.stringify(pr.mc || null); if (mcK !== a.mcK) { a.mcK = mcK; G.emetti('annunci'); }
-    if (pr.em && pr.em.n !== a.nEm) { a.nEm = pr.em.n; const e = EMOTE[pr.em.t]; if (e) { a.av.faiEmote(pr.em.t, e[1]); bolla(a, e[0], e[1] + 0.4); } }
+    if (pr.em && pr.em.n !== a.nEm) { a.nEm = pr.em.n; const e = EMOTE[pr.em.t]; if (e && !bloccato(a)) { a.av.faiEmote(pr.em.t, e[1]); bolla(a, e[0], e[1] + 0.4); } }
   }
+  const filtra = t => (t && window.FiltroChat ? window.FiltroChat.ricevuto(t) : t);
+  const bloccato = a => G.stato.bloccati.has(idAmico(a.nick));
   const EMOTE = { saluta: ['Ciao!', 3], balla: ['♪', 5], ridi: ['Ahah!', 3], applaudi: ['Bravo!', 4], evviva: ['Evviva!', 3] };
   const viaBolla = (r, b) => { r.remove(b); if (b.material) { if (b.material.map) b.material.map.dispose(); b.material.dispose(); } };
   function bolla(a, t, sec) { if (a.bolla) viaBolla(a.av.root, a.bolla); a.bolla = B.fumetto(t); a.bolla.position.y = 3.05; a.av.root.add(a.bolla); a.durBolla = sec; }
@@ -152,7 +155,7 @@
     tInvio -= dt; if (tInvio <= 0) { tInvio = Object.keys(GIOCHI).some(n => GIOCHI[n]() && GIOCHI[n]().attivo) ? 0.066 : 0.1; invia(); }
     const libero = !(B.Raid && B.Raid.attivo) && !(B.Paintball && B.Paintball.attivo) && !(B.Kart && B.Kart.attivo), qui = luogo();
     amici.forEach(a => {
-      const pr = a.pr, vis = libero && qui !== 'casa' && stessoLuogo(pr.s, qui);
+      const pr = a.pr, vis = libero && qui !== 'casa' && stessoLuogo(pr.s, qui) && !bloccato(a);
       a.av.root.visible = vis;
       if (!vis) { a.vis = false; return; }
       const d = dove(a, ora / 1000) || { x: num(pr.x, a.x), z: num(pr.z, a.z), y: num(pr.y, a.y), r: num(pr.r, a.r), v: 0 };
@@ -199,7 +202,7 @@
     pr.dm.l.slice(-3).forEach(e => {
       if (!e || num(e.n, 0) <= a.nDm) return;
       a.nDm = num(e.n, 0);
-      const t = testo(e.t, 200), id = idAmico(a.nick);
+      const t = filtra(testo(e.t, 200)), id = idAmico(a.nick);
       if (!t || !mio || testo(e.a, 20).toLowerCase() !== mio || G.stato.bloccati.has(id)) return;
       const d = new Date(), c = G.conversazione(id);
       c.msgs.push({ da: id, testo: t, ora: String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0') });
@@ -219,11 +222,11 @@
   };
   G.inviaDM = function (id, t) {
     if (typeof id !== 'string' || id.indexOf('amico:') !== 0) return inviaOrig(id, t);
-    t = (t || '').trim().slice(0, 200);
-    if (!t) return false;
     if (G.stato.bloccati.has(id)) { G.emetti('toast', 'Hai bloccato questo utente'); return false; }
     const a = amicoDa(id);
     if (!a) { G.emetti('toast', G.utente(id).nick + ' non è online: il messaggio non può arrivare'); return false; }
+    t = G.controllaMessaggio(t, 'dm', 200);   // filtro e modalita' lenta, come la chat
+    if (!t) return false;
     const d = new Date();
     G.conversazione(id).msgs.push({ da: 'io', testo: t, ora: String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0') });
     G.emetti('dm', { id });
