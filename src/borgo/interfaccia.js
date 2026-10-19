@@ -308,8 +308,13 @@
     const c = G.conversazione(id), box = $('#dm-messaggi'), bloccato = G.stato.bloccati.has(id);
     box.innerHTML = '';
     if (!c.msgs.length) box.append(el('div', 'vuoto', 'Scrivi il primo messaggio a ' + G.utente(id).nick + '.'));
+    let giorno = null;
     c.msgs.forEach((m, i) => {
-      const b = el('div', 'bolla ' + (m.da === 'io' ? 'io' : 'altro'), m.testo); b.append(el('small', null, m.ora));
+      // separatore quando cambia il giorno (le conversazioni restano salvate)
+      if (m.quando) { const g = nomeGiorno(m.quando); if (g !== giorno) { giorno = g; box.append(el('div', 'dm-giorno', g)); } }
+      const b = el('div', 'bolla ' + (m.da === 'io' ? 'io' : 'altro'), m.testo), pic = el('small', null, m.ora);
+      if (m.da === 'io' && m.stato) { const sp = el('span', 'spunte' + (m.stato === 'letto' ? ' letto' : ''), m.stato === 'letto' ? '✓✓' : '✓'); sp.title = m.stato === 'letto' ? 'Letto' : 'Inviato'; pic.append(sp); }
+      b.append(pic);
       // tocca un messaggio per farti chiedere se eliminarlo
       b.addEventListener('click', () => {
         const aperto = box.querySelector('.bolla-elimina'); if (aperto) aperto.remove();
@@ -326,6 +331,17 @@
     const cest = $('#dm-elimina'); cest.classList.remove('conferma'); cest.textContent = 'Elimina chat';
     $('#dm-input').disabled = bloccato;
     $('#dm-input').placeholder = bloccato ? 'Utente bloccato' : 'Scrivi un messaggio privato…';
+  }
+  function nomeGiorno(t) {
+    const d = new Date(t), oggi = new Date(), ieri = new Date(Date.now() - 864e5), stesso = (a, b) => a.toDateString() === b.toDateString();
+    if (stesso(d, oggi)) return 'Oggi'; if (stesso(d, ieri)) return 'Ieri';
+    return d.getDate() + ' ' + ['gen', 'feb', 'mar', 'apr', 'mag', 'giu', 'lug', 'ago', 'set', 'ott', 'nov', 'dic'][d.getMonth()];
+  }
+  // "sta scrivendo…" dell'amico con la chat aperta (controllato due volte al secondo)
+  function aggiornaScrive() {
+    const id = G.stato.dmAperto, box = $('#dm-scrive'), si = !!(id && paginaAttiva === 'messaggi' && G.staScrivendo && G.staScrivendo(id));
+    if (si) $('#dm-scrive-nick').textContent = G.utente(id).nick;
+    if (box.hidden === si) { box.hidden = !si; if (si) { const m = $('#dm-messaggi'); m.scrollTop = m.scrollHeight; } }
   }
   function aggiornaBadgeDM() {
     const n = G.totNonLetti(), b = $('#badge-dm'); b.hidden = n === 0; b.textContent = n > 9 ? '9+' : String(n);
@@ -564,6 +580,8 @@
       clearTimeout(tConferma);
       G.eliminaConversazione(id); UI.toast('Conversazione eliminata'); mostraElencoDM(); aggiornaBadgeDM();
     });
+    $('#dm-input').addEventListener('input', () => { if (G.stato.dmAperto && $('#dm-input').value) G.emetti('scrivo', G.stato.dmAperto); });
+    setInterval(aggiornaScrive, 500);
     $('#dm-form').addEventListener('submit', e => {
       e.preventDefault(); const i = $('#dm-input'), id = G.stato.dmAperto;
       if (id && G.inviaDM(id, i.value)) i.value = '';

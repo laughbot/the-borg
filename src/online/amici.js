@@ -49,7 +49,9 @@
     const dove = (B.Raid && B.Raid.attivo) ? 'raid' : (B.Paintball && B.Paintball.attivo) ? 'paintball' : (B.Kart && B.Kart.attivo) ? 'kart' : (B.Belinverse && B.Belinverse.attivo) ? 'carte' : luogo();
     return { v: 1, nick: testo(gioco.nick, 20), look: lookDa(gioco.look), s: dove, x: +io.x.toFixed(2), z: +io.z.toFixed(2), y: +io.y.toFixed(2), r: +io.yaw.toFixed(2),
       vel: +Math.hypot(io.vx, io.vz).toFixed(2), sed: io.seduto ? (io.seduto.dorme ? 2 : 1) : 0, bk: io.bici ? 1 : 0, k: GIOCHI[dove] && GIOCHI[dove]().rete ? GIOCHI[dove]().rete() : null,
-      mc: B.Mercato && B.Mercato.annunciRete ? B.Mercato.annunciRete() : null, mo: mieiMo.length ? { l: mieiMo } : undefined, re: mieiRe.length ? { l: mieiRe } : undefined };
+      mc: B.Mercato && B.Mercato.annunciRete ? B.Mercato.annunciRete() : null, mo: mieiMo.length ? { l: mieiMo } : undefined, re: mieiRe.length ? { l: mieiRe } : undefined,
+      lt: Object.keys(mieiLetti).length ? Object.keys(mieiLetti).slice(-6).map(k => ({ a: k, n: mieiLetti[k] })) : undefined,
+      sc: scrivoA && performance.now() - tScrivo < 4000 ? testo(scrivoA, 20) : undefined };
   }
   // q = numero progressivo (chi riceve scarta gli aggiornamenti vecchi arrivati in ritardo),
   // t = il mio orologio in ms e vx/vz = la velocita' vera tra un invio e l'altro: chi mi vede
@@ -137,7 +139,7 @@
         bolla(a, dest ? '🤫 ' + t : t, 4.5, dest ? 'sussurro' : null);
       }
     }
-    riceviDm(a, pr); riceviEv(a, pr); riceviMo(a, pr); riceviRe(a, pr);
+    riceviDm(a, pr); riceviLetti(a, pr); riceviEv(a, pr); riceviMo(a, pr); riceviRe(a, pr);
     const mcK = JSON.stringify(pr.mc || null); if (mcK !== a.mcK) { a.mcK = mcK; G.emetti('annunci'); }
     if (pr.em && pr.em.n !== a.nEm) { a.nEm = pr.em.n; const e = EMOTE[pr.em.t]; if (e && !bloccato(a)) { a.av.faiEmote(pr.em.t, e[1]); bolla(a, e[0], e[1] + 0.4); } }
   }
@@ -192,7 +194,8 @@
      Viaggiano nella presenza come la chat (ultimi 3, con il nick del destinatario):
      li vedono passare tutti i telefoni della stanza, ma li mostra solo chi ha quel nick. */
   const noti = new Map();   // nick minuscolo -> { nick, look }: la scheda resta anche se l'amico esce
-  let nDm = 0, mieiDm = [];
+  // i numeri dei messaggi partono dall'ora attuale: restano crescenti anche se si ricarica la pagina (letture e ricevute non si confondono)
+  let nDm = Math.floor(Date.now() / 1000), mieiDm = [];
   const maxN = x => (x && Array.isArray(x.l) ? x.l.reduce((m, e) => Math.max(m, num(e && e.n, 0)), 0) : 0);
   const maxDm = pr => maxN(pr && pr.dm);
   const idAmico = nick => 'amico:' + nick;
@@ -205,9 +208,10 @@
       a.nDm = num(e.n, 0);
       const t = filtra(testo(e.t, 200)), id = idAmico(a.nick);
       if (!t || !mio || testo(e.a, 20).toLowerCase() !== mio || G.stato.bloccati.has(id)) return;
-      const d = new Date(), c = G.conversazione(id);
-      c.msgs.push({ da: id, testo: t, ora: String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0') });
+      const c = G.conversazione(id);
+      c.msgs.push({ da: id, testo: t, ora: oraOra(), quando: Date.now(), n: num(e.n, 0) });
       if (G.stato.dmAperto !== id) { c.nonLetti++; G.emetti('toast', 'Nuovo messaggio da ' + a.nick); }
+      else segnaLetto(a.nick, num(e.n, 0));
       G.emetti('dm', { id });
     });
   }
@@ -239,13 +243,40 @@
     if (!a) { G.emetti('toast', G.utente(id).nick + ' non è online: il messaggio non può arrivare'); return false; }
     t = G.controllaMessaggio(t, 'dm', 200);   // filtro e modalita' lenta, come la chat
     if (!t) return false;
-    const d = new Date();
-    G.conversazione(id).msgs.push({ da: 'io', testo: t, ora: String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0') });
+    nDm++;
+    G.conversazione(id).msgs.push({ da: 'io', testo: t, ora: oraOra(), quando: Date.now(), n: nDm, stato: 'inviato' });
     G.emetti('dm', { id });
-    nDm++; mieiDm = mieiDm.concat({ n: nDm, a: a.nick, t }).slice(-3);
+    mieiDm = mieiDm.concat({ n: nDm, a: a.nick, t }).slice(-3);
+    scrivoA = null;
     invia({ dm: { l: mieiDm } });
     return true;
   };
+
+  /* ---------- letto e "sta scrivendo" ----------
+     lt: [{ a: nick, n }] = ho letto i messaggi di nick fino al numero n; sc: nick a cui sto scrivendo (per 4 secondi dall'ultimo tasto) */
+  const mieiLetti = {};
+  let scrivoA = null, tScrivo = 0;
+  function segnaLetto(nick, n) {
+    const k = String(nick).toLowerCase(); if (!n || (mieiLetti[k] || 0) >= n) return;
+    mieiLetti[k] = n; invia();
+  }
+  const segnaLettiOrig = G.segnaLetti;
+  G.segnaLetti = function (id) {
+    segnaLettiOrig(id);
+    const a = typeof id === 'string' && id.indexOf('amico:') === 0 ? id.slice(6) : null, c = a && G.stato.dm[id];
+    if (c) segnaLetto(a, c.msgs.reduce((m, x) => (x.da !== 'io' ? Math.max(m, num(x.n, 0)) : m), 0));
+  };
+  G.su('scrivo', id => { if (typeof id === 'string' && id.indexOf('amico:') === 0) { scrivoA = id.slice(6); tScrivo = performance.now(); } });
+  function riceviLetti(a, pr) {
+    if (!Array.isArray(pr.lt)) return;
+    const e = pr.lt.find(x => x && stessoLuogo(testo(x.a, 20), mioNick())); if (!e) return;
+    const c = G.stato.dm[idAmico(a.nick)]; if (!c) return;
+    let cambiato = false;
+    c.msgs.forEach(m => { if (m.da === 'io' && m.stato !== 'letto' && num(m.n, Infinity) <= num(e.n, 0)) { m.stato = 'letto'; cambiato = true; } });
+    if (cambiato) G.emetti('dm', { id: idAmico(a.nick) });
+  }
+  // sta scrivendo a me?
+  G.staScrivendo = id => { const a = amicoDa(id); return !!(a && a.pr && a.pr.sc && stessoLuogo(testo(a.pr.sc, 20), mioNick())); };
   /* ---------- visite in casa con il campanello (come Habbo) e "Raggiungi" ----------
      Eventi nella presenza (ultimi 3): bussa -> il padrone vede "Apri / Non ora";
      apri porta con se' la casa (livello, stili e mobili) e sparisce dopo qualche secondo. */

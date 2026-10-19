@@ -158,6 +158,15 @@ button { cursor: pointer; border: 0; background: none; touch-action: manipulatio
 #dm-form { display: flex; gap: 8px; padding: 8px 10px 10px; }
 #dm-form input { flex: 1; min-width: 0; padding: 11px 14px; border-radius: 99px; outline: none; -webkit-user-select: text; user-select: text; }
 #dm-form button { padding: 0 18px; border-radius: 99px; font-weight: 800; }
+.bolla .spunte { margin-left: 4px; letter-spacing: -2px; }
+.bolla .spunte.letto { color: #1f74e0; font-weight: 800; }
+.dm-giorno { align-self: center; margin: 6px 0 2px; padding: 3px 10px; border-radius: 99px; background: rgba(60,40,90,.1); color: #6b5c80; font-size: 12px; font-weight: 700; }
+#dm-scrive { padding: 4px 18px 2px; font-size: 13px; color: #6b5c80; font-style: italic; }
+#dm-scrive[hidden] { display: none; }
+.puntini { display: inline-flex; gap: 3px; vertical-align: middle; }
+.puntini i { width: 5px; height: 5px; border-radius: 50%; background: #8a7aa3; animation: puntino 1.2s infinite ease-in-out; }
+.puntini i:nth-child(2) { animation-delay: .15s; } .puntini i:nth-child(3) { animation-delay: .3s; }
+@keyframes puntino { 0%, 60%, 100% { transform: none; opacity: .5; } 30% { transform: translateY(-3px); opacity: 1; } }
 
 /* ---------- profilo ---------- */
 .profilo-testa { display: flex; flex-direction: column; align-items: center; gap: 8px; padding: 4px 16px 6px; }

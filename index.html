@@ -184,6 +184,15 @@ button { cursor: pointer; border: 0; background: none; touch-action: manipulatio
 #dm-form { display: flex; gap: 8px; padding: 8px 10px 10px; }
 #dm-form input { flex: 1; min-width: 0; padding: 11px 14px; border-radius: 99px; outline: none; -webkit-user-select: text; user-select: text; }
 #dm-form button { padding: 0 18px; border-radius: 99px; font-weight: 800; }
+.bolla .spunte { margin-left: 4px; letter-spacing: -2px; }
+.bolla .spunte.letto { color: #1f74e0; font-weight: 800; }
+.dm-giorno { align-self: center; margin: 6px 0 2px; padding: 3px 10px; border-radius: 99px; background: rgba(60,40,90,.1); color: #6b5c80; font-size: 12px; font-weight: 700; }
+#dm-scrive { padding: 4px 18px 2px; font-size: 13px; color: #6b5c80; font-style: italic; }
+#dm-scrive[hidden] { display: none; }
+.puntini { display: inline-flex; gap: 3px; vertical-align: middle; }
+.puntini i { width: 5px; height: 5px; border-radius: 50%; background: #8a7aa3; animation: puntino 1.2s infinite ease-in-out; }
+.puntini i:nth-child(2) { animation-delay: .15s; } .puntini i:nth-child(3) { animation-delay: .3s; }
+@keyframes puntino { 0%, 60%, 100% { transform: none; opacity: .5; } 30% { transform: translateY(-3px); opacity: 1; } }
 
 /* ---------- profilo ---------- */
 .profilo-testa { display: flex; flex-direction: column; align-items: center; gap: 8px; padding: 4px 16px 6px; }
@@ -539,7 +548,7 @@ body.orizz #inizio-anteprima { width: 120px; height: 140px; }
   <section id="pagina-messaggi" class="pagina" hidden>
     <div id="dm-elenco" class="vista">
       <header class="pagina-testa"><h2>Messaggi privati</h2><span class="tag-demo">DEMO</span></header>
-      <p class="avviso">Dimostrazione: le conversazioni sono simulate dal tuo browser e le risposte sono automatiche. Nulla viene inviato o salvato su un server.</p>
+      <p class="avviso">Le conversazioni con gli amici restano salvate solo su questo telefono. ✓ = inviato, ✓✓ = letto.</p>
       <div id="dm-lista"></div>
       <p class="suggerimento">I messaggi privati arrivano solo dagli amici veri collegati con il vostro codice amici. Per scrivere a un amico tocca il suo personaggio e scegli "Messaggio privato".</p>
     </div>
@@ -553,6 +562,7 @@ body.orizz #inizio-anteprima { width: 120px; height: 140px; }
       </header>
       <p class="avviso">Tocca un messaggio per eliminarlo. L'eliminazione vale solo sul tuo telefono.</p>
       <div id="dm-messaggi"></div>
+      <div id="dm-scrive" hidden><span class="puntini"><i></i><i></i><i></i></span> <b id="dm-scrive-nick"></b> sta scrivendo…</div>
       <form id="dm-form" autocomplete="off">
         <input id="dm-input" maxlength="300" placeholder="Scrivi un messaggio privato…" enterkeyhint="send" autocomplete="off" autocapitalize="sentences">
         <button type="submit">Invia</button>
@@ -10733,6 +10743,30 @@ body.pc #rd-hud .tasto,body.pc #rd-hud .base{display:none}
   function segnaLetti(id) { const c = conversazione(id); if (c.nonLetti) { c.nonLetti = 0; emetti('dm', { id }); } }
   function inviaDM() { emetti('toast', 'I messaggi privati si scambiano solo con gli amici veri'); return false; }
   function eliminaConversazione(id) { if (!stato.dm[id]) return; delete stato.dm[id]; emetti('dm', { id }); }
+
+  /* conversazioni con gli amici veri: restano salvate su questo telefono (ultime 30 chat, 100 messaggi l'una) */
+  const CHIAVE_DM = 'theborg.dm.v1';
+  let tSalvaDM = 0;
+  function salvaDM() {
+    clearTimeout(tSalvaDM);
+    tSalvaDM = setTimeout(() => {
+      try {
+        const o = {};
+        Object.keys(stato.dm).filter(id => id.indexOf('amico:') === 0 && stato.dm[id].msgs.length).slice(-30)
+          .forEach(id => { o[id] = { msgs: stato.dm[id].msgs.slice(-100), nonLetti: stato.dm[id].nonLetti }; });
+        localStorage.setItem(CHIAVE_DM, JSON.stringify(o));
+      } catch (e) { /* storage non disponibile */ }
+    }, 300);
+  }
+  function caricaDM() {
+    try {
+      const o = JSON.parse(localStorage.getItem(CHIAVE_DM) || '{}');
+      Object.keys(o).forEach(id => {
+        if (id.indexOf('amico:') !== 0 || !o[id] || !Array.isArray(o[id].msgs)) return;
+        stato.dm[id] = { msgs: o[id].msgs.filter(m => m && typeof m.testo === 'string').slice(-100), nonLetti: Math.max(0, +o[id].nonLetti || 0) };
+      });
+    } catch (e) { /* niente */ }
+  }
   function eliminaMessaggio(id, i) { const c = stato.dm[id]; if (!c || !c.msgs[i]) return; c.msgs.splice(i, 1); emetti('dm', { id }); }
   /* ---------- blocchi: restano salvati su questo telefono ---------- */
   const CHIAVE_BLOCCHI = 'theborg.bloccati.v1', CHIAVE_SEGNALAZIONI = 'theborg.segnalazioni.v1';
@@ -10795,13 +10829,15 @@ body.pc #rd-hud .tasto,body.pc #rd-hud .base{display:none}
   function avvia(nick, look) {
     stato.giocatore = { id: 'io', nick, look: Object.assign({}, look), io: true };
     stato.chat = []; stato.dm = {}; stato.bloccati = new Set(); stato.dmAperto = null; stato.timerChat = 7;
-    caricaBlocchi(); salva();
+    caricaBlocchi(); caricaDM(); salva();
   }
   function nickValido(n) { return /^[A-Za-z0-9_]{3,14}$/.test(n); }
   function nickPermesso(n) { return FC.nickOk(n); }
   function impostaAtmosfera(id) { stato.atmosfera = id; salva(); emetti('atmosfera', id); }
   function impostaGrafica(g) { stato.grafica = g; salva(); emetti('grafica', g); }
   function cambiaLook(look) { stato.giocatore.look = Object.assign({}, look); salva(); emetti('look', stato.giocatore.look); }
+
+  su('dm', salvaDM);
 
   window.Gioco = { stato, su, emetti, avvia, tick, inviaChat, inviaDM, eliminaConversazione, eliminaMessaggio, conversazione, totNonLetti, segnaLetti, blocca, sblocca, segnala,
     segnalazioni, MOTIVI, elencoBloccati, controllaMessaggio, aggiungiVoce, chatQui, inviaSussurro, citaNick, REAZIONI, reagisci, voceDaChiave, carica, salva, utente, nickValido, nickPermesso, impostaAtmosfera, impostaGrafica, cambiaLook, inPiazza, botPiazza };
@@ -15226,8 +15262,13 @@ body.bv-attivo #barra-alto,body.bv-attivo #controlli,body.bv-attivo #btn-contest
     const c = G.conversazione(id), box = $('#dm-messaggi'), bloccato = G.stato.bloccati.has(id);
     box.innerHTML = '';
     if (!c.msgs.length) box.append(el('div', 'vuoto', 'Scrivi il primo messaggio a ' + G.utente(id).nick + '.'));
+    let giorno = null;
     c.msgs.forEach((m, i) => {
-      const b = el('div', 'bolla ' + (m.da === 'io' ? 'io' : 'altro'), m.testo); b.append(el('small', null, m.ora));
+      // separatore quando cambia il giorno (le conversazioni restano salvate)
+      if (m.quando) { const g = nomeGiorno(m.quando); if (g !== giorno) { giorno = g; box.append(el('div', 'dm-giorno', g)); } }
+      const b = el('div', 'bolla ' + (m.da === 'io' ? 'io' : 'altro'), m.testo), pic = el('small', null, m.ora);
+      if (m.da === 'io' && m.stato) { const sp = el('span', 'spunte' + (m.stato === 'letto' ? ' letto' : ''), m.stato === 'letto' ? '✓✓' : '✓'); sp.title = m.stato === 'letto' ? 'Letto' : 'Inviato'; pic.append(sp); }
+      b.append(pic);
       // tocca un messaggio per farti chiedere se eliminarlo
       b.addEventListener('click', () => {
         const aperto = box.querySelector('.bolla-elimina'); if (aperto) aperto.remove();
@@ -15244,6 +15285,17 @@ body.bv-attivo #barra-alto,body.bv-attivo #controlli,body.bv-attivo #btn-contest
     const cest = $('#dm-elimina'); cest.classList.remove('conferma'); cest.textContent = 'Elimina chat';
     $('#dm-input').disabled = bloccato;
     $('#dm-input').placeholder = bloccato ? 'Utente bloccato' : 'Scrivi un messaggio privato…';
+  }
+  function nomeGiorno(t) {
+    const d = new Date(t), oggi = new Date(), ieri = new Date(Date.now() - 864e5), stesso = (a, b) => a.toDateString() === b.toDateString();
+    if (stesso(d, oggi)) return 'Oggi'; if (stesso(d, ieri)) return 'Ieri';
+    return d.getDate() + ' ' + ['gen', 'feb', 'mar', 'apr', 'mag', 'giu', 'lug', 'ago', 'set', 'ott', 'nov', 'dic'][d.getMonth()];
+  }
+  // "sta scrivendo…" dell'amico con la chat aperta (controllato due volte al secondo)
+  function aggiornaScrive() {
+    const id = G.stato.dmAperto, box = $('#dm-scrive'), si = !!(id && paginaAttiva === 'messaggi' && G.staScrivendo && G.staScrivendo(id));
+    if (si) $('#dm-scrive-nick').textContent = G.utente(id).nick;
+    if (box.hidden === si) { box.hidden = !si; if (si) { const m = $('#dm-messaggi'); m.scrollTop = m.scrollHeight; } }
   }
   function aggiornaBadgeDM() {
     const n = G.totNonLetti(), b = $('#badge-dm'); b.hidden = n === 0; b.textContent = n > 9 ? '9+' : String(n);
@@ -15482,6 +15534,8 @@ body.bv-attivo #barra-alto,body.bv-attivo #controlli,body.bv-attivo #btn-contest
       clearTimeout(tConferma);
       G.eliminaConversazione(id); UI.toast('Conversazione eliminata'); mostraElencoDM(); aggiornaBadgeDM();
     });
+    $('#dm-input').addEventListener('input', () => { if (G.stato.dmAperto && $('#dm-input').value) G.emetti('scrivo', G.stato.dmAperto); });
+    setInterval(aggiornaScrive, 500);
     $('#dm-form').addEventListener('submit', e => {
       e.preventDefault(); const i = $('#dm-input'), id = G.stato.dmAperto;
       if (id && G.inviaDM(id, i.value)) i.value = '';
@@ -16167,7 +16221,9 @@ body.orizz #pagina-zaino .zn-carte{grid-template-columns:repeat(auto-fill,minmax
     const dove = (B.Raid && B.Raid.attivo) ? 'raid' : (B.Paintball && B.Paintball.attivo) ? 'paintball' : (B.Kart && B.Kart.attivo) ? 'kart' : (B.Belinverse && B.Belinverse.attivo) ? 'carte' : luogo();
     return { v: 1, nick: testo(gioco.nick, 20), look: lookDa(gioco.look), s: dove, x: +io.x.toFixed(2), z: +io.z.toFixed(2), y: +io.y.toFixed(2), r: +io.yaw.toFixed(2),
       vel: +Math.hypot(io.vx, io.vz).toFixed(2), sed: io.seduto ? (io.seduto.dorme ? 2 : 1) : 0, bk: io.bici ? 1 : 0, k: GIOCHI[dove] && GIOCHI[dove]().rete ? GIOCHI[dove]().rete() : null,
-      mc: B.Mercato && B.Mercato.annunciRete ? B.Mercato.annunciRete() : null, mo: mieiMo.length ? { l: mieiMo } : undefined, re: mieiRe.length ? { l: mieiRe } : undefined };
+      mc: B.Mercato && B.Mercato.annunciRete ? B.Mercato.annunciRete() : null, mo: mieiMo.length ? { l: mieiMo } : undefined, re: mieiRe.length ? { l: mieiRe } : undefined,
+      lt: Object.keys(mieiLetti).length ? Object.keys(mieiLetti).slice(-6).map(k => ({ a: k, n: mieiLetti[k] })) : undefined,
+      sc: scrivoA && performance.now() - tScrivo < 4000 ? testo(scrivoA, 20) : undefined };
   }
   // q = numero progressivo (chi riceve scarta gli aggiornamenti vecchi arrivati in ritardo),
   // t = il mio orologio in ms e vx/vz = la velocita' vera tra un invio e l'altro: chi mi vede
@@ -16255,7 +16311,7 @@ body.orizz #pagina-zaino .zn-carte{grid-template-columns:repeat(auto-fill,minmax
         bolla(a, dest ? '🤫 ' + t : t, 4.5, dest ? 'sussurro' : null);
       }
     }
-    riceviDm(a, pr); riceviEv(a, pr); riceviMo(a, pr); riceviRe(a, pr);
+    riceviDm(a, pr); riceviLetti(a, pr); riceviEv(a, pr); riceviMo(a, pr); riceviRe(a, pr);
     const mcK = JSON.stringify(pr.mc || null); if (mcK !== a.mcK) { a.mcK = mcK; G.emetti('annunci'); }
     if (pr.em && pr.em.n !== a.nEm) { a.nEm = pr.em.n; const e = EMOTE[pr.em.t]; if (e && !bloccato(a)) { a.av.faiEmote(pr.em.t, e[1]); bolla(a, e[0], e[1] + 0.4); } }
   }
@@ -16310,7 +16366,8 @@ body.orizz #pagina-zaino .zn-carte{grid-template-columns:repeat(auto-fill,minmax
      Viaggiano nella presenza come la chat (ultimi 3, con il nick del destinatario):
      li vedono passare tutti i telefoni della stanza, ma li mostra solo chi ha quel nick. */
   const noti = new Map();   // nick minuscolo -> { nick, look }: la scheda resta anche se l'amico esce
-  let nDm = 0, mieiDm = [];
+  // i numeri dei messaggi partono dall'ora attuale: restano crescenti anche se si ricarica la pagina (letture e ricevute non si confondono)
+  let nDm = Math.floor(Date.now() / 1000), mieiDm = [];
   const maxN = x => (x && Array.isArray(x.l) ? x.l.reduce((m, e) => Math.max(m, num(e && e.n, 0)), 0) : 0);
   const maxDm = pr => maxN(pr && pr.dm);
   const idAmico = nick => 'amico:' + nick;
@@ -16323,9 +16380,10 @@ body.orizz #pagina-zaino .zn-carte{grid-template-columns:repeat(auto-fill,minmax
       a.nDm = num(e.n, 0);
       const t = filtra(testo(e.t, 200)), id = idAmico(a.nick);
       if (!t || !mio || testo(e.a, 20).toLowerCase() !== mio || G.stato.bloccati.has(id)) return;
-      const d = new Date(), c = G.conversazione(id);
-      c.msgs.push({ da: id, testo: t, ora: String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0') });
+      const c = G.conversazione(id);
+      c.msgs.push({ da: id, testo: t, ora: oraOra(), quando: Date.now(), n: num(e.n, 0) });
       if (G.stato.dmAperto !== id) { c.nonLetti++; G.emetti('toast', 'Nuovo messaggio da ' + a.nick); }
+      else segnaLetto(a.nick, num(e.n, 0));
       G.emetti('dm', { id });
     });
   }
@@ -16357,13 +16415,40 @@ body.orizz #pagina-zaino .zn-carte{grid-template-columns:repeat(auto-fill,minmax
     if (!a) { G.emetti('toast', G.utente(id).nick + ' non è online: il messaggio non può arrivare'); return false; }
     t = G.controllaMessaggio(t, 'dm', 200);   // filtro e modalita' lenta, come la chat
     if (!t) return false;
-    const d = new Date();
-    G.conversazione(id).msgs.push({ da: 'io', testo: t, ora: String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0') });
+    nDm++;
+    G.conversazione(id).msgs.push({ da: 'io', testo: t, ora: oraOra(), quando: Date.now(), n: nDm, stato: 'inviato' });
     G.emetti('dm', { id });
-    nDm++; mieiDm = mieiDm.concat({ n: nDm, a: a.nick, t }).slice(-3);
+    mieiDm = mieiDm.concat({ n: nDm, a: a.nick, t }).slice(-3);
+    scrivoA = null;
     invia({ dm: { l: mieiDm } });
     return true;
   };
+
+  /* ---------- letto e "sta scrivendo" ----------
+     lt: [{ a: nick, n }] = ho letto i messaggi di nick fino al numero n; sc: nick a cui sto scrivendo (per 4 secondi dall'ultimo tasto) */
+  const mieiLetti = {};
+  let scrivoA = null, tScrivo = 0;
+  function segnaLetto(nick, n) {
+    const k = String(nick).toLowerCase(); if (!n || (mieiLetti[k] || 0) >= n) return;
+    mieiLetti[k] = n; invia();
+  }
+  const segnaLettiOrig = G.segnaLetti;
+  G.segnaLetti = function (id) {
+    segnaLettiOrig(id);
+    const a = typeof id === 'string' && id.indexOf('amico:') === 0 ? id.slice(6) : null, c = a && G.stato.dm[id];
+    if (c) segnaLetto(a, c.msgs.reduce((m, x) => (x.da !== 'io' ? Math.max(m, num(x.n, 0)) : m), 0));
+  };
+  G.su('scrivo', id => { if (typeof id === 'string' && id.indexOf('amico:') === 0) { scrivoA = id.slice(6); tScrivo = performance.now(); } });
+  function riceviLetti(a, pr) {
+    if (!Array.isArray(pr.lt)) return;
+    const e = pr.lt.find(x => x && stessoLuogo(testo(x.a, 20), mioNick())); if (!e) return;
+    const c = G.stato.dm[idAmico(a.nick)]; if (!c) return;
+    let cambiato = false;
+    c.msgs.forEach(m => { if (m.da === 'io' && m.stato !== 'letto' && num(m.n, Infinity) <= num(e.n, 0)) { m.stato = 'letto'; cambiato = true; } });
+    if (cambiato) G.emetti('dm', { id: idAmico(a.nick) });
+  }
+  // sta scrivendo a me?
+  G.staScrivendo = id => { const a = amicoDa(id); return !!(a && a.pr && a.pr.sc && stessoLuogo(testo(a.pr.sc, 20), mioNick())); };
   /* ---------- visite in casa con il campanello (come Habbo) e "Raggiungi" ----------
      Eventi nella presenza (ultimi 3): bussa -> il padrone vede "Apri / Non ora";
      apri porta con se' la casa (livello, stili e mobili) e sparisce dopo qualche secondo. */

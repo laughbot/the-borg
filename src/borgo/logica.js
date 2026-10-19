@@ -123,6 +123,30 @@
   function segnaLetti(id) { const c = conversazione(id); if (c.nonLetti) { c.nonLetti = 0; emetti('dm', { id }); } }
   function inviaDM() { emetti('toast', 'I messaggi privati si scambiano solo con gli amici veri'); return false; }
   function eliminaConversazione(id) { if (!stato.dm[id]) return; delete stato.dm[id]; emetti('dm', { id }); }
+
+  /* conversazioni con gli amici veri: restano salvate su questo telefono (ultime 30 chat, 100 messaggi l'una) */
+  const CHIAVE_DM = 'theborg.dm.v1';
+  let tSalvaDM = 0;
+  function salvaDM() {
+    clearTimeout(tSalvaDM);
+    tSalvaDM = setTimeout(() => {
+      try {
+        const o = {};
+        Object.keys(stato.dm).filter(id => id.indexOf('amico:') === 0 && stato.dm[id].msgs.length).slice(-30)
+          .forEach(id => { o[id] = { msgs: stato.dm[id].msgs.slice(-100), nonLetti: stato.dm[id].nonLetti }; });
+        localStorage.setItem(CHIAVE_DM, JSON.stringify(o));
+      } catch (e) { /* storage non disponibile */ }
+    }, 300);
+  }
+  function caricaDM() {
+    try {
+      const o = JSON.parse(localStorage.getItem(CHIAVE_DM) || '{}');
+      Object.keys(o).forEach(id => {
+        if (id.indexOf('amico:') !== 0 || !o[id] || !Array.isArray(o[id].msgs)) return;
+        stato.dm[id] = { msgs: o[id].msgs.filter(m => m && typeof m.testo === 'string').slice(-100), nonLetti: Math.max(0, +o[id].nonLetti || 0) };
+      });
+    } catch (e) { /* niente */ }
+  }
   function eliminaMessaggio(id, i) { const c = stato.dm[id]; if (!c || !c.msgs[i]) return; c.msgs.splice(i, 1); emetti('dm', { id }); }
   /* ---------- blocchi: restano salvati su questo telefono ---------- */
   const CHIAVE_BLOCCHI = 'theborg.bloccati.v1', CHIAVE_SEGNALAZIONI = 'theborg.segnalazioni.v1';
@@ -185,13 +209,15 @@
   function avvia(nick, look) {
     stato.giocatore = { id: 'io', nick, look: Object.assign({}, look), io: true };
     stato.chat = []; stato.dm = {}; stato.bloccati = new Set(); stato.dmAperto = null; stato.timerChat = 7;
-    caricaBlocchi(); salva();
+    caricaBlocchi(); caricaDM(); salva();
   }
   function nickValido(n) { return /^[A-Za-z0-9_]{3,14}$/.test(n); }
   function nickPermesso(n) { return FC.nickOk(n); }
   function impostaAtmosfera(id) { stato.atmosfera = id; salva(); emetti('atmosfera', id); }
   function impostaGrafica(g) { stato.grafica = g; salva(); emetti('grafica', g); }
   function cambiaLook(look) { stato.giocatore.look = Object.assign({}, look); salva(); emetti('look', stato.giocatore.look); }
+
+  su('dm', salvaDM);
 
   window.Gioco = { stato, su, emetti, avvia, tick, inviaChat, inviaDM, eliminaConversazione, eliminaMessaggio, conversazione, totNonLetti, segnaLetti, blocca, sblocca, segnala,
     segnalazioni, MOTIVI, elencoBloccati, controllaMessaggio, aggiungiVoce, chatQui, inviaSussurro, citaNick, REAZIONI, reagisci, voceDaChiave, carica, salva, utente, nickValido, nickPermesso, impostaAtmosfera, impostaGrafica, cambiaLook, inPiazza, botPiazza };
