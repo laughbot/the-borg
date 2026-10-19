@@ -248,6 +248,14 @@ button { cursor: pointer; border: 0; background: none; touch-action: manipulatio
 .spunta input { width: 20px; height: 20px; margin: 0; accent-color: var(--ambra); }
 .btn-primario:disabled { opacity: .45; box-shadow: none; }
 .riga.sistema { display: block; }
+.riga.lontano { opacity: .55; }
+.riga.sussurro .corpo { font-style: italic; color: #dcd2ff; }
+.riga .verso { color: #b9a6f2; font-weight: 700; margin-right: 4px; font-style: normal; }
+#chat-sussurro { display: flex; align-items: center; gap: 8px; margin: 4px 8px 0; padding: 4px 4px 4px 12px; border-radius: 99px; background: rgba(122,98,200,.38); font-size: 13px; }
+#chat-sussurro[hidden], #chat.compatta #chat-sussurro { display: none; }
+#chat-sussurro span { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+#chat-sussurro button { flex: none; width: 28px; height: 28px; border-radius: 50%; background: rgba(255,255,255,.16); font-size: 13px; }
+#chat.sussurra #chat-form input { border-color: #a58ef0; }
 .riga.sistema .link { color: var(--ambra); text-decoration: underline; font-style: normal; font-weight: 700; padding: 0 0 0 4px; font-size: inherit; }
 .sicurezza-box { padding: 12px 14px; display: flex; flex-direction: column; gap: 10px; }
 .sicurezza-box p { margin: 0; }
@@ -476,7 +484,7 @@ body.orizz #inizio-anteprima { width: 120px; height: 140px; }
     <div id="chat" hidden>
       <div class="chat-testa">
         <svg viewBox="0 0 24 24" class="ico"><path d="M4 5.5h16a1.5 1.5 0 0 1 1.5 1.5v8A1.5 1.5 0 0 1 20 16.5h-8l-5 4v-4H4A1.5 1.5 0 0 1 2.5 15V7A1.5 1.5 0 0 1 4 5.5Z"/></svg>
-        <strong>Chat Piazza</strong>
+        <strong id="chat-titolo">Chat</strong>
         <span class="tag-demo">DEMO</span>
         <span id="chat-ultimo"></span>
         <button id="chat-chiudi" class="btn-mini" aria-label="Riduci o apri la chat">
@@ -484,6 +492,7 @@ body.orizz #inizio-anteprima { width: 120px; height: 140px; }
         </button>
       </div>
       <div id="chat-lista"></div>
+      <div id="chat-sussurro" hidden><span>🤫 Sussurri a <b id="chat-sussurro-nick"></b>: lo leggete solo voi due</span><button id="chat-sussurro-via" type="button" aria-label="Smetti di sussurrare">✕</button></div>
       <form id="chat-form" autocomplete="off">
         <input id="chat-input" maxlength="120" placeholder="Scrivi un messaggio…" enterkeyhint="send" autocomplete="off" autocapitalize="sentences">
         <button type="submit" aria-label="Invia"><svg viewBox="0 0 24 24" class="ico"><path d="M21 3 10 14"/><path d="m21 3-7 18-4-7-7-4Z"/></svg></button>
@@ -586,6 +595,7 @@ body.orizz #inizio-anteprima { width: 120px; height: 140px; }
       <p id="foglio-bio"></p>
       <div class="azioni">
         <button id="foglio-dm" class="btn-primario">Messaggio privato</button>
+        <button id="foglio-sussurra" class="btn-secondario">🤫 Sussurra in chat</button>
         <div class="azioni-riga" id="foglio-amico" hidden>
           <button id="foglio-visita" class="btn-secondario">Visita casa</button>
           <button id="foglio-raggiungi" class="btn-secondario">Raggiungi</button>
@@ -1000,17 +1010,68 @@ window.CONFIG = {
     const s = new T.Sprite(new T.SpriteMaterial({ map: tex(cv), transparent: true, depthTest: false }));
     const h = o.altezza || 0.42; s.scale.set(h * w / 68, h, 1); s.renderOrder = 20; return s;
   }
-  function fumetto(testo) {
-    const [c0, x0] = tela(8, 8); x0.font = '36px sans-serif';
-    const w = Math.ceil(x0.measureText(testo).width) + 44, [cv, x] = tela(w, 86);
-    rr(x, 2, 2, w - 4, 62, 24); x.fillStyle = '#ffffff'; x.fill(); x.lineWidth = 3; x.strokeStyle = '#2a1a2e'; x.stroke();
-    x.beginPath(); x.moveTo(w / 2 - 10, 62); x.lineTo(w / 2, 82); x.lineTo(w / 2 + 10, 62); x.fillStyle = '#fff'; x.fill();
-    x.font = '36px sans-serif'; x.textAlign = 'center'; x.textBaseline = 'middle'; x.fillStyle = '#2a1a2e'; x.fillText(testo, w / 2, 34);
-    const s = new T.Sprite(new T.SpriteMaterial({ map: tex(cv), transparent: true, depthTest: false }));
-    s.scale.set(0.5 * w / 86, 0.5, 1); s.renderOrder = 21; return s;
+  /* ---------- fumetti (come Habbo) ----------
+     Il testo lungo va a capo (al massimo 3 righe). stile: 'sussurro' = fumetto chiaro, tratteggiato e in corsivo. */
+  const F_FONT = 36, F_RIGA = 42, F_MAXW = 470, F_RIGHE = 3;
+  function righeFumetto(x, testo) {
+    const parole = String(testo).split(' '), righe = []; let r = '';
+    const larga = t => x.measureText(t).width > F_MAXW;
+    parole.forEach(p => {
+      while (larga(p)) {                                   // parola lunghissima: si spezza
+        let k = p.length; while (k > 1 && larga((r ? r + ' ' : '') + p.slice(0, k))) k--;
+        if (k <= 1 && r) { righe.push(r); r = ''; continue; }
+        righe.push((r ? r + ' ' : '') + p.slice(0, k)); r = ''; p = p.slice(k);
+      }
+      const prova = r ? r + ' ' + p : p;
+      if (larga(prova) && r) { righe.push(r); r = p; } else r = prova;
+    });
+    if (r) righe.push(r);
+    if (righe.length > F_RIGHE) { righe.length = F_RIGHE; let u = righe[F_RIGHE - 1]; while (u && larga(u + '…')) u = u.slice(0, -1); righe[F_RIGHE - 1] = u + '…'; }
+    return righe;
   }
+  function fumetto(testo, stile) {
+    const sus = stile === 'sussurro', font = (sus ? 'italic ' : '') + F_FONT + 'px sans-serif';
+    const [c0, x0] = tela(8, 8); x0.font = font;
+    const righe = righeFumetto(x0, testo), larg = Math.max(...righe.map(r => x0.measureText(r).width), 20);
+    const w = Math.ceil(larg) + 44, hc = righe.length * F_RIGA + 22, h = hc + 24, [cv, x] = tela(w, h);
+    rr(x, 2, 2, w - 4, hc - 2, 24); x.fillStyle = sus ? '#ece6f7' : '#ffffff'; x.fill();
+    x.lineWidth = 3; x.strokeStyle = sus ? '#7a62c8' : '#2a1a2e'; if (sus) x.setLineDash([9, 7]); x.stroke(); x.setLineDash([]);
+    x.beginPath(); x.moveTo(w / 2 - 10, hc); x.lineTo(w / 2, h - 4); x.lineTo(w / 2 + 10, hc); x.fillStyle = sus ? '#ece6f7' : '#fff'; x.fill();
+    x.font = font; x.textAlign = 'center'; x.textBaseline = 'middle'; x.fillStyle = sus ? '#4b3a72' : '#2a1a2e';
+    righe.forEach((r, i) => x.fillText(r, w / 2, 13 + F_RIGA / 2 + i * F_RIGA));
+    const s = new T.Sprite(new T.SpriteMaterial({ map: tex(cv), transparent: true, depthTest: false }));
+    s.scale.set(0.5 * w / 86, 0.5 * h / 86, 1); s.renderOrder = 21; s.center.set(0.5, 0); return s;
+  }
+  /* fumetti impilati sopra la testa: il nuovo in basso, i precedenti salgono e sbiadiscono (al massimo 3).
+     ent ha av.root; si usa Bolle.mostra / aggiorna (ogni fotogramma) / pulisci / finisci. */
+  const BOLLE_MAX = 3, BOLLE_Y = 2.78;
+  function bollaVia(root, b) { root.remove(b.s); if (b.s.material) { if (b.s.material.map) b.s.material.map.dispose(); b.s.material.dispose(); } }
+  const Bolle = {
+    mostra(ent, testo, sec, stile) {
+      const root = ent.av.root, l = ent.bolle || (ent.bolle = []), s = fumetto(testo, stile);
+      s.position.y = BOLLE_Y - 0.25; root.add(s);
+      l.push({ s, dur: sec || 4.5, y: BOLLE_Y - 0.25 });
+      while (l.length > BOLLE_MAX) bollaVia(root, l.shift());
+      ent.bolla = s;
+    },
+    aggiorna(ent, dt) {
+      const l = ent.bolle; if (!l || !l.length) return;
+      for (let i = l.length - 1; i >= 0; i--) { l[i].dur -= dt; if (l[i].dur <= 0) { bollaVia(ent.av.root, l[i]); l.splice(i, 1); } }
+      // sdraiato (a letto) l'avatar e' ruotato: i fumetti salgono lungo il suo asse z
+      const sdr = !!ent.bolleSdraiato; let y = sdr ? 1.65 : BOLLE_Y;
+      for (let i = l.length - 1; i >= 0; i--) {
+        const b = l[i]; b.y += (y - b.y) * Math.min(1, dt * 12);
+        if (sdr) b.s.position.set(0, 0.5, b.y); else b.s.position.set(0, b.y, 0);
+        b.s.material.opacity = Math.min(1, b.dur / 0.35) * (i === l.length - 1 ? 1 : 0.78);
+        y += b.s.scale.y + 0.06;
+      }
+      ent.bolla = l.length ? l[l.length - 1].s : null;
+    },
+    pulisci(ent) { (ent.bolle || []).forEach(b => bollaVia(ent.av.root, b)); ent.bolle = []; ent.bolla = null; },
+    finisci(ent) { const l = ent.bolle; if (l && l.length) l[l.length - 1].dur = Math.min(l[l.length - 1].dur, 0.3); }
+  };
 
-  window.B3 = { T, CFG, M, eCache, Mluce, finestreMat, linea, lineaBox, mesh, tela, tex, rnd, rr, etichetta, fumetto,
+  window.B3 = { T, CFG, M, eCache, Mluce, finestreMat, linea, lineaBox, mesh, tela, tex, rnd, rr, etichetta, fumetto, Bolle,
     texSelciato, texTegole, texParquet, texTerracotta, texTappeto, texMosaico, texAlone, texOrologio, texLancette, texQuadro, texBacheca, texRighe, texFestone, texInsegna, texStendardo, texLuna, texCielo, texCerchio, COLORE_LINEA };
 })();
 
@@ -10565,11 +10626,29 @@ body.pc #rd-hud .tasto,body.pc #rd-hud .base{display:none}
     return r.testo;
   }
 
-  /* ---------- chat pubblica (simulata) ---------- */
-  function aggiungiChat(id, nick, testo, io) {
-    const voce = { id, nick, testo, ora: ora(), io: !!io };
-    stato.chat.push(voce); if (stato.chat.length > 80) stato.chat.shift();
+  /* ---------- chat pubblica (simulata) ----------
+     Ogni voce ricorda il luogo (stanza): ogni luogo ha la sua chat, come le stanze di Habbo.
+     sussurro: solo tu e chi lo riceve lo vedete; lontano: detto lontano da te (piu' tenue). */
+  function aggiungiVoce(voce) {
+    voce.stanza = voce.stanza || stato.chiaveChat || stato.stanzaId;
+    stato.chat.push(voce); if (stato.chat.length > 150) stato.chat.shift();
     emetti('chat', voce);
+    return voce;
+  }
+  function aggiungiChat(id, nick, testo, io, extra) { return aggiungiVoce(Object.assign({ id, nick, testo, ora: ora(), io: !!io }, extra || {})); }
+  function chatQui() { const k = stato.chiaveChat || stato.stanzaId; return stato.chat.filter(m => m.stanza === k); }
+
+  // sussurro a un abitante dimostrativo (quelli degli amici veri li gestisce online/amici.js)
+  const SUSSURRI = ['Psst! Ciao {nick} 😄', 'Shh, è un segreto!', 'Ahah, ok!', 'Non lo dico a nessuno 🤫', 'Ci vediamo alla fontana?', 'Hehe 😉'];
+  function inviaSussurro(id, testo) {
+    const u = utenteDi(id); if (!u) return false;
+    if (stato.bloccati.has(id)) { emetti('toast', 'Hai bloccato questo utente'); return false; }
+    if (stato.stanzaId !== 'piazza' || !inPiazza().some(b => b.id === id)) { emetti('toast', u.nick + ' non è qui: non puoi sussurrargli'); return false; }
+    testo = controllaMessaggio(testo, 'chat', 120);
+    if (!testo) return false;
+    aggiungiChat('io', stato.giocatore.nick, testo, true, { sussurro: true, aId: id, aNick: u.nick });
+    if (Math.random() < 0.6) setTimeout(() => { if (!stato.bloccati.has(id) && stato.stanzaId === 'piazza') aggiungiChat(id, u.nick, pick(SUSSURRI).replace('{nick}', stato.giocatore.nick), false, { sussurro: true }); }, rnd(1800, 3500));
+    return true;
   }
   function inviaChat(testo) {
     testo = controllaMessaggio(testo, 'chat', 120);
@@ -10660,7 +10739,7 @@ body.pc #rd-hud .tasto,body.pc #rd-hud .base{display:none}
   function cambiaLook(look) { stato.giocatore.look = Object.assign({}, look); salva(); emetti('look', stato.giocatore.look); }
 
   window.Gioco = { stato, su, emetti, avvia, tick, inviaChat, inviaDM, eliminaConversazione, eliminaMessaggio, conversazione, totNonLetti, segnaLetti, blocca, sblocca, segnala,
-    segnalazioni, MOTIVI, elencoBloccati, controllaMessaggio, carica, salva, utente, nickValido, nickPermesso, impostaAtmosfera, impostaGrafica, cambiaLook, inPiazza, botPiazza };
+    segnalazioni, MOTIVI, elencoBloccati, controllaMessaggio, aggiungiVoce, chatQui, inviaSussurro, carica, salva, utente, nickValido, nickPermesso, impostaAtmosfera, impostaGrafica, cambiaLook, inPiazza, botPiazza };
 })();
 
 </script>
@@ -14406,15 +14485,9 @@ body.bv-attivo #barra-alto,body.bv-attivo #controlli,body.bv-attivo #btn-contest
   }
 
   /* ---------- fumetti e nomi ---------- */
-  const viaBolla = (r, b) => { r.remove(b); if (b.material) { if (b.material.map) b.material.map.dispose(); b.material.dispose(); } };   // il fumetto ha texture e materiale suoi: vanno liberati
-  function mostraBolla(ent, testo, sec) {
-    if (ent.bolla) viaBolla(ent.av.root, ent.bolla);
-    ent.bolla = B.fumetto(testo); ent.bolla.position.y = 3.05; ent.av.root.add(ent.bolla); ent.durBolla = sec || 4.5;
-  }
-  function aggBolla(ent, dt) {
-    if (!ent.bolla) return; ent.durBolla -= dt;
-    if (ent.durBolla <= 0) { viaBolla(ent.av.root, ent.bolla); ent.bolla = null; }
-  }
+  // fumetti impilati come in Habbo (B3.Bolle, in base.js): ogni fumetto ha texture e materiale suoi, Bolle li libera
+  function mostraBolla(ent, testo, sec, stile) { B.Bolle.mostra(ent, testo, sec || 4.5, stile); }
+  function aggBolla(ent, dt) { B.Bolle.aggiorna(ent, dt); }
 
   /* ---------- giocatore ---------- */
   const io = { av: null, x: 0, z: 38.6, y: 0, vx: 0, vz: 0, yaw: PI, st: stanze.piazza, bolla: null, nick: '' };
@@ -14502,9 +14575,15 @@ body.bv-attivo #barra-alto,body.bv-attivo #controlli,body.bv-attivo #btn-contest
     if (vel > 0.2) o.yaw += angDiff(o.yaw, Math.atan2(o.vx, o.vz)) * Math.min(1, dt * 9);
     o.av.root.position.set(o.x, 0, o.z); o.av.root.rotation.y = o.yaw; if (!o.lontano) o.av.aggiorna(dt, vel, t);
   }
+  // RAGGIO_ASCOLTO: oltre questa distanza un messaggio arriva "da lontano" (piu' tenue in chat, come in Habbo)
+  const RAGGIO_ASCOLTO = 14;
   G.su('chat', v => {
-    if (v.io) { if (io.av) mostraBolla(io, v.testo, 4.5); return; }
-    const o = npc.find(n => n.id === v.id); if (o && !G.stato.bloccati.has(v.id) && stanza.id === 'piazza') mostraBolla(o, v.testo, 4.5);
+    if (v.io) { if (io.av) mostraBolla(io, v.sussurro ? '🤫 ' + v.testo : v.testo, 4.5, v.sussurro ? 'sussurro' : null); return; }
+    const o = npc.find(n => n.id === v.id);
+    if (o && !G.stato.bloccati.has(v.id) && stanza.id === 'piazza') {
+      if (!v.sussurro && Math.hypot(o.x - io.x, o.z - io.z) > RAGGIO_ASCOLTO) v.lontano = true;
+      mostraBolla(o, v.sussurro ? '🤫 ' + v.testo : v.testo, 4.5, v.sussurro ? 'sussurro' : null);
+    }
   });
 
   /* ---------- camera isometrica ortogonale ---------- */
@@ -14548,7 +14627,8 @@ body.bv-attivo #barra-alto,body.bv-attivo #controlli,body.bv-attivo #btn-contest
     C.azT = C.az = stanza.az === undefined ? PI / 4 : stanza.az; impostaZoom(stanza.zoom); if (stanza.elev) { C.elev = stanza.elev; C.elevAuto = true; } else if (C.elevAuto) { C.elev = 28; C.elevAuto = false; } C.tx = io.x; C.tz = io.z; C.ty = 1.0 + io.y;
     { const fuori = id === 'piazza'; if (!fuori) setBici(false); const bb = $('#btn-bici'); if (bb) bb.style.display = fuori ? '' : 'none'; }
     assegnaLuci(); ultimaPorta = undefined;
-    if (io.bolla) { viaBolla(io.av.root, io.bolla); io.bolla = null; }
+    B.Bolle.pulisci(io);
+    G.stato.chiaveChat = id === 'ospite' ? 'casa:' + String(stanza.ospite || '').toLowerCase() : id;   // ogni luogo ha la sua chat
     if (B.Arredo) B.Arredo.stanzaCambiata(id);
     G.emetti('stanza', { id, def: { nome: stanza.nome, pubblica: stanza.pubblica } });
   }
@@ -14560,7 +14640,8 @@ body.bv-attivo #barra-alto,body.bv-attivo #controlli,body.bv-attivo #btn-contest
   }
   function alzati() {
     const s = io.seduto; if (!s) return; io.seduto = null;
-    if (s.dorme && io.bolla) io.durBolla = 0;
+    if (s.dorme) B.Bolle.finisci(io);
+    io.bolleSdraiato = false;
     if (s.esci) { io.x = s.esci.x; io.z = s.esci.z; }
     else {
       // cerca il primo punto libero attorno al posto: davanti, poi di lato, dietro, poi sempre piu' lontano (evita di restare incastrati in siepi o ostacoli)
@@ -14678,7 +14759,7 @@ body.bv-attivo #barra-alto,body.bv-attivo #controlli,body.bv-attivo #btn-contest
       else {
         const s = io.seduto, k = Math.min(1, dt * 10);
         io.x += (s.x - io.x) * k; io.z += (s.z - io.z) * k; io.y += (s.y - io.y) * k; io.yaw += angDiff(io.yaw, s.yaw) * k; io.vx = io.vz = 0;
-        io.av.sedT = io.seduto.dorme ? 0 : 1; io.av.sdrT = io.seduto.dorme ? 1 : 0; io.av.root.rotation.order = 'YXZ'; io.av.root.rotation.x = -PI / 2 * io.av.sdr; if (io.seduto.dorme && io.bolla) io.bolla.position.set(0, 0.5, 1.9); io.av.root.position.set(io.x, io.y, io.z); io.av.root.rotation.y = io.yaw; B.pos = { x: io.x, z: io.z };
+        io.av.sedT = io.seduto.dorme ? 0 : 1; io.av.sdrT = io.seduto.dorme ? 1 : 0; io.av.root.rotation.order = 'YXZ'; io.av.root.rotation.x = -PI / 2 * io.av.sdr; io.bolleSdraiato = !!io.seduto.dorme; io.av.root.position.set(io.x, io.y, io.z); io.av.root.rotation.y = io.yaw; B.pos = { x: io.x, z: io.z };
         return 0;
       }
     }
@@ -14902,6 +14983,8 @@ body.bv-attivo #barra-alto,body.bv-attivo #controlli,body.bv-attivo #btn-contest
     $('#nome-stanza').textContent = info.def.nome;
     const b = $('#badge-stanza'); b.textContent = info.def.pubblica ? 'Pubblica' : 'Privata'; b.className = 'badge' + (info.def.pubblica ? ' pubblica' : '');
     $('#chat').hidden = !info.def.pubblica && info.id !== 'casa';   // in casa: per chiacchierare con gli amici in visita
+    $('#chat-titolo').textContent = info.id === 'casa' ? 'Chat di casa' : info.def.nome;   // ogni luogo ha la sua chat
+    smettiSussurro();
     $('#btn-casa').setAttribute('aria-label', info.id === 'casa' ? 'Vai in piazza' : 'Vai a casa');
     $('#btn-casa').title = info.id === 'casa' ? 'Vai in piazza' : 'Vai a casa';
     $('#btn-contesto').hidden = true;
@@ -14932,21 +15015,37 @@ body.bv-attivo #barra-alto,body.bv-attivo #controlli,body.bv-attivo #btn-contest
     const lista = $('#chat-lista'); lista.innerHTML = '';
     const benv = el('div', 'riga sistema', 'Benvenuto! Rispetta tutti e non scrivere mai dati personali.'), lr = el('button', 'link', 'Regole');
     lr.type = 'button'; lr.addEventListener('click', () => mostraRegole()); benv.append(lr); lista.append(benv);
-    const visibili = G.stato.chat.filter(m => !G.stato.bloccati.has(m.id));
+    const visibili = G.chatQui().filter(m => !G.stato.bloccati.has(m.id));
     visibili.forEach(m => {
-      const r = el('div', 'riga' + (m.io ? ' io' : ''));
+      const r = el('div', 'riga' + (m.io ? ' io' : '') + (m.sussurro ? ' sussurro' : '') + (m.lontano ? ' lontano' : ''));
+      if (m.lontano) r.title = 'Detto lontano da te';
       const av = el('span', 'av', m.nick.charAt(0).toUpperCase()), cb = coloreAvatar(m.id); av.style.background = cb;
       { const n2 = parseInt(cb.slice(1), 16), lum = (0.299 * (n2 >> 16) + 0.587 * ((n2 >> 8) & 255) + 0.114 * (n2 & 255)); av.style.color = lum < 110 ? '#ffffff' : '#2b2230'; }
       const corpo = el('div', 'corpo');
       const n = el('button', 'nick', m.nick); n.type = 'button';
       if (!m.io) n.addEventListener('click', () => apriFoglio(m.id));
-      corpo.append(n, document.createTextNode(m.testo), el('span', 'ora', m.ora));
+      if (m.sussurro) corpo.append(n, el('span', 'verso', m.io ? '🤫 a ' + m.aNick + ':' : '🤫'), document.createTextNode(m.testo), el('span', 'ora', m.ora));
+      else corpo.append(n, document.createTextNode(m.testo), el('span', 'ora', m.ora));
       r.append(av, corpo);
       lista.append(r);
     });
     lista.scrollTop = lista.scrollHeight;
     const ultimo = visibili[visibili.length - 1];
     $('#chat-ultimo').textContent = ultimo ? ultimo.nick + ': ' + ultimo.testo : '';
+  }
+
+  /* ---------- sussurra (come Habbo): il messaggio lo legge solo chi scegli, nella stessa stanza ---------- */
+  let sussurroA = null;
+  function sussurra(id) {
+    const u = G.utente(id); if (!u) return;
+    sussurroA = id; $('#chat-sussurro-nick').textContent = u.nick; $('#chat-sussurro').hidden = false; $('#chat').classList.add('sussurra');
+    $('#chat-input').placeholder = 'Sussurra a ' + u.nick + '…';
+    if (!chatAperta) compattaChat();
+    UI.aggiornaArea(); setTimeout(() => { try { $('#chat-input').focus(); } catch (e) { /* ok */ } }, 60);
+  }
+  function smettiSussurro() {
+    sussurroA = null; $('#chat-sussurro').hidden = true; $('#chat').classList.remove('sussurra');
+    $('#chat-input').placeholder = 'Scrivi un messaggio…'; UI.aggiornaArea();
   }
 
   /* ---------- messaggi privati ---------- */
@@ -15014,6 +15113,7 @@ body.bv-attivo #barra-alto,body.bv-attivo #controlli,body.bv-attivo #btn-contest
     $('#foglio-tipo').textContent = u.amico ? 'Amico vero' : 'Utente dimostrativo';
     $('#foglio-amico').hidden = !u.amico;
     $('#foglio-dm').hidden = !u.amico;   // ai bot non si scrivono messaggi privati
+    $('#foglio-sussurra').hidden = G.stato.bloccati.has(id) || !u.online;
     aggiornaBottoneBlocco();
     $('#foglio').hidden = false;
   }
@@ -15212,7 +15312,7 @@ body.bv-attivo #barra-alto,body.bv-attivo #controlli,body.bv-attivo #btn-contest
     aggiungiFrecce($('#inizio-anteprima')); aggiungiFrecce($('#profilo-anteprima')); creaZaino();
     $('#chat-form').addEventListener('submit', e => {
       e.preventDefault(); const i = $('#chat-input');
-      if (G.inviaChat(i.value)) i.value = '';
+      if (sussurroA ? G.inviaSussurro(sussurroA, i.value) : G.inviaChat(i.value)) i.value = '';
     });
 
     $('#dm-indietro').addEventListener('click', mostraElencoDM);
@@ -15242,6 +15342,8 @@ body.bv-attivo #barra-alto,body.bv-attivo #controlli,body.bv-attivo #btn-contest
       apriPagina('messaggi'); apriThread(id);
     });
     $('#foglio-segnala').addEventListener('click', () => apriSegnala(idFoglio));
+    $('#foglio-sussurra').addEventListener('click', () => { const id = idFoglio; chiudiFoglio(); chiudiPagine(); sussurra(id); });
+    $('#chat-sussurro-via').addEventListener('click', smettiSussurro);
     $('#segnala-annulla').addEventListener('click', chiudiSegnala);
     $('#segnala .fc-sfondo').addEventListener('click', chiudiSegnala);
     $('#segnala-invia').addEventListener('click', inviaSegnala);
@@ -15289,7 +15391,7 @@ body.bv-attivo #barra-alto,body.bv-attivo #controlli,body.bv-attivo #btn-contest
     G.su('stanza', aggiornaStanza);
     G.su('profilo', d => apriFoglio(d.id));
     G.su('chat', () => rendiChat());
-    G.su('blocchi', () => { rendiChat(); aggiornaBadgeDM(); if (paginaAttiva === 'profilo') aggiornaBloccati(); if (paginaAttiva === 'messaggi') { G.stato.dmAperto ? rendiThread() : mostraElencoDM(); } });
+    G.su('blocchi', () => { if (sussurroA && G.stato.bloccati.has(sussurroA)) smettiSussurro(); rendiChat(); aggiornaBadgeDM(); if (paginaAttiva === 'profilo') aggiornaBloccati(); if (paginaAttiva === 'messaggi') { G.stato.dmAperto ? rendiThread() : mostraElencoDM(); } });
     G.su('dm', d => {
       ordineDM = [d.id].concat(ordineDM.filter(x => x !== d.id));
       if (G.stato.dmAperto === d.id) { G.segnaLetti(d.id); rendiThread(); }
@@ -15936,7 +16038,7 @@ body.orizz #pagina-zaino .zn-carte{grid-template-columns:repeat(auto-fill,minmax
     noti.set(nick.toLowerCase(), { nick, look });
     amici.set(peer, a); return a;
   }
-  function togli(peer) { aiGiochi(peer, null, null); const a = amici.get(peer); if (!a) return; bici(a, false); app.scene.remove(a.av.root); B.liberaAvatar(a.av); amici.delete(peer); }
+  function togli(peer) { aiGiochi(peer, null, null); const a = amici.get(peer); if (!a) return; bici(a, false); B.Bolle.pulisci(a); app.scene.remove(a.av.root); B.liberaAvatar(a.av); amici.delete(peer); }
   // la bici dell'amico: la stessa che usa lui, montata sotto il suo avatar
   function bici(a, on) {
     if (on && !a.bk && app.creaBici) { a.bk = app.creaBici(); a.av.root.add(a.bk); }
@@ -15986,12 +16088,13 @@ body.orizz #pagina-zaino .zn-carte{grid-template-columns:repeat(auto-fill,minmax
     aiGiochi(peer, a.nick, pr);   // nei minigiochi: il suo stato di gioco
     // messaggio nuovo in chat: entra nella chat pubblica e appare nel fumetto
     // (passa dal filtro anche qui: il telefono di chi scrive si puo' manomettere; chi e' bloccato non si legge)
+    // msg.a = nick di chi riceve un sussurro: gli altri telefoni lo ignorano
     if (pr.msg && pr.msg.n !== a.nMsg) {
-      a.nMsg = pr.msg.n; const t = filtra(testo(pr.msg.t, 120));
-      if (t && stessoLuogo(pr.s, luogo()) && !bloccato(a)) {
-        const d = new Date(), voce = { id: idAmico(a.nick), nick: a.nick, testo: t, ora: String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0'), io: false, amico: true };
-        G.stato.chat.push(voce); if (G.stato.chat.length > 80) G.stato.chat.shift(); G.emetti('chat', voce);
-        bolla(a, t, 4.5);
+      a.nMsg = pr.msg.n; const t = filtra(testo(pr.msg.t, 120)), dest = testo(pr.msg.a, 20);
+      if (t && stessoLuogo(pr.s, luogo()) && !bloccato(a) && (!dest || stessoLuogo(dest, mioNick()))) {
+        const lontano = !dest && Math.hypot(a.x - app.io.x, a.z - app.io.z) > 14;
+        G.aggiungiVoce({ id: idAmico(a.nick), nick: a.nick, testo: t, ora: oraOra(), io: false, amico: true, sussurro: !!dest, lontano });
+        bolla(a, dest ? '🤫 ' + t : t, 4.5, dest ? 'sussurro' : null);
       }
     }
     riceviDm(a, pr); riceviEv(a, pr); riceviMo(a, pr);
@@ -16001,8 +16104,8 @@ body.orizz #pagina-zaino .zn-carte{grid-template-columns:repeat(auto-fill,minmax
   const filtra = t => (t && window.FiltroChat ? window.FiltroChat.ricevuto(t) : t);
   const bloccato = a => G.stato.bloccati.has(idAmico(a.nick));
   const EMOTE = { saluta: ['Ciao!', 3], balla: ['♪', 5], ridi: ['Ahah!', 3], applaudi: ['Bravo!', 4], evviva: ['Evviva!', 3] };
-  const viaBolla = (r, b) => { r.remove(b); if (b.material) { if (b.material.map) b.material.map.dispose(); b.material.dispose(); } };
-  function bolla(a, t, sec) { if (a.bolla) viaBolla(a.av.root, a.bolla); a.bolla = B.fumetto(t); a.bolla.position.y = 3.05; a.av.root.add(a.bolla); a.durBolla = sec; }
+  function bolla(a, t, sec, stile) { B.Bolle.mostra(a, t, sec, stile); }
+  const oraOra = () => { const d = new Date(); return String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0'); };
 
   /* ---------- ogni fotogramma: seguono la loro posizione, si vedono solo nella tua stessa stanza ---------- */
   let prima = performance.now(), tBadge = 0;
@@ -16027,7 +16130,7 @@ body.orizz #pagina-zaino .zn-carte{grid-template-columns:repeat(auto-fill,minmax
       a.av.root.position.set(a.x, a.y, a.z); a.av.root.rotation.y = a.r;
       a.av.aggiorna(dt, vel, ora / 1000);
       if (a.bk) { a.bk.userData.ruote.forEach(r => { r.rotation.x += vel * dt / 0.27; }); a.bk.userData.pedali.rotation.x = -a.av.fb; }
-      if (a.bolla) { a.durBolla -= dt; if (a.durBolla <= 0) { viaBolla(a.av.root, a.bolla); a.bolla = null; } }
+      B.Bolle.aggiorna(a, dt);
     });
     tBadge -= dt; if (tBadge <= 0) { tBadge = 0.5; badge(amici.size); }
   }
@@ -16069,7 +16172,18 @@ body.orizz #pagina-zaino .zn-carte{grid-template-columns:repeat(auto-fill,minmax
     });
   }
   const NOMI = { piazza: 'In piazza', raid: 'Nel raid', paintball: 'A paintball', kart: 'Sui kart', carte: 'A Belinverse', casa: 'A casa sua' };
-  const utenteOrig = G.utente, inviaOrig = G.inviaDM;
+  const utenteOrig = G.utente, inviaOrig = G.inviaDM, sussurroOrig = G.inviaSussurro;
+  // sussurro a un amico: deve essere nel tuo stesso luogo; parte con la chat (msg.a), lo legge solo lui
+  G.inviaSussurro = function (id, t) {
+    if (typeof id !== 'string' || id.indexOf('amico:') !== 0) return sussurroOrig(id, t);
+    if (G.stato.bloccati.has(id)) { G.emetti('toast', 'Hai bloccato questo utente'); return false; }
+    const a = amicoDa(id);
+    if (!a || !stessoLuogo(a.pr.s, luogo())) { G.emetti('toast', G.utente(id).nick + ' non è qui: usa un messaggio privato'); return false; }
+    t = G.controllaMessaggio(t, 'chat', 120);
+    if (!t) return false;
+    G.aggiungiVoce({ id: 'io', nick: mioNick(), testo: t, ora: oraOra(), io: true, sussurro: true, aId: id, aNick: a.nick });
+    return true;
+  };
   G.utente = function (id) {
     if (typeof id !== 'string' || id.indexOf('amico:') !== 0) return utenteOrig(id);
     const a = amicoDa(id), n = noti.get(id.slice(6).toLowerCase()) || { nick: id.slice(6), look: {} };
@@ -16218,7 +16332,11 @@ body.orizz #pagina-zaino .zn-carte{grid-template-columns:repeat(auto-fill,minmax
   B.amiciToccabili = () => [...amici.values()].filter(a => a.av.root.visible).map(a => ({ obj: a.av.proxy, tipo: 'npc', id: idAmico(a.nick) }));
 
   /* ---------- i miei messaggi e le mie emote partono per tutti ---------- */
-  G.su('chat', v => { if (v.io && !v.amico) { nMsg++; invia({ msg: { n: nMsg, t: testo(v.testo, 120) } }); } });
+  G.su('chat', v => {
+    if (!v.io || v.amico) return;
+    if (v.sussurro && String(v.aId || '').indexOf('amico:') !== 0) return;   // sussurro a un abitante dimostrativo: resta qui
+    nMsg++; invia({ msg: { n: nMsg, t: testo(v.testo, 120), a: v.sussurro ? testo(v.aNick, 20) : undefined } });
+  });
   const emoteOrig = app.emote;
   app.emote = function (tipo) { emoteOrig(tipo); if (EMOTE[tipo] && !app.io.seduto) { nEm++; invia({ em: { n: nEm, t: tipo } }); } };
 

@@ -222,6 +222,14 @@ button { cursor: pointer; border: 0; background: none; touch-action: manipulatio
 .spunta input { width: 20px; height: 20px; margin: 0; accent-color: var(--ambra); }
 .btn-primario:disabled { opacity: .45; box-shadow: none; }
 .riga.sistema { display: block; }
+.riga.lontano { opacity: .55; }
+.riga.sussurro .corpo { font-style: italic; color: #dcd2ff; }
+.riga .verso { color: #b9a6f2; font-weight: 700; margin-right: 4px; font-style: normal; }
+#chat-sussurro { display: flex; align-items: center; gap: 8px; margin: 4px 8px 0; padding: 4px 4px 4px 12px; border-radius: 99px; background: rgba(122,98,200,.38); font-size: 13px; }
+#chat-sussurro[hidden], #chat.compatta #chat-sussurro { display: none; }
+#chat-sussurro span { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+#chat-sussurro button { flex: none; width: 28px; height: 28px; border-radius: 50%; background: rgba(255,255,255,.16); font-size: 13px; }
+#chat.sussurra #chat-form input { border-color: #a58ef0; }
 .riga.sistema .link { color: var(--ambra); text-decoration: underline; font-style: normal; font-weight: 700; padding: 0 0 0 4px; font-size: inherit; }
 .sicurezza-box { padding: 12px 14px; display: flex; flex-direction: column; gap: 10px; }
 .sicurezza-box p { margin: 0; }
