@@ -136,7 +136,6 @@
     $('#btn-casa').title = info.id === 'casa' ? 'Vai in piazza' : 'Vai a casa';
     $('#btn-contesto').hidden = true;
     rendiChat(); evidenziaTab(); UI.aggiornaArea();
-    if (info.id === 'sala') UI.toast('Sala Giochi: a sinistra l\'ala PAINTBALL, a destra l\'ala GO-KART. Entra dagli archi per giocare (dimostrativo).');
     if (info.id === 'biblioteca') UI.toast('Biblioteca: al leggio, in fondo, premi "Leggi" per le letture.');
     if (info.id === 'collectibles') UI.toast('Laugh Tale Collectibles: avvicinati al bancone e premi "Apri il negozio online" (prodotti e pagamenti sono sul sito vero).');
     if (info.id === 'negozio') UI.toast('Stanza ancora vuota. Esci dal tappetino a sud.');
