@@ -204,7 +204,7 @@
         let tSaluto = 0;
         anim.push((t, dt) => { av.aggiorna(dt || 0.016, 0, t); if (t - tSaluto > 9 && av.faiEmote) { tSaluto = t; av.faiEmote('saluta', 1.6); } });
         ostBox(VX, VZ, 3.0, 1.0); ostCer(VX, VZ + 0.95, 0.4);
-        toccabili.push({ obj: av.proxy, tipo: 'azione', testo: 'Venditore: "Un pacchetto di Belinverse al giorno è gratis! Gli altri costano coins." — premi "Pacchetti Belinverse"' });
+        toccabili.push({ obj: av.proxy, tipo: 'azione', testo: 'Venditore: "Un pacchetto di Belinverse al giorno è gratis! Gli altri costano ' + B3.Eco.nome + '." — premi "Pacchetti Belinverse"' });
         porte.push({ id: 'pacchetti-belinverse', nome: 'Pacchetti Belinverse', testo: 'Pacchetti Belinverse', fn: () => { if (B.Belinverse) B.Belinverse.negozio(); }, x: VX, z: VZ - 1.4, r: 1.8 });
       })();
       porte.push({ id: 'porta-negozio', nome: 'Torna al negozio', testo: 'Torna al negozio', x: -X + 1.2, z: 9, r: 1.4, verso: 'collectibles', arrivo: { x: -DIM.negozio.X + 2.2, z: 9, yaw: PI / 2 } });

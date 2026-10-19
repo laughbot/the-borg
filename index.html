@@ -471,6 +471,13 @@ body.orizz #inizio-anteprima { width: 120px; height: 140px; }
 #btn-bici.attivo { background: #d8453b; border-color: #fff; }
 #btn-cam.attivo { background: #3b7fd6; border-color: #fff; }
 
+/* ---------- STARLIGHT, la moneta del borgo: bastoncino luminoso verde (come quelli da pesca) ---------- */
+.sl-ico{display:inline-block;position:relative;width:.42em;height:1.08em;border-radius:.22em;vertical-align:-.16em;margin:0 .22em 0 .12em;transform:rotate(32deg);
+  background:linear-gradient(90deg,rgba(178,255,106,.85),#f2ffd6 42%,#c8ff8a 58%,rgba(120,232,58,.9));
+  box-shadow:0 0 .32em rgba(150,255,70,.95),0 0 .7em rgba(120,240,50,.55),inset 0 0 .08em rgba(255,255,255,.9)}
+.sl-ico::before,.sl-ico::after{content:'';position:absolute;left:.05em;right:.05em;height:.1em;border-radius:.05em;background:rgba(235,255,210,.75)}
+.sl-ico::before{top:.16em}.sl-ico::after{bottom:.16em}
+
 </style>
 </head>
 <body>
@@ -3395,7 +3402,7 @@ window.B3_LOGO = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAyAAAAC3CAIAAABl
         let tSaluto = 0;
         anim.push((t, dt) => { av.aggiorna(dt || 0.016, 0, t); if (t - tSaluto > 9 && av.faiEmote) { tSaluto = t; av.faiEmote('saluta', 1.6); } });
         ostBox(VX, VZ, 3.0, 1.0); ostCer(VX, VZ + 0.95, 0.4);
-        toccabili.push({ obj: av.proxy, tipo: 'azione', testo: 'Venditore: "Un pacchetto di Belinverse al giorno è gratis! Gli altri costano coins." — premi "Pacchetti Belinverse"' });
+        toccabili.push({ obj: av.proxy, tipo: 'azione', testo: 'Venditore: "Un pacchetto di Belinverse al giorno è gratis! Gli altri costano ' + B3.Eco.nome + '." — premi "Pacchetti Belinverse"' });
         porte.push({ id: 'pacchetti-belinverse', nome: 'Pacchetti Belinverse', testo: 'Pacchetti Belinverse', fn: () => { if (B.Belinverse) B.Belinverse.negozio(); }, x: VX, z: VZ - 1.4, r: 1.8 });
       })();
       porte.push({ id: 'porta-negozio', nome: 'Torna al negozio', testo: 'Torna al negozio', x: -X + 1.2, z: 9, r: 1.4, verso: 'collectibles', arrivo: { x: -DIM.negozio.X + 2.2, z: 9, yaw: PI / 2 } });
@@ -4902,7 +4909,7 @@ body.kart-attivo #kart-hud #k-fine ol{max-height:30vh}
     const m = migliore(); if (player.migliorGiro != null && (m == null || player.migliorGiro < m)) { salvaMigliore(player.migliorGiro); rec = ' &#x1F3C6; nuovo record!'; }
     const pos0 = classifica().indexOf(player) + 1, premio = B.Eco && B.Eco.premioGioco ? B.Eco.premioGioco('kart', (pos0 === 1 ? 1.6 : pos0 === 2 ? 1.3 : pos0 === 3 ? 1.1 : 0.7) * (gara ? 1.2 : 1)) : 0;   // premio in base all'arrivo (online con gli amici un po' di piu')
     setTimeout(() => { if (!K.attivo) return; const cl = classifica(), pos = cl.indexOf(player) + 1; ui.grande.style.opacity = 0;
-      ui.fine.innerHTML = '<h3>' + (pos === 1 ? '&#x1F947; Hai vinto!' : pos === 2 ? '&#x1F948; Secondo posto' : pos === 3 ? '&#x1F949; Terzo posto' : pos + '° posto') + '</h3><div style="font-size:14px;opacity:.9">Tempo ' + tempo(gt) + ' &middot; miglior giro ' + tempo(player.migliorGiro) + rec + '</div><ol id="k-ol"></ol>' + (premio ? '<div style="font-size:14px;font-weight:800;margin-bottom:6px">' + B.ECONOMIA.moneta.icona + ' +' + B.Eco.fmt(premio) + '</div>' : '') + '<div style="font-size:12px;opacity:.75;margin-bottom:6px">' + (gara ? 'Gara online con gli amici.' : 'Gara contro avversari simulati.') + '</div><button id="k-ancora">Rigioca</button><button class="s" id="k-via">Esci</button>';
+      ui.fine.innerHTML = '<h3>' + (pos === 1 ? '&#x1F947; Hai vinto!' : pos === 2 ? '&#x1F948; Secondo posto' : pos === 3 ? '&#x1F949; Terzo posto' : pos + '° posto') + '</h3><div style="font-size:14px;opacity:.9">Tempo ' + tempo(gt) + ' &middot; miglior giro ' + tempo(player.migliorGiro) + rec + '</div><ol id="k-ol"></ol>' + (premio ? '<div style="font-size:14px;font-weight:800;margin-bottom:6px">' + B.Eco.ico + ' +' + B.Eco.fmt(premio) + '</div>' : '') + '<div style="font-size:12px;opacity:.75;margin-bottom:6px">' + (gara ? 'Gara online con gli amici.' : 'Gara contro avversari simulati.') + '</div><button id="k-ancora">Rigioca</button><button class="s" id="k-via">Esci</button>';
       scriviFine(); ui.fine.style.display = 'block'; ui.fine.querySelector('#k-ancora').onclick = () => nuovo(); ui.fine.querySelector('#k-via').onclick = () => K.esci(); }, 1400);
   }
   // la classifica finale si aggiorna mentre gli amici arrivano al traguardo
@@ -5818,7 +5825,7 @@ body.pc .cf .cf-t,body.pc .cf .cf-base{display:none}
     stato = 'fine'; messaggio('');
     const vinto = punti[io.team] > punti[1 - io.team], segui = gara && !capo();
     const premio = B.Eco && B.Eco.premioGioco ? B.Eco.premioGioco('paintball', (vinto ? 1.5 : punti[io.team] === punti[1 - io.team] ? 0.9 : 0.6) * (gara ? 1.2 : 1)) : 0;
-    ui.fine.innerHTML = '<h3>' + (vinto ? '&#x1F3C6; Hai vinto la partita!' : '&#x1F4A5; Partita persa') + '</h3><div style="font-size:26px;font-weight:900;margin:4px 0 8px">Blu ' + punti[0] + ' &ndash; ' + punti[1] + ' Rossi</div>' + (premio ? '<div style="font-size:14px;font-weight:800;margin-bottom:8px">' + B.ECONOMIA.moneta.icona + ' +' + B.Eco.fmt(premio) + '</div>' : '') + (segui ? '<div style="font-size:13px;margin-bottom:6px">Aspetta che ' + esc(nomeCapo()) + ' riparta, oppure esci.</div>' : '<button id="pb-ri">Rigioca</button>') + '<button class="s" id="pb-sc">' + (gara ? 'Torna al menu' : 'Cambia squadre') + '</button><button class="s" id="pb-ex">Esci</button>';
+    ui.fine.innerHTML = '<h3>' + (vinto ? '&#x1F3C6; Hai vinto la partita!' : '&#x1F4A5; Partita persa') + '</h3><div style="font-size:26px;font-weight:900;margin:4px 0 8px">Blu ' + punti[0] + ' &ndash; ' + punti[1] + ' Rossi</div>' + (premio ? '<div style="font-size:14px;font-weight:800;margin-bottom:8px">' + B.Eco.ico + ' +' + B.Eco.fmt(premio) + '</div>' : '') + (segui ? '<div style="font-size:13px;margin-bottom:6px">Aspetta che ' + esc(nomeCapo()) + ' riparta, oppure esci.</div>' : '<button id="pb-ri">Rigioca</button>') + '<button class="s" id="pb-sc">' + (gara ? 'Torna al menu' : 'Cambia squadre') + '</button><button class="s" id="pb-ex">Esci</button>';
     ui.fine.style.display = 'block';
     if (!segui) ui.fine.querySelector('#pb-ri').onclick = () => { punti = [0, 0]; nuovoRound(); };
     ui.fine.querySelector('#pb-sc').onclick = () => menu();
@@ -11458,7 +11465,7 @@ body.pc #rd-hud .tasto,body.pc #rd-hud .base{display:none}
   const S = { coins: 600, inv: {}, piazzati: [], bonus: '', st: null, storico: [], liv: 0, avvio: 0, stili: { pav: 'parquet', par: 'crema' }, stiliPos: ['parquet', 'crema'] };
   try { const r = JSON.parse(localStorage.getItem(CHIAVE) || 'null'); if (r) { S.coins = r.coins | 0; S.inv = r.inv || {}; S.piazzati = r.piazzati || []; S.bonus = r.bonus || ''; S.liv = r.liv | 0; S.avvio = r.avvio | 0; if (r.st) S.st = r.st; if (Array.isArray(r.storico)) S.storico = r.storico; if (r.stili) S.stili = Object.assign(S.stili, r.stili); if (Array.isArray(r.stiliPos)) S.stiliPos = r.stiliPos.concat(['parquet', 'crema']); } } catch (e) { /* ok */ }
   function salva() { try { localStorage.setItem(CHIAVE, JSON.stringify(S)); } catch (e) { /* ok */ } }
-  function avvisa() { ascolta.forEach(f => f()); const pl = document.getElementById('pill-coins'); if (pl && !pl.firstChild) pl.innerHTML = '\u{1FA99} <b></b>'; const p = document.querySelector('#pill-coins b'); if (p) p.textContent = S.coins; document.querySelectorAll('.coins-val').forEach(n => { n.textContent = S.coins; }); }
+  function avvisa() { ascolta.forEach(f => f()); const pl = document.getElementById('pill-coins'); if (pl && !pl.firstChild) pl.innerHTML = Eco.ico + ' <b></b>'; const p = document.querySelector('#pill-coins b'); if (p) p.textContent = S.coins; document.querySelectorAll('.coins-val').forEach(n => { n.textContent = S.coins; }); }
   const Eco = B.Eco = {
     get coins() { return S.coins; },
     su(f) { ascolta.push(f); },
@@ -11490,7 +11497,7 @@ body.pc #rd-hud .tasto,body.pc #rd-hud .base{display:none}
      leggono da qui i loro premi e i loro tetti. Aggiungendo un minigioco o un negozio si sposta solo una quota.
      Ogni guadagno viene registrato per fonte e per giorno (Eco.statistiche), cosi' si vede se una fonte rende troppo. */
   const ECO = B.ECONOMIA = {
-    moneta: { nome: 'coins', icona: '\u{1FA99}' },   // il nome della moneta: si cambia solo qui
+    moneta: { nome: 'Starlight', articolo: 'gli' },   // il nome della moneta: si cambia solo qui (l'icona e' la classe CSS .sl-ico in stile.css)
     giorno: 500,                                     // guadagno medio in un giorno di gioco (circa 45 minuti)
     quote: { minigiochi: 0.40, missioni: 0.20, accesso: 0.15, piazza: 0.25 },
     partite: 6,                                      // partite premiate a pieno al giorno, su tutti i minigiochi insieme
@@ -11507,6 +11514,9 @@ body.pc #rd-hud .tasto,body.pc #rd-hud .base{display:none}
     quota: f => Math.round(ECO.giorno * (ECO.quote[f] || 0)),
     oggi: f => (S.st && S.st.g === oggiG() ? S.st.f[f] || 0 : 0),
     fmt: n => n + ' ' + ECO.moneta.nome,
+    get nome() { return ECO.moneta.nome; },
+    get gli() { return ECO.moneta.articolo + ' ' + ECO.moneta.nome; },   // "gli Starlight"
+    ico: '<i class="sl-ico" aria-hidden="true"></i>',
     /* premio di fine partita: molt = quanto e' andata (0.6 partecipazione ... 1.6 vittoria) */
     premioGioco(gioco, molt) {
       const base = Eco.quota('minigiochi') / ECO.partite * (ECO.giochi[gioco] || 1) * (molt || 1);
@@ -11733,7 +11743,7 @@ body.arredando #joy,body.arredando #controlli,body.arredando #btn-contesto,body.
       c.innerHTML = '<div class="im">🏠</div>';
       c.appendChild(el('b', '', max ? 'La tua casa è al massimo' : 'Amplia la stanza'));
       c.appendChild(el('small', '', 'Ora: ' + dim(liv) + (max ? '' : '  →  ' + dim(liv + 1)) + ' · livello ' + (liv + 1) + '/' + L.length));
-      const b = el('button', 'bt', max ? 'Livello massimo' : '🪙 ' + Eco.costoAmpliamento()); b.disabled = max || Eco.coins < Eco.costoAmpliamento();
+      const b = el('button', 'bt', max ? 'Livello massimo' : B3.Eco.ico + ' ' + Eco.costoAmpliamento()); b.disabled = max || Eco.coins < Eco.costoAmpliamento();
       b.addEventListener('click', () => { if (Eco.amplia()) { dire('Stanza ampliata! La trovi più grande in casa.'); aggiornaNegozio(); } });
       c.appendChild(b); gr.appendChild(c);
     }
@@ -11742,7 +11752,7 @@ body.arredando #joy,body.arredando #controlli,body.arredando #btn-contesto,body.
       B.STILI[tipo].forEach(a => {
         const c = el('div', 'cd'), im = el('div', 'im'), uso = Eco.stileInUso(tipo) === a.id, ho = Eco.haStile(a.id);
         im.style.background = B.STILI.anteprima(tipo, a); im.style.backgroundSize = a.dis || a.tex ? '48px' : '';
-        const b = el('button', 'bt', uso ? 'In uso' : ho ? 'Usa' : '🪙 ' + a.prezzo); b.disabled = uso || (!ho && Eco.coins < a.prezzo);
+        const b = el('button', 'bt', uso ? 'In uso' : ho ? 'Usa' : B3.Eco.ico + ' ' + a.prezzo); b.disabled = uso || (!ho && Eco.coins < a.prezzo);
         b.addEventListener('click', () => { if (Eco.stile(tipo, a.id)) { dire(ho ? 'Applicato: ' + a.nome : 'Comprato e applicato: ' + a.nome); aggiornaNegozio(); } });
         c.appendChild(im); c.appendChild(el('b', '', a.nome)); c.appendChild(b); gr.appendChild(c);
       });
@@ -11751,7 +11761,7 @@ body.arredando #joy,body.arredando #controlli,body.arredando #btn-contesto,body.
     mobili.filter(a => !a.esclusivo).forEach(a => {
       const c = el('div', 'cd'), im = el('div', 'im'), src = anteprima(a.id);
       if (src) { const i = new Image(); i.src = src; i.alt = a.nome; im.appendChild(i); } else im.textContent = EMO[a.id] || '🪑';
-      const b = el('button', 'bt', '🪙 ' + a.prezzo); b.disabled = Eco.coins < a.prezzo;
+      const b = el('button', 'bt', B3.Eco.ico + ' ' + a.prezzo); b.disabled = Eco.coins < a.prezzo;
       b.addEventListener('click', () => { if (Eco.compra(a.id)) { dire('Comprato: ' + a.nome + ' (lo trovi in casa, “Arreda”)'); aggiornaNegozio(); } });
       c.appendChild(im); c.appendChild(el('b', '', a.nome)); c.appendChild(el('small', '', 'Ne hai: ' + Eco.posseduti(a.id))); c.appendChild(b); gr.appendChild(c);
     });
@@ -11759,7 +11769,7 @@ body.arredando #joy,body.arredando #controlli,body.arredando #btn-contesto,body.
   function dire(t) { msg.textContent = t; msg.classList.add('on'); clearTimeout(tmsg); tmsg = setTimeout(() => msg.classList.remove('on'), 2200); }
   function creaNegozio() {
     ov = el('div'); ov.id = 'arr-ov';
-    ov.innerHTML = '<div class="sb"><button class="bk">← Torna al gioco</button><b>Arredamenti</b><span class="mon">🪙 <span class="coins-val">' + Eco.coins + '</span></span></div><div class="gr"></div><div class="msg"></div>';
+    ov.innerHTML = '<div class="sb"><button class="bk">← Torna al gioco</button><b>Arredamenti</b><span class="mon">' + B3.Eco.ico + ' <span class="coins-val">' + Eco.coins + '</span></span></div><div class="gr"></div><div class="msg"></div>';
     document.body.appendChild(ov); gr = ov.querySelector('.gr'); msg = ov.querySelector('.msg');
     ov.querySelector('.bk').addEventListener('click', () => NegozioArredi.chiudi());
     window.addEventListener('keydown', e => { if (e.key === 'Escape' && NegozioArredi.aperto) NegozioArredi.chiudi(); });
@@ -11907,12 +11917,12 @@ body.arredando #joy,body.arredando #controlli,body.arredando #btn-contesto,body.
       B.STILI[tab].forEach(a => {
         const uso = Eco.stileInUso(tab) === a.id, ho = Eco.haStile(a.id), b = el('button', uso ? 'sel' : ''), sw = el('div', 'sw');
         sw.style.background = B.STILI.anteprima(tab, a); if (a.dis || a.tex) sw.style.backgroundSize = '36px';
-        b.appendChild(sw); b.appendChild(document.createTextNode(a.nome)); b.appendChild(el('small', '', uso ? 'in uso' : ho ? 'tuo' : '🪙 ' + a.prezzo));
+        b.appendChild(sw); b.appendChild(document.createTextNode(a.nome)); b.appendChild(el('small', '', uso ? 'in uso' : ho ? 'tuo' : Eco.ico + ' ' + a.prezzo));
         if (!ho && Eco.coins < a.prezzo) b.style.opacity = '.5';
         b.addEventListener('click', () => { if (Eco.stile(tab, a.id)) app.G.emetti('toast', ho ? 'Applicato: ' + a.nome : 'Comprato e applicato: ' + a.nome); else app.G.emetti('toast', 'Coins insufficienti per ' + a.nome); });
         ch.appendChild(b);
       });
-      tt.textContent = tab === 'pav' ? 'Scegli il pavimento: quelli che non hai si comprano qui con i coins' : 'Scegli il colore delle pareti: quelle che non hai si comprano qui con i coins';
+      tt.textContent = tab === 'pav' ? 'Scegli il pavimento: quelli che non hai si comprano qui con ' + B3.Eco.gli : 'Scegli il colore delle pareti: quelle che non hai si comprano qui con ' + B3.Eco.gli;
       bPosa.disabled = true; ui(); return;
     }
     mobili.forEach(a => {
@@ -12450,7 +12460,7 @@ body.arredando #joy,body.arredando #controlli,body.arredando #btn-contesto,body.
     const bonus = CFG.serie[Math.min(S.serie, CFG.serie.length) - 1]; B.Eco.add(bonus, 'accesso');
     let extra = '';
     if (S.serie >= CFG.serieLunga.giorni && !S.l7) { S.l7 = true; B.Eco.regala(CFG.serieLunga.premio); extra = ' + regalo speciale: ' + B.ARREDI.find(a => a.id === CFG.serieLunga.premio).nome + '!'; }
-    salva(); toast('Giorno ' + S.serie + ' di fila: +' + bonus + ' coins' + extra); return { bonus, serie: S.serie };
+    salva(); toast('Giorno ' + S.serie + ' di fila: +' + bonus + ' ' + B3.Eco.nome + extra); return { bonus, serie: S.serie };
   };
 
   /* ---------- eventi di gioco ---------- */
@@ -12470,17 +12480,17 @@ body.arredando #joy,body.arredando #controlli,body.arredando #btn-contesto,body.
   function riscuotiQ(q) {
     const d = def(q.id); if (!q.ok || q.rit) return; q.rit = true; const k = paga(d.r);
     if (S.settN < CFG.settimanale.n) S.settN++;
-    toast(k >= d.r ? '+' + k + ' coins' : k ? '+' + k + ' coins (raggiunto il tetto di oggi)' : 'Tetto giornaliero raggiunto: torna domani'); salva(); badge(); disegna();
+    toast(k >= d.r ? '+' + k + ' ' + B3.Eco.nome : k ? '+' + k + ' ' + B3.Eco.nome + ' (raggiunto il tetto di oggi)' : 'Tetto giornaliero raggiunto: torna domani'); salva(); badge(); disegna();
   }
   function riscuotiS() {
     if (S.settN < CFG.settimanale.n || S.settRit) return; S.settRit = true; B.Eco.add(CFG.settimanale.coins, 'missioni'); B.Eco.regala(CFG.settimanale.premio);
-    toast('Missione settimanale! +' + CFG.settimanale.coins + ' coins e ' + B.ARREDI.find(a => a.id === CFG.settimanale.premio).nome); salva(); badge(); disegna();
+    toast('Missione settimanale! +' + CFG.settimanale.coins + ' ' + B3.Eco.nome + ' e ' + B.ARREDI.find(a => a.id === CFG.settimanale.premio).nome); salva(); badge(); disegna();
   }
   function ctx() {
     const e = B.Eco.stato, p = e.piazzati, n = id => p.filter(x => x.id === id).length;
     return { mobili: p.length, pedane: n('pedana'), fontane: n('fontana'), liv: e.liv, dormito: S.dormito };
   }
-  function riscuotiC(m) { if (S.build[m.id]) return; S.build[m.id] = 1; B.Eco.add(m.r, 'costruzione'); toast('+' + m.r + ' coins'); salva(); badge(); disegna(); }
+  function riscuotiC(m) { if (S.build[m.id]) return; S.build[m.id] = 1; B.Eco.add(m.r, 'costruzione'); toast('+' + m.r + ' ' + B3.Eco.nome); salva(); badge(); disegna(); }
   const daRiscuotere = () => S.q.filter(q => q.ok && !q.rit).length + (S.settN >= CFG.settimanale.n && !S.settRit ? 1 : 0) + CFG.costruzione.filter(m => !S.build[m.id] && m.cur(ctx()) >= m.n).length;
 
   /* ---------- pannello ---------- */
@@ -12527,18 +12537,18 @@ body.arredando #joy,body.arredando #controlli,body.arredando #btn-contesto,body.
     const gg = sr.querySelector('.gg'); for (let i = 1; i <= CFG.serieLunga.giorni; i++) gg.appendChild(el('span', i <= S.serie ? 'fatto' : '', i === CFG.serieLunga.giorni ? '🎁' : '+' + bon[Math.min(i, bon.length) - 1]));
     co.appendChild(sr);
     co.appendChild(el('h3', '', 'Di oggi'));
-    S.q.forEach(q => { const d = def(q.id); co.appendChild(riga(d.t, q.p + ' / ' + d.n, q.p, d.n, '🪙 ' + d.r, q.ok, q.rit, () => riscuotiQ(q))); });
-    co.appendChild(el('div', 'tetto', 'Guadagnato oggi dalle missioni: ' + S.guad + ' / ' + CFG.tettoGiornaliero + ' coins'));
+    S.q.forEach(q => { const d = def(q.id); co.appendChild(riga(d.t, q.p + ' / ' + d.n, q.p, d.n, B3.Eco.ico + ' ' + d.r, q.ok, q.rit, () => riscuotiQ(q))); });
+    co.appendChild(el('div', 'tetto', 'Guadagnato oggi dalle missioni: ' + S.guad + ' / ' + CFG.tettoGiornaliero + ' ' + B3.Eco.nome));
     co.appendChild(el('h3', '', 'Della settimana'));
     const W = CFG.settimanale, pn = B.ARREDI.find(a => a.id === W.premio).nome;
-    co.appendChild(riga(W.t, S.settN + ' / ' + W.n + ' · premio: 🪙 ' + W.coins + ' + ' + pn + ' (esclusivo)', S.settN, W.n, '🎁', S.settN >= W.n, S.settRit, riscuotiS));
+    co.appendChild(riga(W.t, S.settN + ' / ' + W.n + ' · premio: ' + B3.Eco.ico + ' ' + W.coins + ' + ' + pn + ' (esclusivo)', S.settN, W.n, '🎁', S.settN >= W.n, S.settRit, riscuotiS));
     co.appendChild(el('h3', '', 'Obiettivi della casa (una volta sola)'));
     const c = ctx(), ord = CFG.costruzione.slice().sort((a, b) => (S.build[a.id] ? 1 : 0) - (S.build[b.id] ? 1 : 0));
-    ord.forEach(m => { const cur = Math.min(m.n, m.cur(c)); co.appendChild(riga(m.t, cur + ' / ' + m.n, cur, m.n, '🪙 ' + m.r, cur >= m.n, !!S.build[m.id], () => riscuotiC(m))); });
+    ord.forEach(m => { const cur = Math.min(m.n, m.cur(c)); co.appendChild(riga(m.t, cur + ' / ' + m.n, cur, m.n, B3.Eco.ico + ' ' + m.r, cur >= m.n, !!S.build[m.id], () => riscuotiC(m))); });
   }
   function creaPannello() {
     ov = el('div'); ov.id = 'mis-ov';
-    ov.innerHTML = '<div class="sb"><button class="bk">← Torna al gioco</button><b>Missioni</b><span class="mon">🪙 <span class="coins-val">' + B.Eco.coins + '</span></span></div><div class="co"></div>';
+    ov.innerHTML = '<div class="sb"><button class="bk">← Torna al gioco</button><b>Missioni</b><span class="mon">' + B3.Eco.ico + ' <span class="coins-val">' + B.Eco.coins + '</span></span></div><div class="co"></div>';
     document.body.appendChild(ov); co = ov.querySelector('.co'); ov.querySelector('.bk').addEventListener('click', Miss.chiudi);
     window.addEventListener('keydown', e => { if (e.key === 'Escape' && Miss.aperto) Miss.chiudi(); });
   }
@@ -12603,6 +12613,7 @@ body.arredando #joy,body.arredando #controlli,body.arredando #btn-contesto,body.
             attesa: [2.2, 6.5], finestra: 1.15, trofeo: 8 },
     usato: { quota: 0.55, prezzoEsclusivi: 400 },          // i banchi ti ricomprano i mobili liberi al 55% del negozio
     carte: { C: 8, R: 25, SR: 70, alt: 1000, tetto: Math.round(B.Eco.quota('piazza') * 0.8) },  // banco Belinverse TCG: coins per carta (pacchetto 150 = 6 carte) e massimo al giorno
+    cratere: { x: -38, z: 40, r: 3.6, cartelloA: PI / 2 },   // il Cratere della Cometa (cartello verso est, verso la piazza)
     annunci: { max: 10, consigliato: 2 }                     // carte in vendita agli amici: quante e prezzo proposto (x valore del banco; Alternative a 1000)
   };
   const RAR = {
@@ -12654,6 +12665,7 @@ body.arredando #joy,body.arredando #controlli,body.arredando #btn-contesto,body.
     costruisciLago(ctx);
     costruisciRuota(ctx);
     costruisciMercato(ctx);
+    costruisciCratere(ctx);
     // voci per la mappa grande (solo nome e ingombro, niente trasparenza)
     ctx.edifici.push({ g: null, x: CF.lago.x, z: CF.lago.z, w: CF.lago.rx * 2, d: CF.lago.rz * 2, nome: 'Laghetto', mappa: 'acqua' });
     ctx.edifici.push({ g: null, x: CF.ruota.x, z: CF.ruota.z, w: 11, d: 3.6, nome: 'Ruota panoramica' });
@@ -13244,8 +13256,8 @@ body.arredando #joy,body.arredando #controlli,body.arredando #btn-contesto,body.
       offerte(i).forEach(o => {
         const a = (B.ARREDI || []).find(q => q.id === o.id); if (!a) return;
         const d = el('div', 'att-cd' + (o.top ? ' top' : '')); d.appendChild(immagineMobile(a));
-        d.appendChild(el('b', '', a.nome)); d.appendChild(el('small', '', o.pieno && o.pieno > o.prezzo ? '<s>🪙 ' + o.pieno + '</s> −' + Math.round((1 - o.prezzo / o.pieno) * 100) + '%' : a.esclusivo ? 'Esclusivo' : 'Ne hai: ' + (B.Eco ? B.Eco.posseduti(a.id) : 0)));
-        const bt = el('button', 'att-bt', o.venduto ? 'Venduto' : '🪙 ' + o.prezzo); bt.disabled = o.venduto || !B.Eco || B.Eco.coins < o.prezzo;
+        d.appendChild(el('b', '', a.nome)); d.appendChild(el('small', '', o.pieno && o.pieno > o.prezzo ? '<s>' + B3.Eco.ico + ' ' + o.pieno + '</s> −' + Math.round((1 - o.prezzo / o.pieno) * 100) + '%' : a.esclusivo ? 'Esclusivo' : 'Ne hai: ' + (B.Eco ? B.Eco.posseduti(a.id) : 0)));
+        const bt = el('button', 'att-bt', o.venduto ? 'Venduto' : B3.Eco.ico + ' ' + o.prezzo); bt.disabled = o.venduto || !B.Eco || B.Eco.coins < o.prezzo;
         bt.addEventListener('click', () => {
           if (!B.Eco.spendi(o.prezzo)) return; B.Eco.regala(o.id); S.merc.presi.push(o.k); salva(); missione('mercato');
           ov.dire('Comprato: ' + a.nome + ' (lo trovi in casa, “Arreda”)'); if (ven && app.mostraBolla) app.mostraBolla(ven.o, 'Grazie! Buona giornata!', 3);
@@ -13258,16 +13270,16 @@ body.arredando #joy,body.arredando #controlli,body.arredando #btn-contesto,body.
   };
   function disegnaPescheria(c, ven) {
     const resta = Math.max(0, CF.pesca.tettoPescheria - S.vend.c);
-    c.appendChild(el('p', 'att-intro', (ven ? '<b>' + ven.o.nick + '</b> · ' : '') + 'Compra i pesci del laghetto. Prezzi di oggi; può spendere ancora 🪙 ' + resta + '.'));
+    c.appendChild(el('p', 'att-intro', (ven ? '<b>' + ven.o.nick + '</b> · ' : '') + 'Compra i pesci del laghetto. Prezzi di oggi; può spendere ancora ' + B3.Eco.ico + ' ' + resta + '.'));
     const ids = SPECIE.filter(s => S.secchio[s.id]);
     if (!ids.length) { c.appendChild(el('p', 'att-vuoto', 'Il tuo secchio è vuoto. Vai a pescare al laghetto, a est della piazza!')); return; }
     let tot = 0; ids.forEach(s => { tot += prezzoPesce(s) * S.secchio[s.id]; });
     const tutto = el('div', 'att-cd big'); tutto.appendChild(el('b', '', 'Nel secchio: ' + pesci(nelSecchio())));
-    tutto.appendChild(el('small', '', 'Valgono 🪙 ' + tot + ' in tutto'));
+    tutto.appendChild(el('small', '', 'Valgono ' + B3.Eco.ico + ' ' + tot + ' in tutto'));
     const bt = el('button', 'att-bt', 'Vendi tutto'); bt.disabled = !resta; bt.addEventListener('click', () => vendiPesci(ids.map(s => s.id), ven)); tutto.appendChild(bt); c.appendChild(tutto);
     ids.forEach(s => {
       const d = el('div', 'att-cd'), im = el('div', 'att-im pesce'); const i = new Image(); i.src = disegnaPesce(s); im.appendChild(i); d.appendChild(im);
-      d.appendChild(el('b', '', s.nome + ' ×' + S.secchio[s.id])); d.appendChild(el('small', '', '🪙 ' + prezzoPesce(s) + ' l\'uno'));
+      d.appendChild(el('b', '', s.nome + ' ×' + S.secchio[s.id])); d.appendChild(el('small', '', B3.Eco.ico + ' ' + prezzoPesce(s) + ' l\'uno'));
       const b = el('button', 'att-bt', 'Vendi'); b.disabled = !resta; b.addEventListener('click', () => vendiPesci([s.id], ven)); d.appendChild(b); c.appendChild(d);
     });
   }
@@ -13275,7 +13287,7 @@ body.arredando #joy,body.arredando #controlli,body.arredando #btn-contesto,body.
     let guad = 0, resta = CF.pesca.tettoPescheria - S.vend.c, finito = false;
     ids.forEach(id => { const sp = SPECIE.find(s => s.id === id), p = prezzoPesce(sp); while (S.secchio[id] > 0) { if (p > resta) { finito = true; break; } S.secchio[id]--; guad += p; resta -= p; } if (!S.secchio[id]) delete S.secchio[id]; });
     S.vend.c += guad; salva(); if (guad && B.Eco) B.Eco.add(guad, 'piazza'); if (guad) missione('mercato');
-    ov.dire(guad ? 'Venduto! +' + guad + ' coins' + (finito ? ' (per oggi ha finito i soldi)' : '') : 'Per oggi la Pescheria non compra più: torna domani');
+    ov.dire(guad ? 'Venduto! +' + guad + ' ' + B3.Eco.nome + (finito ? ' (per oggi ha finito i soldi)' : '') : 'Per oggi la Pescheria non compra più: torna domani');
     if (ven && guad && app.mostraBolla) app.mostraBolla(ven.o, 'Che bel pescato!', 3);
     aggSecchio(); Mercato.disegna();
   }
@@ -13288,11 +13300,11 @@ body.arredando #joy,body.arredando #controlli,body.arredando #btn-contesto,body.
     liberi.forEach(a => {
       const prezzo = a.esclusivo || !a.prezzo ? CF.usato.prezzoEsclusivi : Math.max(10, Math.round(a.prezzo * CF.usato.quota)), d = el('div', 'att-cd');
       d.appendChild(immagineMobile(a)); d.appendChild(el('b', '', a.nome)); d.appendChild(el('small', '', 'Ne hai liberi: ' + B.Eco.liberi(a.id)));
-      const b = el('button', 'att-bt', 'Vendi a 🪙 ' + prezzo);
+      const b = el('button', 'att-bt', 'Vendi a ' + B3.Eco.ico + ' ' + prezzo);
       b.addEventListener('click', () => {
         if (B.Eco.liberi(a.id) <= 0) return;
         B.Eco.stato.inv[a.id]--; B.Eco.salva(); B.Eco.add(prezzo, 'rivendita'); missione('mercato');
-        ov.dire('Venduto: ' + a.nome + ' (+' + prezzo + ' coins)'); if (ven && app.mostraBolla) app.mostraBolla(ven.o, 'Affare fatto!', 3);
+        ov.dire('Venduto: ' + a.nome + ' (+' + prezzo + ' ' + B3.Eco.nome + ')'); if (ven && app.mostraBolla) app.mostraBolla(ven.o, 'Affare fatto!', 3);
         Mercato.disegna();
       });
       d.appendChild(b); c.appendChild(d);
@@ -13324,10 +13336,10 @@ body.arredando #joy,body.arredando #controlli,body.arredando #btn-contesto,body.
     loro.forEach(l => {
       const k = BC.PER_ID[l.id]; if (!k) return;
       const d = riquadroCarta(k, '· da <b>' + esc(l.nick) + '</b>');
-      const b = el('button', 'att-bt', l.attesa ? 'In attesa di ' + esc(l.nick) + '…' : 'Compra a 🪙 ' + l.p); b.disabled = l.attesa || !B.Eco || B.Eco.coins < l.p;
+      const b = el('button', 'att-bt', l.attesa ? 'In attesa di ' + esc(l.nick) + '…' : 'Compra a ' + B3.Eco.ico + ' ' + l.p); b.disabled = l.attesa || !B.Eco || B.Eco.coins < l.p;
       b.addEventListener('click', () => {
         const r = ON.compra(l.nick, l.i);
-        ov.dire({ ok: 'Pagato 🪙 ' + l.p + ': aspetta che ' + l.nick + ' ti passi la carta', soldi: 'Non hai abbastanza coins', esaurito: 'Questa carta non è più in vendita', offline: l.nick + ' non è più online', attesa: 'Stai già aspettando questa carta' }[r] || '');
+        ov.dire({ ok: 'Pagato ' + l.p + ' ' + B3.Eco.nome + ': aspetta che ' + l.nick + ' ti passi la carta', soldi: 'Non hai abbastanza ' + B3.Eco.nome, esaurito: 'Questa carta non è più in vendita', offline: l.nick + ' non è più online', attesa: 'Stai già aspettando questa carta' }[r] || '');
         Mercato.disegna();
       });
       d.appendChild(b); c.appendChild(d);
@@ -13335,10 +13347,10 @@ body.arredando #joy,body.arredando #controlli,body.arredando #btn-contesto,body.
     // 2) le mie carte in vendita
     c.appendChild(el('h3', '', '🏷️ Le tue carte in vendita <small>' + S.annunci.length + ' / ' + CF.annunci.max + '</small>'));
     if (!S.annunci.length) c.appendChild(el('p', 'att-vuoto', 'Non hai carte in vendita.'));
-    else c.appendChild(el('p', 'att-intro', 'Le vedono i tuoi amici quando siete online insieme: quando uno la compra, i coins arrivano a te.'));
+    else c.appendChild(el('p', 'att-intro', 'Le vedono i tuoi amici quando siete online insieme: quando uno la compra, ' + B3.Eco.gli + ' arrivano a te.'));
     S.annunci.forEach(a => {
       const k = BC.PER_ID[a.id]; if (!k) return;
-      const d = riquadroCarta(k, '🪙 ' + a.p);
+      const d = riquadroCarta(k, B3.Eco.ico + ' ' + a.p);
       const b = el('button', 'att-bt sec', 'Ritira'); b.addEventListener('click', () => { ritiraAnnuncio(a); ov.dire('Ritirata: ' + k.n + ' (torna nello zaino)'); Mercato.disegna(); });
       d.appendChild(b); c.appendChild(d);
     });
@@ -13347,20 +13359,20 @@ body.arredando #joy,body.arredando #controlli,body.arredando #btn-contesto,body.
     const lista = BC.CARTE.concat(BC.LEADER.filter(l => l.alt)).filter(k => BV.vendibili(k.id) > 0);
     c.appendChild(el('h3', '', '🃏 Metti in vendita le tue carte'));
     if (!lista.length) { c.appendChild(el('p', 'att-vuoto', Object.keys(coll).length ? 'Le carte che hai le usi tutte nel tuo mazzo.' : 'Non hai ancora carte. Il venditore della sala TCG ti regala un pacchetto al giorno.')); return; }
-    c.appendChild(el('p', 'att-intro', 'Scegli il prezzo (quello proposto dipende dalla rarità). Le copie del tuo mazzo e il Belinone scelto restano tue. Se hai fretta, ' + (ven ? ven.o.nick : 'il banco') + ' te le compra subito a meno: Comune 🪙 ' + CF.carte.C + ', Rara 🪙 ' + CF.carte.R + ', Super rara 🪙 ' + CF.carte.SR + ', Alternative 🪙 ' + CF.carte.alt + ' (oggi può spendere ancora 🪙 ' + resta + ').'));
+    c.appendChild(el('p', 'att-intro', 'Scegli il prezzo (quello proposto dipende dalla rarità). Le copie del tuo mazzo e il Belinone scelto restano tue. Se hai fretta, ' + (ven ? ven.o.nick : 'il banco') + ' te le compra subito a meno: Comune ' + B3.Eco.ico + ' ' + CF.carte.C + ', Rara ' + B3.Eco.ico + ' ' + CF.carte.R + ', Super rara ' + B3.Eco.ico + ' ' + CF.carte.SR + ', Alternative ' + B3.Eco.ico + ' ' + CF.carte.alt + ' (oggi può spendere ancora ' + B3.Eco.ico + ' ' + resta + ').'));
     const pieno = S.annunci.length >= CF.annunci.max;
     lista.forEach(k => {
       const nv = BV.vendibili(k.id), d = riquadroCarta(k, nv > 1 ? '· ne hai ' + nv + ' da vendere' : '');
       const riga = el('div', 'att-prezzo'), inp = el('input'); inp.type = 'number'; inp.min = 1; inp.max = 99999; inp.inputMode = 'numeric'; inp.value = prezzoConsigliato(k);
-      riga.append(el('span', '', '🪙'), inp); d.appendChild(riga);
+      riga.append(el('span', '', B3.Eco.ico), inp); d.appendChild(riga);
       const b = el('button', 'att-bt', pieno ? 'Banco pieno' : 'Metti in vendita'); b.disabled = pieno;
       b.addEventListener('click', () => {
         const p = Math.round(+inp.value); if (!(p >= 1 && p <= 99999)) { ov.dire('Scrivi un prezzo da 1 a 99999'); return; }
         if (S.annunci.length >= CF.annunci.max || !BV.vendi(k.id, 1)) return;
         S.annunci.push({ i: ++S.nAnn, id: k.id, p }); salva(); missione('mercato');
-        ov.dire('In vendita: ' + k.n + ' a 🪙 ' + p); Mercato.disegna();
+        ov.dire('In vendita: ' + k.n + ' a ' + p + ' ' + B3.Eco.nome); Mercato.disegna();
       });
-      const sub = el('button', 'att-bt sec', 'Vendi subito a 🪙 ' + CF.carte[rarCarta(k)]); sub.disabled = CF.carte[rarCarta(k)] > resta;
+      const sub = el('button', 'att-bt sec', 'Vendi subito a ' + B3.Eco.ico + ' ' + CF.carte[rarCarta(k)]); sub.disabled = CF.carte[rarCarta(k)] > resta;
       sub.addEventListener('click', () => vendiCarte([{ k, n: 1 }], ven));
       d.append(b, sub); c.appendChild(d);
     });
@@ -13374,7 +13386,7 @@ body.arredando #joy,body.arredando #controlli,body.arredando #btn-contesto,body.
     const a = S.annunci.find(x => x.i === i && x.id === id && x.p === p); if (!a) return false;
     S.annunci.splice(S.annunci.indexOf(a), 1); salva();
     if (B.Eco) B.Eco.add(p, 'amici'); missione('mercato');
-    toast('🃏 ' + nick + ' ha comprato ' + nomeCarta(id) + ' dal tuo banco (+' + p + ' coins)');
+    toast('🃏 ' + nick + ' ha comprato ' + nomeCarta(id) + ' dal tuo banco (+' + p + ' ' + B3.Eco.nome + ')');
     if (Mercato.aperto >= 0 && ov.aperta()) Mercato.disegna();
     return true;
   }
@@ -13382,7 +13394,7 @@ body.arredando #joy,body.arredando #controlli,body.arredando #btn-contesto,body.
     const BV = B.Belinverse; let guad = 0, n = 0, resta = CF.carte.tetto - S.vendC.c, finito = false;
     lista.forEach(o => { const p = CF.carte[rarCarta(o.k)]; for (let q = 0; q < o.n; q++) { if (p > resta) { finito = true; break; } if (!BV.vendi(o.k.id, 1)) break; guad += p; resta -= p; n++; } });
     S.vendC.c += guad; salva(); if (guad && B.Eco) B.Eco.add(guad, 'piazza'); if (guad) missione('mercato');
-    ov.dire(guad ? 'Vendut' + (n > 1 ? 'e ' + n + ' carte' : 'a') + '! +' + guad + ' coins' + (finito ? ' (per oggi ha finito i soldi)' : '') : 'Per oggi il banco non compra più carte: torna domani');
+    ov.dire(guad ? 'Vendut' + (n > 1 ? 'e ' + n + ' carte' : 'a') + '! +' + guad + ' ' + B3.Eco.nome + (finito ? ' (per oggi ha finito i soldi)' : '') : 'Per oggi il banco non compra più carte: torna domani');
     if (ven && guad && app.mostraBolla) app.mostraBolla(ven.o, 'Bella carta!', 3);
     Mercato.disegna();
   }
@@ -13491,6 +13503,12 @@ body.orizz #pesca-pan{left:auto;right:136px;bottom:16px}
 .att-ov .prog{height:10px;border-radius:5px;background:rgba(255,255,255,.14);overflow:hidden;margin-top:6px;width:100%}.att-ov .prog i{display:block;height:100%;background:#f2c76e}
 .att-ov .msg{position:absolute;left:50%;bottom:calc(env(safe-area-inset-bottom,0px) + 26px);transform:translateX(-50%);background:#f2c76e;color:#2a1a2e;font-weight:800;padding:10px 16px;border-radius:14px;opacity:0;transition:opacity .25s;pointer-events:none;max-width:90vw;text-align:center}
 .att-ov .msg.on{opacity:1}
+.cr-storia{grid-column:1/-1;width:100%;max-width:600px;margin:0 auto;justify-self:center;padding:6px 4px 30px;color:#f4ead6;line-height:1.55;font-size:15.5px}
+.cr-storia h2{font-family:Georgia,serif;font-weight:700;font-size:24px;margin:6px 0 12px;color:#c8ff8a;text-align:center;text-shadow:0 0 14px rgba(140,255,70,.35)}
+.cr-storia .cr-ico{text-align:center;font-size:30px;margin-top:6px}
+.cr-storia p{margin:0 0 12px}.cr-storia b{color:#d9ffb0}
+.cr-storia .cr-firma{opacity:.6;font-style:italic;font-size:13px;text-align:right}
+.cr-storia .cr-tuoi{text-align:center;font-weight:800;background:rgba(140,255,70,.1);border:1px solid rgba(140,255,70,.35);border-radius:14px;padding:8px}
 `;
   document.head.appendChild(css);
 
@@ -13499,7 +13517,7 @@ body.orizz #pesca-pan{left:auto;right:136px;bottom:16px}
     let nodo = null, gr = null, msg = null, tm = 0, alChiudere = null;
     function crea() {
       nodo = el('div', 'att-ov');
-      nodo.innerHTML = '<div class="sb"><button class="bk">← Torna al gioco</button><b></b><span class="mon">🪙 <span class="coins-val">' + (B.Eco ? B.Eco.coins : 0) + '</span></span></div><div class="gr"></div><div class="msg"></div>';
+      nodo.innerHTML = '<div class="sb"><button class="bk">← Torna al gioco</button><b></b><span class="mon">' + B3.Eco.ico + ' <span class="coins-val">' + (B.Eco ? B.Eco.coins : 0) + '</span></span></div><div class="gr"></div><div class="msg"></div>';
       document.body.appendChild(nodo); gr = nodo.querySelector('.gr'); msg = nodo.querySelector('.msg');
       nodo.querySelector('.bk').addEventListener('click', () => o.chiudi());
       window.addEventListener('keydown', e => { if (e.key === 'Escape' && nodo.classList.contains('on')) o.chiudi(); });
@@ -13513,6 +13531,109 @@ body.orizz #pesca-pan{left:auto;right:136px;bottom:16px}
     };
     return o;
   })();
+
+  /* =====================================================================
+     IL CRATERE DELLA COMETA: da qui viene la Starlight, la moneta del borgo.
+     Una roccia scura mezza sepolta, piena di bastoncini luminosi verdi; attorno il bordo del cratere,
+     sassi e qualche Starlight sparsa. Il cartello racconta la storia (si legge toccandolo o dal pulsante).
+     ===================================================================== */
+  const STORIA = {
+    titolo: 'La notte della Cometa Verde',
+    pagine: [
+      'Tanto tempo fa, in una notte d\'estate, sopra il borgo passò una cometa verde. Erano tutti in piazza con il naso all\'insù, quando un pezzo si staccò dalla coda e venne giù fischiando. <b>BUM!</b> Cadde proprio qui e scavò questo cratere.',
+      'Il mattino dopo, al posto della cometa c\'era una roccia scura piena di piccoli cristalli a forma di bastoncino. Brillavano di una luce verde che non si spegneva mai, nemmeno di giorno. Gli abitanti li chiamarono <b>Starlight</b>, la luce delle stelle.',
+      'Il primo a usarli fu il pescatore del laghetto, che li legava alla lenza per vedere quando i pesci abboccavano di notte. Poi il fornaio, per controllare il forno all\'alba. In poco tempo tutti ne volevano uno, e la Starlight diventò la moneta del borgo.',
+      'La roccia ne è ancora piena, ma nessuno è mai riuscito a staccarne uno con le mani. Dicono che la cometa ne liberi uno nuovo ogni volta che qualcuno gioca, vince una sfida o aiuta il borgo. Per questo le Starlight non si comprano: <b>si guadagnano</b>.'
+    ]
+  };
+  function apriStoria() {
+    const c = ov.corpo(); c.textContent = '';
+    const s = el('div', 'cr-storia');
+    s.innerHTML = '<div class="cr-ico">' + B.Eco.ico + B.Eco.ico + B.Eco.ico + '</div><h2>' + STORIA.titolo + '</h2>' + STORIA.pagine.map(p => '<p>' + p + '</p>').join('') +
+      '<p class="cr-firma">— dal cartello del Cratere della Cometa</p><p class="cr-tuoi">Hai ' + B.Eco.ico + ' <b>' + B.Eco.coins + '</b> ' + B.Eco.nome + '</p>';
+    c.appendChild(s); ov.apri('Il Cratere della Cometa');
+  }
+  function costruisciCratere(ctx) {
+    const C = CF.cratere, sc = ctx.scene, gm = M('#fff').gradientMap;
+    const g = new T.Group(); g.position.set(C.x, 0, C.z); sc.add(g); W.gCratere = g;
+    const toon = (col, extra) => new T.MeshToonMaterial(Object.assign({ color: new T.Color(col), gradientMap: gm }, extra || {}));
+    const disco = (r, col, y, extra) => { const m = new T.Mesh(new T.CircleGeometry(r, 48), toon(col, Object.assign({ polygonOffset: true, polygonOffsetFactor: -1, polygonOffsetUnits: -1 }, extra))); m.rotation.x = -PI / 2; m.position.y = y; m.receiveShadow = true; g.add(m); return m; };
+    // terra bruciata attorno, fondo scuro con un bagliore verde al centro
+    disco(C.r + 1.3, '#a48b72', 0.011); disco(C.r + 0.55, '#7a6656', 0.014); disco(C.r, '#463b36', 0.018);
+    const fondo = disco(C.r * 0.55, '#2f4a2a', 0.022, { emissive: new T.Color('#3f9a2a'), emissiveIntensity: 0.35 });
+    // crepe luminose che partono dal centro
+    for (let i = 0; i < 9; i++) {
+      const a = i / 9 * PI * 2 + rnd(-0.2, 0.2), L = rnd(C.r * 0.6, C.r + 0.6);
+      const cr = new T.Mesh(new T.PlaneGeometry(0.07, L), B.Mluce('#9dff5a', 0.75)); cr.rotation.set(-PI / 2, 0, -a); cr.position.set(Math.sin(a) * L / 2, 0.026, Math.cos(a) * L / 2); g.add(cr);
+    }
+    // bordo: anello di terra sollevata e sassi
+    const anello = mesh(new T.TorusGeometry(C.r, 0.45, 8, 40), M('#8a7563'), { y: 0.05, l: 0.02 }); anello.rotation.x = PI / 2; anello.scale.z = 0.55; g.add(anello);
+    for (let i = 0; i < 26; i++) {
+      const a = i / 26 * PI * 2 + rnd(-0.1, 0.1), r = C.r + rnd(-0.1, 0.5), s = rnd(0.22, 0.48);
+      const sasso = mesh(new T.DodecahedronGeometry(s, 0), M(['#7d6b5c', '#6a5a4e', '#94806d'][i % 3]), { x: Math.sin(a) * r, y: s * 0.45, z: Math.cos(a) * r, l: 0.02 });
+      sasso.rotation.set(rnd(0, 3), rnd(0, 3), rnd(0, 3)); g.add(sasso);
+    }
+    // la roccia della cometa, mezza sepolta
+    const roccia = new T.Group(); roccia.position.y = 0.15; roccia.rotation.set(0.25, 0.6, -0.15); g.add(roccia);
+    const corpo = mesh(new T.IcosahedronGeometry(1.15, 1), M('#3b3640'), { l: 0.03 }); corpo.scale.set(1.25, 0.85, 1); roccia.add(corpo);
+    roccia.add(mesh(new T.IcosahedronGeometry(0.6, 0), M('#2e2a33'), { x: 0.9, y: 0.25, z: 0.3, l: 0.025 }));
+    roccia.add(mesh(new T.IcosahedronGeometry(0.5, 0), M('#4a4450'), { x: -0.95, y: 0.1, z: -0.35, l: 0.025 }));
+    // i bastoncini di Starlight: capsule luminose con il nucleo piu' chiaro e un alone
+    const guscio = new T.MeshBasicMaterial({ color: new T.Color('#9dff5a'), transparent: true, opacity: 0.8 });
+    const nucleo = B.Mluce('#eaffc8', 1), GC = new T.CapsuleGeometry(0.075, 0.42, 4, 10), GN = new T.CapsuleGeometry(0.04, 0.3, 3, 8);
+    const aloni = [];
+    function stick(gr, x, y, z, rx, rz, s, alone) {
+      const st = new T.Group(); st.position.set(x, y, z); st.rotation.set(rx, 0, rz); st.scale.setScalar(s || 1); gr.add(st);
+      st.add(new T.Mesh(GC, guscio)); st.add(new T.Mesh(GN, nucleo));
+      if (alone) { const al = new T.Sprite(new T.SpriteMaterial({ map: B.texAlone(), color: new T.Color('#8cff4a'), transparent: true, blending: T.AdditiveBlending, depthWrite: false, opacity: 0.55 })); al.scale.set(1.3, 1.3, 1); st.add(al); aloni.push({ al, k: Math.random() * 6 }); }
+      return st;
+    }
+    for (let i = 0; i < 16; i++) {   // conficcati nella roccia, inclinati verso l'esterno
+      const a = i / 16 * PI * 2 * 1.6 + rnd(-0.3, 0.3), h = rnd(-0.1, 0.75), r = 0.85 + (0.75 - h) * 0.35;
+      stick(roccia, Math.sin(a) * r * 1.2, h, Math.cos(a) * r, Math.cos(a) * 0.9, -Math.sin(a) * 0.9, rnd(0.8, 1.35), i % 3 === 0);
+    }
+    for (let i = 0; i < 14; i++) {   // sparsi nel cratere
+      const a = rnd(0, PI * 2), r = rnd(1.7, C.r - 0.4);
+      stick(g, Math.sin(a) * r, 0.08, Math.cos(a) * r, PI / 2 - rnd(0, 0.3), rnd(0, PI), rnd(0.7, 1.1), i % 4 === 0);
+    }
+    const grande = new T.Sprite(new T.SpriteMaterial({ map: B.texAlone(), color: new T.Color('#7dff3a'), transparent: true, blending: T.AdditiveBlending, depthWrite: false, opacity: 0.5 }));
+    grande.scale.set(4.6, 4.6, 1); grande.position.y = 1.1; g.add(grande);
+    ctx.anim.push(t => {
+      const p = 0.5 + Math.sin(t * 1.6) * 0.5; fondo.material.emissiveIntensity = 0.28 + p * 0.22; grande.material.opacity = 0.16 + p * 0.16;
+      aloni.forEach(o => { o.al.material.opacity = 0.35 + Math.sin(t * 2.3 + o.k) * 0.2; });
+      roccia.position.y = 0.15 + Math.sin(t * 0.8) * 0.015;
+    });
+    // paletti con la corda attorno (non si entra nel cratere)
+    const NP = 12, RP = C.r + 1.25, pal = [];
+    for (let i = 0; i < NP; i++) {
+      const a = i / NP * PI * 2; if (Math.abs(a - C.cartelloA) < 0.25) { pal.push(null); continue; }
+      const p = new T.Vector3(Math.sin(a) * RP, 0.75, Math.cos(a) * RP); pal.push(p);
+      g.add(mesh(new T.CylinderGeometry(0.06, 0.07, 0.9, 6), M('#5c3822'), { x: p.x, y: 0.45, z: p.z, l: 0.015 }));
+      g.add(mesh(new T.SphereGeometry(0.08, 8, 6), M('#7a4a2a'), { x: p.x, y: 0.92, z: p.z }));
+    }
+    pal.forEach((p, i) => { const q = pal[(i + 1) % NP]; if (p && q) trave(g, p, q, 0.025, '#d9b98a', 0); });
+    // cartello con la storia
+    const ca = new T.Group(), A = C.cartelloA; ca.position.set(Math.sin(A) * (RP + 0.2), 0, Math.cos(A) * (RP + 0.2)); ca.rotation.y = A; g.add(ca);
+    [-0.75, 0.75].forEach(x => ca.add(mesh(new T.CylinderGeometry(0.07, 0.08, 1.9, 8), M('#5c3822'), { x, y: 0.95, l: 0.02 })));
+    ca.add(mesh(new T.BoxGeometry(1.9, 1.15, 0.1), M('#8a5a35'), { y: 1.45, lb: 0.02 }));
+    const [cv, x] = B.tela(512, 300);
+    x.fillStyle = '#f1e2c2'; B.rr(x, 6, 6, 500, 288, 18); x.fill(); x.lineWidth = 6; x.strokeStyle = '#5c3822'; x.stroke();
+    x.textAlign = 'center'; x.fillStyle = '#2b180f'; x.font = 'bold 44px Georgia, serif'; x.fillText('Il Cratere', 256, 70); x.fillText('della Cometa', 256, 120);
+    x.strokeStyle = '#3f9a2a'; x.lineWidth = 3; x.beginPath(); x.moveTo(140, 146); x.lineTo(372, 146); x.stroke();
+    x.font = '28px Georgia, serif'; x.fillStyle = '#4a2f1e'; ['Qui cadde la Cometa Verde.', 'Dalla sua roccia nascono', 'le Starlight del borgo.'].forEach((r, i) => x.fillText(r, 256, 192 + i * 34));
+    x.font = 'italic 22px Georgia, serif'; x.fillStyle = '#3f7a2a'; x.fillText('Tocca per leggere la storia', 256, 282);
+    const tav = new T.Mesh(new T.PlaneGeometry(1.75, 1.03), new T.MeshToonMaterial({ map: B.tex(cv), gradientMap: gm })); tav.position.set(0, 1.45, 0.056); ca.add(tav);
+    const tetto = mesh(new T.BoxGeometry(2.1, 0.1, 0.36), M('#3f6a2a'), { y: 2.1, lb: 0.015 }); ca.add(tetto);
+    const pr = new T.Mesh(new T.BoxGeometry(2.1, 2.2, 0.7), new T.MeshBasicMaterial()); pr.position.set(0, 1.1, 0); pr.visible = false; ca.add(pr);
+    // ostacoli (coordinate del mondo)
+    ctx.ostacoli.push({ t: 'c', x: C.x, z: C.z, r: RP + 0.1 });
+    const cx = C.x + Math.sin(A) * (RP + 0.2), cz = C.z + Math.cos(A) * (RP + 0.2);
+    ctx.ostacoli.push({ t: 'c', x: cx, z: cz, r: 0.35 });
+    ctx.toccabili.push({ obj: pr, testo: 'Il Cratere della Cometa', fn: apriStoria });
+    ctx.toccabili.push({ obj: corpo, testo: 'La roccia della Cometa Verde: è piena di Starlight, ma non si staccano con le mani. Le Starlight si guadagnano giocando!' });
+    ctx.porte.push({ id: 'cratere', nome: 'Cratere della Cometa', testo: '📜 Leggi la storia', x: C.x + Math.sin(A) * (RP + 1.4), z: C.z + Math.cos(A) * (RP + 1.4), r: 1.6, fn: apriStoria });
+    ctx.edifici.push({ g: null, x: C.x, z: C.z, w: RP * 2, d: RP * 2, nome: 'Cratere della Cometa' });
+  }
 
   /* ---------- collezione dei pesci ---------- */
   function apriCollezione() {
@@ -13567,7 +13688,7 @@ body.orizz #pesca-pan{left:auto;right:136px;bottom:16px}
     carta_.innerHTML = '<img alt=""><b></b><span class="rar"></span><small class="d"></small><small class="nuovo"></small>';
     carta_.querySelector('img').src = disegnaPesce(sp); carta_.querySelector('b').textContent = sp.nome;
     const rr = carta_.querySelector('.rar'); rr.textContent = r.nome; rr.style.background = r.col;
-    carta_.querySelector('.d').textContent = sp.curiosita ? 'Non vale niente, ma finisce in collezione' : cm + ' cm · alla Pescheria vale 🪙 ' + prezzoPesce(sp);
+    carta_.querySelector('.d').textContent = sp.curiosita ? 'Non vale niente, ma finisce in collezione' : cm + ' cm · alla Pescheria vale ' + prezzoPesce(sp) + ' ' + B3.Eco.nome;
     carta_.querySelector('.nuovo').textContent = premio === 'trofeo' ? '🏆 ' + CF.pesca.trofeo + ' specie! Hai vinto il Trofeo di pesca' : nuovo ? '✨ Nuova specie per la collezione!' : record ? '📏 Nuovo record!' : '';
     carta_.classList.add('on'); clearTimeout(tCarta); tCarta = setTimeout(() => carta_.classList.remove('on'), premio ? 4500 : 2800);
   }
@@ -14781,10 +14902,10 @@ body.bv-attivo #barra-alto,body.bv-attivo #controlli,body.bv-attivo #btn-contest
     const coins = B.Eco ? B.Eco.coins : 0, gratis = gratisOggi();
     mn.innerHTML = `<div class="top"><h1>Pacchetti</h1><button class="sec" data-n="esci">${daMenu ? '← Indietro' : '✕ Esci'}</button></div>
 <div class="pk-riga"><div class="pacco"><b>BELINVERSE</b><span>2</span><small>Set 001 · ${PACCHETTO.carte} carte</small></div>
-<div class="pk-info"><p class="pk-voce">«${gratis ? 'Ciao! Il pacchetto di oggi è offerto dalla casa.' : 'Il regalo di oggi l\'hai già preso. Se ne vuoi altri costano ' + PACCHETTO.prezzo + ' coins.'}»</p>
+<div class="pk-info"><p class="pk-voce">«${gratis ? 'Ciao! Il pacchetto di oggi è offerto dalla casa.' : 'Il regalo di oggi l\'hai già preso. Se ne vuoi altri costano ' + PACCHETTO.prezzo + ' ' + (B.Eco ? B.Eco.nome : 'coins') + '.'}»</p>
 <p>Ogni pacchetto ha ${PACCHETTO.carte} carte: 4 comuni, 1 rara e 1 rara o super rara. Ogni tanto esce un Belinone Alternative. Le carte finiscono nello zaino e le usi per il tuo mazzo.</p>
-<div class="riga-b">${gratis ? '<button class="pri" data-n="gratis">🎁 Apri il pacchetto gratis</button>' : ''}<button class="${gratis ? 'sec' : 'pri'}" data-n="compra"${coins < PACCHETTO.prezzo ? ' disabled' : ''}>Compra un pacchetto · 🪙 ${PACCHETTO.prezzo}</button>${daMenu ? '' : '<button class="sec" data-n="gioca">Gioca a Belinverse</button>'}</div>
-<p style="opacity:.75;font-size:12px">Hai 🪙 ${coins} · Le tue carte: ${tuttePossedute()} (${carteDiverse()} diverse su ${CARTE.length}) · Pacchetti aperti: ${SAV.pacchetti | 0}</p></div></div>`;
+<div class="riga-b">${gratis ? '<button class="pri" data-n="gratis">🎁 Apri il pacchetto gratis</button>' : ''}<button class="${gratis ? 'sec' : 'pri'}" data-n="compra"${coins < PACCHETTO.prezzo ? ' disabled' : ''}>Compra un pacchetto · ${B.Eco ? B.Eco.ico : ""} ${PACCHETTO.prezzo}</button>${daMenu ? '' : '<button class="sec" data-n="gioca">Gioca a Belinverse</button>'}</div>
+<p style="opacity:.75;font-size:12px">Hai ${B.Eco ? B.Eco.ico : ""} ${coins} · Le tue carte: ${tuttePossedute()} (${carteDiverse()} diverse su ${CARTE.length}) · Pacchetti aperti: ${SAV.pacchetti | 0}</p></div></div>`;
     mn.querySelectorAll('[data-n]').forEach(b => b.addEventListener('click', () => {
       const n = b.dataset.n;
       if (n === 'esci') { if (daMenu) menu(); else BV.chiudi(); }
@@ -16213,7 +16334,7 @@ body.bv-attivo #barra-alto,body.bv-attivo #controlli,body.bv-attivo #btn-contest
     // ricomincia da capo: cancella i progressi su questo dispositivo (si tengono il codice amici e le impostazioni di audio e comandi)
     { const b = $('#btn-ricomincia'); let sicuro = 0, tt = 0;
       if (b) b.addEventListener('click', () => {
-        if (!sicuro) { sicuro = 1; b.textContent = 'Sicuro? Perdi coins, mobili e carte: tocca ancora'; clearTimeout(tt); tt = setTimeout(() => { sicuro = 0; b.textContent = 'Ricomincia da capo'; }, 4000); return; }
+        if (!sicuro) { sicuro = 1; b.textContent = 'Sicuro? Perdi ' + B3.Eco.nome + ', mobili e carte: tocca ancora'; clearTimeout(tt); tt = setTimeout(() => { sicuro = 0; b.textContent = 'Ricomincia da capo'; }, 4000); return; }
         const tieni = ['borg_amici', 'theborg.musica', 'theborg.effetti', 'theborg.muto', 'theborg.comandi.v1', 'theborg.raid.vibra'];
         try { Object.keys(localStorage).forEach(k => { if ((k.indexOf('borg') === 0 || k.indexOf('theborg') === 0 || k === CFG.chiaveSalvataggio) && tieni.indexOf(k) < 0) localStorage.removeItem(k); }); } catch (e) { /* ok */ }
         location.reload();
@@ -16303,8 +16424,8 @@ body.bv-attivo #barra-alto,body.bv-attivo #controlli,body.bv-attivo #btn-contest
     { sel: '#joy', t: 'Muoviti', d: 'Trascina il pallino del joystick per camminare. Sul computer puoi usare anche le frecce o i tasti W A S D.' },
     { sel: '#controlli', t: 'Guarda come vuoi', d: 'Con questi pulsanti ruoti la visuale, ingrandisci o riduci, alzi e abbassi la telecamera. 😊 apre le emote (saluta, balla, ride...).' },
     { sel: '#minimappa-box', t: 'Minimappa e casa', d: 'La mappa mostra dove sei: toccala per ingrandirla. Il pulsante con la casetta ti porta subito a casa tua.' },
-    { sel: '#pill-coins', t: 'I tuoi coins 🪙', d: 'Sono la moneta del gioco. Servono per comprare mobili, pavimenti e pareti per la tua casa, e per ampliare la stanza.' },
-    { sel: '#btn-miss', t: 'Missioni', d: 'Ogni giorno hai delle missioni facili (parlare in chat, sederti, arredare...). Completale per guadagnare coins. Più giorni di fila giochi, più guadagni.' },
+    { sel: '#pill-coins', t: 'I tuoi ' + B3.Eco.nome, d: 'Sono la moneta del gioco. Servono per comprare mobili, pavimenti e pareti per la tua casa, e per ampliare la stanza.' },
+    { sel: '#btn-miss', t: 'Missioni', d: 'Ogni giorno hai delle missioni facili (parlare in chat, sederti, arredare...). Completale per guadagnare ' + B3.Eco.nome + '. Più giorni di fila giochi, più guadagni.' },
     { sel: '#btn-arreda', t: 'Arreda la casa', d: 'Qui in casa tocca questo pulsante per spostare i mobili col dito, girarli e cambiare pavimento e pareti. Parti con una stanza vuota ma con tutti i mobili base nello zaino.' },
     { sel: '#chat', t: 'Chat della piazza', d: 'In piazza puoi scrivere agli altri. Tocca un personaggio per vedere il profilo, scrivergli in privato, segnalarlo o bloccarlo.' },
     { sel: '#tabbar', t: 'Il menu', d: 'Mondo, Chat privata, Amici, Zaino e Profilo (qui cambi aspetto e atmosfera, e puoi rivedere questo tutorial).' },
@@ -16545,7 +16666,7 @@ body.orizz #pagina-zaino .zn-carte{grid-template-columns:repeat(auto-fill,minmax
     else {
       c.appendChild(el('p', 'zn-nota', 'Li vendi alla Pescheria del mercatino, in piazza.'));
       const g = el('div', 'zn-griglia');
-      nel.forEach(s => g.appendChild(tile({ bg: 'radial-gradient(circle at 50% 55%,' + s.col2 + ' 0 22%,' + s.col + ' 23% 60%,rgba(0,0,0,.18) 61%)', testo: '' }, s.nome, '<span style="color:' + (RAR[s.rar] || '#ccc') + '">' + (NOMI_RAR[s.rar] || '') + '</span> · 🪙 ' + s.prezzo, P.secchio[s.id])));
+      nel.forEach(s => g.appendChild(tile({ bg: 'radial-gradient(circle at 50% 55%,' + s.col2 + ' 0 22%,' + s.col + ' 23% 60%,rgba(0,0,0,.18) 61%)', testo: '' }, s.nome, '<span style="color:' + (RAR[s.rar] || '#ccc') + '">' + (NOMI_RAR[s.rar] || '') + '</span> · ' + B3.Eco.ico + ' ' + s.prezzo, P.secchio[s.id])));
       c.appendChild(g);
     }
     // collezione
@@ -16604,7 +16725,7 @@ body.orizz #pagina-zaino .zn-carte{grid-template-columns:repeat(auto-fill,minmax
     const coll = BV.collezione(), mazzo = BV.mazzo, inMazzo = {}; (mazzo || []).forEach(id => { inMazzo[id] = (inMazzo[id] || 0) + 1; });
     const tot = BC.CARTE.reduce((a, k) => a + (coll[k.id] | 0), 0), diverse = BV.carteDiverse();
     c.appendChild(el('h3', '', '🃏 Belinverse 2 <small>' + tot + ' carte · ' + diverse + ' diverse su ' + BC.CARTE.length + '</small>'));
-    c.appendChild(el('p', 'zn-nota', (BV.gratisOggi() ? '🎁 Oggi hai un pacchetto gratis dal venditore nella sala TCG. ' : 'Il pacchetto gratis di oggi l\'hai già preso: gli altri si comprano a coins dal venditore nella sala TCG. ') + (mazzo ? 'Il tuo mazzo è pronto.' : tot >= 40 ? 'Hai abbastanza carte per costruire il tuo mazzo.' : 'Ti servono 40 carte per un mazzo tuo.')));
+    c.appendChild(el('p', 'zn-nota', (BV.gratisOggi() ? '🎁 Oggi hai un pacchetto gratis dal venditore nella sala TCG. ' : 'Il pacchetto gratis di oggi l\'hai già preso: gli altri si comprano con ' + B3.Eco.gli + ' dal venditore nella sala TCG. ') + (mazzo ? 'Il tuo mazzo è pronto.' : tot >= 40 ? 'Hai abbastanza carte per costruire il tuo mazzo.' : 'Ti servono 40 carte per un mazzo tuo.')));
     const r = el('div', 'zn-riga');
     const pk = el('button', 'zn-bt', BV.gratisOggi() ? '🎁 Apri il pacchetto' : '🎁 Pacchetti'); pk.type = 'button';
     pk.addEventListener('click', () => vaiAlMondo(() => BV.negozio()));
@@ -16650,7 +16771,7 @@ body.orizz #pagina-zaino .zn-carte{grid-template-columns:repeat(auto-fill,minmax
     const pesci = P ? Object.keys(P.secchio).reduce((a, k) => a + P.secchio[k], 0) : 0;
     const coll = B.Belinverse ? B.Belinverse.collezione() : {}, nCarte = Object.keys(coll).reduce((a, k) => a + (k < '101' ? coll[k] : 0), 0);
     const nMob = E ? (B.ARREDI || []).reduce((a, m) => a + E.posseduti(m.id), 0) : 0;
-    pagina.querySelector('.zn-soldi').innerHTML = '<span class="zn-pill">🪙 <b>' + (E ? E.coins : 0) + '</b> coins</span><span class="zn-pill">🛋️ <b>' + nMob + '</b> mobili</span><span class="zn-pill">🃏 <b>' + nCarte + '</b> carte</span><span class="zn-pill">🐟 <b>' + pesci + '</b> nel secchio</span>';
+    pagina.querySelector('.zn-soldi').innerHTML = '<span class="zn-pill">' + B3.Eco.ico + ' <b>' + (E ? E.coins : 0) + '</b> ' + B3.Eco.nome + '</span><span class="zn-pill">🛋️ <b>' + nMob + '</b> mobili</span><span class="zn-pill">🃏 <b>' + nCarte + '</b> carte</span><span class="zn-pill">🐟 <b>' + pesci + '</b> nel secchio</span>';
     const c = document.getElementById('zaino-griglia'); c.innerHTML = '';
     if (scheda === 'oggetti') oggetti(c); else if (scheda === 'mobili') mobili(c); else carte(c);
   }
@@ -17168,7 +17289,7 @@ body.orizz #pagina-zaino .zn-carte{grid-template-columns:repeat(auto-fill,minmax
     const k = chiaveA(nick, i), c = inAttesa.get(k); if (!c) return; inAttesa.delete(k);
     const nome = ((B.BELIN_CARTE && B.BELIN_CARTE.PER_ID && B.BELIN_CARTE.PER_ID[c.id]) || {}).n || 'la carta';
     if (ok && B.Belinverse && B.Belinverse.aggiungi(c.id)) { G.emetti('toast', '🃏 Hai comprato ' + nome + ' da ' + c.nick + ': la trovi nello zaino'); if (B.Miss) B.Miss.ev('mercato'); }
-    else { if (B.Eco) B.Eco.add(c.p, 'rimborso'); G.emetti('toast', ok ? 'Acquisto non riuscito: coins restituiti' : nome + ' era già stata venduta: ti tornano ' + c.p + ' coins'); }
+    else { if (B.Eco) B.Eco.add(c.p, 'rimborso'); G.emetti('toast', ok ? 'Acquisto non riuscito: ' + B3.Eco.nome + ' restituiti' : nome + ' era già stata venduta: ti tornano ' + c.p + ' ' + B3.Eco.nome); }
     G.emetti('annunci');
   }
   // se il venditore esce prima di rispondere, i coins tornano indietro

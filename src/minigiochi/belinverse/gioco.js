@@ -1040,10 +1040,10 @@ body.bv-attivo #barra-alto,body.bv-attivo #controlli,body.bv-attivo #btn-contest
     const coins = B.Eco ? B.Eco.coins : 0, gratis = gratisOggi();
     mn.innerHTML = `<div class="top"><h1>Pacchetti</h1><button class="sec" data-n="esci">${daMenu ? '← Indietro' : '✕ Esci'}</button></div>
 <div class="pk-riga"><div class="pacco"><b>BELINVERSE</b><span>2</span><small>Set 001 · ${PACCHETTO.carte} carte</small></div>
-<div class="pk-info"><p class="pk-voce">«${gratis ? 'Ciao! Il pacchetto di oggi è offerto dalla casa.' : 'Il regalo di oggi l\'hai già preso. Se ne vuoi altri costano ' + PACCHETTO.prezzo + ' coins.'}»</p>
+<div class="pk-info"><p class="pk-voce">«${gratis ? 'Ciao! Il pacchetto di oggi è offerto dalla casa.' : 'Il regalo di oggi l\'hai già preso. Se ne vuoi altri costano ' + PACCHETTO.prezzo + ' ' + (B.Eco ? B.Eco.nome : 'coins') + '.'}»</p>
 <p>Ogni pacchetto ha ${PACCHETTO.carte} carte: 4 comuni, 1 rara e 1 rara o super rara. Ogni tanto esce un Belinone Alternative. Le carte finiscono nello zaino e le usi per il tuo mazzo.</p>
-<div class="riga-b">${gratis ? '<button class="pri" data-n="gratis">🎁 Apri il pacchetto gratis</button>' : ''}<button class="${gratis ? 'sec' : 'pri'}" data-n="compra"${coins < PACCHETTO.prezzo ? ' disabled' : ''}>Compra un pacchetto · 🪙 ${PACCHETTO.prezzo}</button>${daMenu ? '' : '<button class="sec" data-n="gioca">Gioca a Belinverse</button>'}</div>
-<p style="opacity:.75;font-size:12px">Hai 🪙 ${coins} · Le tue carte: ${tuttePossedute()} (${carteDiverse()} diverse su ${CARTE.length}) · Pacchetti aperti: ${SAV.pacchetti | 0}</p></div></div>`;
+<div class="riga-b">${gratis ? '<button class="pri" data-n="gratis">🎁 Apri il pacchetto gratis</button>' : ''}<button class="${gratis ? 'sec' : 'pri'}" data-n="compra"${coins < PACCHETTO.prezzo ? ' disabled' : ''}>Compra un pacchetto · ${B.Eco ? B.Eco.ico : ""} ${PACCHETTO.prezzo}</button>${daMenu ? '' : '<button class="sec" data-n="gioca">Gioca a Belinverse</button>'}</div>
+<p style="opacity:.75;font-size:12px">Hai ${B.Eco ? B.Eco.ico : ""} ${coins} · Le tue carte: ${tuttePossedute()} (${carteDiverse()} diverse su ${CARTE.length}) · Pacchetti aperti: ${SAV.pacchetti | 0}</p></div></div>`;
     mn.querySelectorAll('[data-n]').forEach(b => b.addEventListener('click', () => {
       const n = b.dataset.n;
       if (n === 'esci') { if (daMenu) menu(); else BV.chiudi(); }
