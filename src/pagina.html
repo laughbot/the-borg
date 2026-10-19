@@ -95,7 +95,7 @@
   <section id="pagina-messaggi" class="pagina" hidden>
     <div id="dm-elenco" class="vista">
       <header class="pagina-testa"><h2>Messaggi privati</h2><span class="tag-demo">DEMO</span></header>
-      <p class="avviso">Dimostrazione: le conversazioni sono simulate dal tuo browser e le risposte sono automatiche. Nulla viene inviato o salvato su un server.</p>
+      <p class="avviso">Le conversazioni con gli amici restano salvate solo su questo telefono. ✓ = inviato, ✓✓ = letto.</p>
       <div id="dm-lista"></div>
       <p class="suggerimento">I messaggi privati arrivano solo dagli amici veri collegati con il vostro codice amici. Per scrivere a un amico tocca il suo personaggio e scegli "Messaggio privato".</p>
     </div>
@@ -109,6 +109,7 @@
       </header>
       <p class="avviso">Tocca un messaggio per eliminarlo. L'eliminazione vale solo sul tuo telefono.</p>
       <div id="dm-messaggi"></div>
+      <div id="dm-scrive" hidden><span class="puntini"><i></i><i></i><i></i></span> <b id="dm-scrive-nick"></b> sta scrivendo…</div>
       <form id="dm-form" autocomplete="off">
         <input id="dm-input" maxlength="300" placeholder="Scrivi un messaggio privato…" enterkeyhint="send" autocomplete="off" autocapitalize="sentences">
         <button type="submit">Invia</button>
