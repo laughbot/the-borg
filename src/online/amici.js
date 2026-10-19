@@ -369,7 +369,7 @@
     const k = chiaveA(nick, i), c = inAttesa.get(k); if (!c) return; inAttesa.delete(k);
     const nome = ((B.BELIN_CARTE && B.BELIN_CARTE.PER_ID && B.BELIN_CARTE.PER_ID[c.id]) || {}).n || 'la carta';
     if (ok && B.Belinverse && B.Belinverse.aggiungi(c.id)) { G.emetti('toast', '🃏 Hai comprato ' + nome + ' da ' + c.nick + ': la trovi nello zaino'); if (B.Miss) B.Miss.ev('mercato'); }
-    else { if (B.Eco) B.Eco.add(c.p); G.emetti('toast', ok ? 'Acquisto non riuscito: coins restituiti' : nome + ' era già stata venduta: ti tornano ' + c.p + ' coins'); }
+    else { if (B.Eco) B.Eco.add(c.p, 'rimborso'); G.emetti('toast', ok ? 'Acquisto non riuscito: coins restituiti' : nome + ' era già stata venduta: ti tornano ' + c.p + ' coins'); }
     G.emetti('annunci');
   }
   // se il venditore esce prima di rispondere, i coins tornano indietro

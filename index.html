@@ -4900,8 +4900,9 @@ body.kart-attivo #kart-hud #k-fine ol{max-height:30vh}
     player.ai = true; player.vmax = 14; player.off = 0;
     const gt = player.fine; let rec = '';
     const m = migliore(); if (player.migliorGiro != null && (m == null || player.migliorGiro < m)) { salvaMigliore(player.migliorGiro); rec = ' &#x1F3C6; nuovo record!'; }
+    const pos0 = classifica().indexOf(player) + 1, premio = B.Eco && B.Eco.premioGioco ? B.Eco.premioGioco('kart', (pos0 === 1 ? 1.6 : pos0 === 2 ? 1.3 : pos0 === 3 ? 1.1 : 0.7) * (gara ? 1.2 : 1)) : 0;   // premio in base all'arrivo (online con gli amici un po' di piu')
     setTimeout(() => { if (!K.attivo) return; const cl = classifica(), pos = cl.indexOf(player) + 1; ui.grande.style.opacity = 0;
-      ui.fine.innerHTML = '<h3>' + (pos === 1 ? '&#x1F947; Hai vinto!' : pos === 2 ? '&#x1F948; Secondo posto' : pos === 3 ? '&#x1F949; Terzo posto' : pos + '° posto') + '</h3><div style="font-size:14px;opacity:.9">Tempo ' + tempo(gt) + ' &middot; miglior giro ' + tempo(player.migliorGiro) + rec + '</div><ol id="k-ol"></ol><div style="font-size:12px;opacity:.75;margin-bottom:6px">' + (gara ? 'Gara online con gli amici.' : 'DEMO: gara contro avversari simulati, nessun premio reale.') + '</div><button id="k-ancora">Rigioca</button><button class="s" id="k-via">Esci</button>';
+      ui.fine.innerHTML = '<h3>' + (pos === 1 ? '&#x1F947; Hai vinto!' : pos === 2 ? '&#x1F948; Secondo posto' : pos === 3 ? '&#x1F949; Terzo posto' : pos + '° posto') + '</h3><div style="font-size:14px;opacity:.9">Tempo ' + tempo(gt) + ' &middot; miglior giro ' + tempo(player.migliorGiro) + rec + '</div><ol id="k-ol"></ol>' + (premio ? '<div style="font-size:14px;font-weight:800;margin-bottom:6px">' + B.ECONOMIA.moneta.icona + ' +' + B.Eco.fmt(premio) + '</div>' : '') + '<div style="font-size:12px;opacity:.75;margin-bottom:6px">' + (gara ? 'Gara online con gli amici.' : 'Gara contro avversari simulati.') + '</div><button id="k-ancora">Rigioca</button><button class="s" id="k-via">Esci</button>';
       scriviFine(); ui.fine.style.display = 'block'; ui.fine.querySelector('#k-ancora').onclick = () => nuovo(); ui.fine.querySelector('#k-via').onclick = () => K.esci(); }, 1400);
   }
   // la classifica finale si aggiorna mentre gli amici arrivano al traguardo
@@ -5816,7 +5817,8 @@ body.pc .cf .cf-t,body.pc .cf .cf-base{display:none}
   function fineMatch() {
     stato = 'fine'; messaggio('');
     const vinto = punti[io.team] > punti[1 - io.team], segui = gara && !capo();
-    ui.fine.innerHTML = '<h3>' + (vinto ? '&#x1F3C6; Hai vinto la partita!' : '&#x1F4A5; Partita persa') + '</h3><div style="font-size:26px;font-weight:900;margin:4px 0 8px">Blu ' + punti[0] + ' &ndash; ' + punti[1] + ' Rossi</div>' + (segui ? '<div style="font-size:13px;margin-bottom:6px">Aspetta che ' + esc(nomeCapo()) + ' riparta, oppure esci.</div>' : '<button id="pb-ri">Rigioca</button>') + '<button class="s" id="pb-sc">' + (gara ? 'Torna al menu' : 'Cambia squadre') + '</button><button class="s" id="pb-ex">Esci</button>';
+    const premio = B.Eco && B.Eco.premioGioco ? B.Eco.premioGioco('paintball', (vinto ? 1.5 : punti[io.team] === punti[1 - io.team] ? 0.9 : 0.6) * (gara ? 1.2 : 1)) : 0;
+    ui.fine.innerHTML = '<h3>' + (vinto ? '&#x1F3C6; Hai vinto la partita!' : '&#x1F4A5; Partita persa') + '</h3><div style="font-size:26px;font-weight:900;margin:4px 0 8px">Blu ' + punti[0] + ' &ndash; ' + punti[1] + ' Rossi</div>' + (premio ? '<div style="font-size:14px;font-weight:800;margin-bottom:8px">' + B.ECONOMIA.moneta.icona + ' +' + B.Eco.fmt(premio) + '</div>' : '') + (segui ? '<div style="font-size:13px;margin-bottom:6px">Aspetta che ' + esc(nomeCapo()) + ' riparta, oppure esci.</div>' : '<button id="pb-ri">Rigioca</button>') + '<button class="s" id="pb-sc">' + (gara ? 'Torna al menu' : 'Cambia squadre') + '</button><button class="s" id="pb-ex">Esci</button>';
     ui.fine.style.display = 'block';
     if (!segui) ui.fine.querySelector('#pb-ri').onclick = () => { punti = [0, 0]; nuovoRound(); };
     ui.fine.querySelector('#pb-sc').onclick = () => menu();
@@ -10331,14 +10333,17 @@ float rumoreC(vec3 x) { vec3 i = floor(x); vec3 f = fract(x); f = f * f * (3.0 -
     ui.pan.querySelector('#rd-menu').onclick = () => menu();
   }
   function avviaPercorso(k) { if (!PERCORSI[k]) return intro(k); audio(); prepara(k, true); pannello(''); stato = 'gioco'; toast(enc.nome + ': raggiungi ' + NOMI_INC[k]); }
+  // premio in moneta del borgo per un incontro completato: di piu' a difficolta' alta e per l'ultimo incontro
+  function premioCripta(i) { if (!B.Eco || !B.Eco.premioGioco) return 0; return B.Eco.premioGioco('cripta', [1, 1.25, 1.5][liv] * (i === INCONTRI.length - 1 ? 1.3 : 1)); }
   function completa() {
     if (stato !== 'gioco') return;
     if (enc.percorso) { intro(encI); return; }   // fine del percorso: si entra nel prossimo incontro
     if (enc.fatto) return; enc.fatto = true; completati[encI] = 1; salvaProgressi();
+    const pr = premioCripta(encI), prT = pr ? ' · +' + B.Eco.fmt(pr) : ''; if (ON) ON.fz = [(ON.fz ? ON.fz[0] : 0) + 1, encI];   // gli ospiti ricevono il premio con il prossimo fotogramma
     const t = Math.floor(tEnc / 60) + ':' + String(Math.floor(tEnc % 60)).padStart(2, '0'), ultimo = encI === INCONTRI.length - 1;
-    if (!ultimo) { toast('Incontro completato in ' + t + '. Avanti verso ' + NOMI_INC[encI + 1], 'bene'); tPassa = 3; return; }   // si prosegue a piedi
+    if (!ultimo) { toast('Incontro completato in ' + t + prT + '. Avanti verso ' + NOMI_INC[encI + 1], 'bene'); tPassa = 3; return; }   // si prosegue a piedi
     stato = 'fatto'; sparo = false;
-    pannello('<div class="kick bene">Incontro completato · ' + t + '</div><h2>' + enc.nome + '</h2>' +
+    pannello('<div class="kick bene">Incontro completato · ' + t + prT + '</div><h2>' + enc.nome + '</h2>' +
       (ultimo ? '<p class="sotto">Hai superato i primi quattro passi del raid. Le Gemelle del Velo e il Re Senza Luce in persona ti aspettano nella prossima versione.</p>' : '<p class="sotto">Prossimo: <b>' + NOMI_INC[encI + 1] + '</b></p>') +
       '<div class="pul">' + (ultimo ? '<button id="rd-menu">Stanza d\'attesa</button>' : '<button id="rd-avanti">Avanti</button><button class="sec" id="rd-menu">Stanza d\'attesa</button>') + '</div>');
     const av = ui.pan.querySelector('#rd-avanti'); if (av) av.onclick = () => intro(encI + 1);
@@ -10658,7 +10663,7 @@ body.pc #rd-hud .tasto,body.pc #rd-hud .base{display:none}
     const ne = nemici.filter(e => e.vivo).sort((a, b) => (b.boss ? 1 : 0) - (a.boss ? 1 : 0)).slice(0, 26)
       .map(e => [e.id, TIPIK.indexOf(e.tipo), f2(e.pos.x), f2(e.pos.y), f2(e.pos.z), f2(e.yaw), Math.round(e.hp), e.max, e.imm ? 1 : 0, e.camm ? 1 : 0, e.anN || 0, e.anK || '']);
     const tp = {}; umani().forEach(u => { if (u.remoto && ON.tp[u.k]) tp[u.k] = ON.tp[u.k]; });
-    const o = { id: mioId, st: 'raid', g: ON.g, ru: 'h', mem: ON.mem || [], sto: stato, ei: encI, pe: enc && enc.percorso ? 1 : 0, pn: prepN, lv: liv, wm: ON.wm, sq, ne, pj: ON.pj, to: ON.to, tp, ra: radioRete, es: enc && enc.foto ? enc.foto() : null };
+    const o = { id: mioId, st: 'raid', g: ON.g, ru: 'h', mem: ON.mem || [], sto: stato, ei: encI, pe: enc && enc.percorso ? 1 : 0, pn: prepN, lv: liv, wm: ON.wm, sq, ne, pj: ON.pj, to: ON.to, tp, ra: radioRete, fz: ON.fz || null, es: enc && enc.foto ? enc.foto() : null };
     if (JSON.stringify(o).length > 3500) { o.pj = ON.pj.slice(-3); o.to = ON.to.slice(-2); o.ra = radioRete.slice(-2); o.ne = ne.slice(0, 16); }
     return o;
   }
@@ -10666,7 +10671,7 @@ body.pc #rd-hud .tasto,body.pc #rd-hud .base{display:none}
   /* ---------- ospite ---------- */
   function liberaFantasmi() { if (!SEGUI) return; SEGUI.fant.forEach(f => { scena.remove(f.mesh); if (f.av && B.liberaAvatar) B.liberaAvatar(f.av); }); SEGUI.fant.clear(); }
   function unisciti(r) {
-    SEGUI = { r, g: r.d.g, pn: -1, rp: -1, fant: new Map(), d: null, pan: '', pjN: maxN(r.d.pj), toN: maxN(r.d.to), tpN: maxN(r.d.tp && r.d.tp[mioId]), raN: maxN(r.d.ra), lp: io.pos.clone(), v: 0 };
+    SEGUI = { r, g: r.d.g, pn: -1, rp: -1, fant: new Map(), d: null, pan: '', pjN: maxN(r.d.pj), toN: maxN(r.d.to), tpN: maxN(r.d.tp && r.d.tp[mioId]), raN: maxN(r.d.ra), fzN: r.d.fz ? nnum(r.d.fz[0], 0) : 0, lp: io.pos.clone(), v: 0 };
     toast(r.nick + ' ha dato il via: si parte!', 'bene', true);
   }
   // si torna nella stanza d'attesa (la squadra resta la stessa, se non la lasci)
@@ -10750,6 +10755,7 @@ body.pc #rd-hud .tasto,body.pc #rd-hud .base{display:none}
       liberaFantasmi(); prepara(clamp(d.ei | 0, 0, INCONTRI.length - 1), !!d.pe); SEGUI.rp = -1; SEGUI.d = null; SEGUI.pan = ''; stato = 'intro';
     }
     if (SEGUI.d !== d) { SEGUI.d = d; seguiDati(d); }
+    if (Array.isArray(d.fz) && nnum(d.fz[0], 0) > SEGUI.fzN) { SEGUI.fzN = nnum(d.fz[0], 0); const i = clamp(nnum(d.fz[1], 0) | 0, 0, INCONTRI.length - 1); completati[i] = 1; salvaProgressi(); const pr = premioCripta(i); if (pr) toast(NOMI_INC[i] + ' completato · +' + B.Eco.fmt(pr), 'bene', true); }
     pannelloOspite(String(d.sto));
     // muovo compagni e nemici verso dove li vede lui
     const k = Math.min(1, dt * 10);
@@ -11439,7 +11445,7 @@ body.pc #rd-hud .tasto,body.pc #rd-hud .base{display:none}
    - B.ARREDI: catalogo dei mobili (modellati da codice)
    - B.NegozioArredi: schermata del negozio (si apre dall'edificio "Arredamenti" in piazza)
    - B.Arredo: modalita' "Arreda" in casa (scegli un mobile, cammini per spostarlo, lo posi)
-   Tutto DIMOSTRATIVO: i coins si guadagnano solo con il bonus giornaliero.
+   - B.ECONOMIA: le regole dell'economia, a percentuali (vedi sotto)
    ===================================================================== */
 (function () {
   'use strict';
@@ -11449,23 +11455,19 @@ body.pc #rd-hud .tasto,body.pc #rd-hud .base{display:none}
 
   /* ---------- portafoglio e zaino ---------- */
   const ascolta = [];
-  const S = { coins: 600, inv: {}, piazzati: [], bonus: '', liv: 0, avvio: 0, stili: { pav: 'parquet', par: 'crema' }, stiliPos: ['parquet', 'crema'] };
-  try { const r = JSON.parse(localStorage.getItem(CHIAVE) || 'null'); if (r) { S.coins = r.coins | 0; S.inv = r.inv || {}; S.piazzati = r.piazzati || []; S.bonus = r.bonus || ''; S.liv = r.liv | 0; S.avvio = r.avvio | 0; if (r.stili) S.stili = Object.assign(S.stili, r.stili); if (Array.isArray(r.stiliPos)) S.stiliPos = r.stiliPos.concat(['parquet', 'crema']); } } catch (e) { /* ok */ }
+  const S = { coins: 600, inv: {}, piazzati: [], bonus: '', st: null, storico: [], liv: 0, avvio: 0, stili: { pav: 'parquet', par: 'crema' }, stiliPos: ['parquet', 'crema'] };
+  try { const r = JSON.parse(localStorage.getItem(CHIAVE) || 'null'); if (r) { S.coins = r.coins | 0; S.inv = r.inv || {}; S.piazzati = r.piazzati || []; S.bonus = r.bonus || ''; S.liv = r.liv | 0; S.avvio = r.avvio | 0; if (r.st) S.st = r.st; if (Array.isArray(r.storico)) S.storico = r.storico; if (r.stili) S.stili = Object.assign(S.stili, r.stili); if (Array.isArray(r.stiliPos)) S.stiliPos = r.stiliPos.concat(['parquet', 'crema']); } } catch (e) { /* ok */ }
   function salva() { try { localStorage.setItem(CHIAVE, JSON.stringify(S)); } catch (e) { /* ok */ } }
   function avvisa() { ascolta.forEach(f => f()); const pl = document.getElementById('pill-coins'); if (pl && !pl.firstChild) pl.innerHTML = '\u{1FA99} <b></b>'; const p = document.querySelector('#pill-coins b'); if (p) p.textContent = S.coins; document.querySelectorAll('.coins-val').forEach(n => { n.textContent = S.coins; }); }
   const Eco = B.Eco = {
     get coins() { return S.coins; },
     su(f) { ascolta.push(f); },
-    add(n) { S.coins += n; salva(); avvisa(); const p = document.getElementById('pill-coins'); if (p) { p.classList.remove('pop'); void p.offsetWidth; p.classList.add('pop'); } },
+    add(n, fonte) { n = Math.round(n) || 0; if (!n) return; S.coins += n; registra(fonte || 'altro', n); salva(); avvisa(); const p = document.getElementById('pill-coins'); if (p) { p.classList.remove('pop'); void p.offsetWidth; p.classList.add('pop'); } },
     spendi(n) { if (S.coins < n) return false; S.coins -= n; salva(); avvisa(); return true; },
     posseduti(id) { return S.inv[id] || 0; },
     liberi(id) { return (S.inv[id] || 0) - S.piazzati.filter(p => p.id === id).length; },
     regala(id) { S.inv[id] = (S.inv[id] || 0) + 1; salva(); avvisa(); },
     compra(id) { const a = B.ARREDI.find(x => x.id === id); if (!a || !Eco.spendi(a.prezzo)) return false; S.inv[id] = (S.inv[id] || 0) + 1; salva(); avvisa(); return true; },
-    bonusGiornaliero() {
-      const oggi = new Date().toISOString().slice(0, 10);
-      if (S.bonus === oggi) return 0; S.bonus = oggi; Eco.add(100); return 100;
-    },
     COSTI_AMPL: [400, 900, 1800],
     get liv() { return S.liv; },
     costoAmpliamento() { return S.liv < Eco.COSTI_AMPL.length ? Eco.COSTI_AMPL[S.liv] : 0; },
@@ -11481,6 +11483,39 @@ body.pc #rd-hud .tasto,body.pc #rd-hud .base{display:none}
     },
     stato: S, salva, avvisa
   };
+
+  /* ---------- ECONOMIA A PERCENTUALI ----------
+     Un solo numero di partenza: quanto guadagna in media in un giorno chi gioca (giorno).
+     Ogni fonte di guadagno ne riceve una fetta (quote, la somma fa 1): missioni, accesso, piazza e minigiochi
+     leggono da qui i loro premi e i loro tetti. Aggiungendo un minigioco o un negozio si sposta solo una quota.
+     Ogni guadagno viene registrato per fonte e per giorno (Eco.statistiche), cosi' si vede se una fonte rende troppo. */
+  const ECO = B.ECONOMIA = {
+    moneta: { nome: 'coins', icona: '\u{1FA99}' },   // il nome della moneta: si cambia solo qui
+    giorno: 500,                                     // guadagno medio in un giorno di gioco (circa 45 minuti)
+    quote: { minigiochi: 0.40, missioni: 0.20, accesso: 0.15, piazza: 0.25 },
+    partite: 6,                                      // partite premiate a pieno al giorno, su tutti i minigiochi insieme
+    dopoTetto: 0.2,                                  // oltre la quota del giorno una partita rende solo il 20%
+    giochi: { kart: 1, paintball: 1, cripta: 1.6, belinverse: 1 }   // peso di una partita (la Cripta dura di piu')
+  };
+  const oggiG = () => { const d = new Date(); return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); };
+  function registra(fonte, n) {
+    const g = oggiG(); if (!S.st || S.st.g !== g) { if (S.st && S.st.g) { S.storico = (S.storico || []).concat([S.st]).slice(-30); } S.st = { g, f: {} }; }
+    S.st.f[fonte] = (S.st.f[fonte] || 0) + n;
+  }
+  const tondo = n => n >= 20 ? Math.round(n / 5) * 5 : Math.max(1, Math.round(n));
+  Object.assign(Eco, {
+    quota: f => Math.round(ECO.giorno * (ECO.quote[f] || 0)),
+    oggi: f => (S.st && S.st.g === oggiG() ? S.st.f[f] || 0 : 0),
+    fmt: n => n + ' ' + ECO.moneta.nome,
+    /* premio di fine partita: molt = quanto e' andata (0.6 partecipazione ... 1.6 vittoria) */
+    premioGioco(gioco, molt) {
+      const base = Eco.quota('minigiochi') / ECO.partite * (ECO.giochi[gioco] || 1) * (molt || 1);
+      const resto = Math.max(0, Eco.quota('minigiochi') - Eco.oggi('minigiochi'));
+      const k = tondo(Math.min(base, resto) + Math.max(0, base - resto) * ECO.dopoTetto);
+      Eco.add(k, 'minigiochi'); return k;
+    },
+    statistiche: () => ({ oggi: S.st && S.st.g === oggiG() ? S.st.f : {}, giorni: (S.storico || []).slice() })
+  });
 
   /* ---------- catalogo dei mobili (origine al centro sul pavimento, fronte verso +z) ---------- */
   const box = (g, w, h, d, col, x, y, z, lb) => { const m = mesh(new T.BoxGeometry(w, h, d), M(col), { x, y, z, lb: lb === undefined ? 0.02 : lb }); g.add(m); return m; };
@@ -12349,8 +12384,9 @@ body.arredando #joy,body.arredando #controlli,body.arredando #btn-contesto,body.
 
   /* ---------- TABELLA DI BILANCIAMENTO ---------- */
   const CFG = B.MISSIONI_CFG = {
-    tettoGiornaliero: 300,                         // massimo di coins al giorno dalle missioni quotidiane/settimanali (le "di costruzione" non contano)
-    serie: [100, 120, 150, 180, 200, 220],         // bonus di accesso al giorno 1, 2, 3...; dall'ultimo in poi resta uguale
+    // i numeri vengono dall'economia (B.ECONOMIA in coins-arredi.js): quota missioni e quota accesso
+    tettoGiornaliero: Math.round(B.Eco.quota('missioni') * 1.5),   // massimo al giorno dalle missioni quotidiane/settimanali (le "di costruzione" non contano)
+    serie: [0.65, 0.8, 1, 1.2, 1.35, 1.5].map(k => Math.round(B.Eco.quota('accesso') * k / 5) * 5),   // bonus di accesso al giorno 1, 2, 3...; dall'ultimo in poi resta uguale
     saltoGiorno: 2,                                // se salti un giorno la serie scende di tanti giorni (non si azzera)
     nQuotidiane: 5,
     pool: [
@@ -12360,14 +12396,14 @@ body.arredando #joy,body.arredando #controlli,body.arredando #btn-contesto,body.
       { id: 'bici', t: 'Fai un giro in bicicletta', ev: 'bici', n: 150, r: 25 },
       { id: 'siedi', t: 'Siediti da qualche parte', ev: 'siediti', n: 1, r: 15 },
       { id: 'bib', t: 'Passa dalla biblioteca', ev: 'biblioteca', n: 1, r: 20 },
-      { id: 'gioco', t: 'Fai una partita (go-kart o paintball)', ev: 'gioco', n: 1, r: 40 },
+      { id: 'gioco', t: 'Fai una partita a un minigioco', ev: 'gioco', n: 1, r: 40 },
       { id: 'stanze', t: 'Visita 4 luoghi diversi', ev: 'stanza', n: 4, r: 25, unici: true },
       { id: 'posa', t: 'Posa un mobile in casa', ev: 'posa', n: 1, r: 20 },
       { id: 'pesca', t: 'Pesca 3 pesci al laghetto', ev: 'pesca', n: 3, r: 25 },
       { id: 'ruota', t: 'Fai un giro sulla ruota panoramica', ev: 'ruota', n: 1, r: 20 },
       { id: 'mercato', t: 'Compra o vendi qualcosa al mercatino', ev: 'mercato', n: 1, r: 20 }
     ],
-    settimanale: { t: 'Completa 5 missioni quotidiane in una settimana', n: 5, coins: 150, premio: 'statua' },
+    settimanale: { t: 'Completa 5 missioni quotidiane in una settimana', n: 5, coins: Math.round(B.Eco.quota('missioni') * 1.5 / 5) * 5, premio: 'statua' },
     serieLunga: { giorni: 7, premio: 'lanterna' },
     costruzione: [
       { id: 'm5', t: 'Metti 5 mobili in casa', n: 5, r: 60, cur: c => c.mobili },
@@ -12411,7 +12447,7 @@ body.arredando #joy,body.arredando #controlli,body.arredando #btn-contesto,body.
     if (!S.ultimo) S.serie = 1;
     else { const gap = giorni(o) - giorni(S.ultimo); S.serie = gap <= 1 ? S.serie + 1 : Math.max(0, S.serie - CFG.saltoGiorno) + 1; }
     S.ultimo = o;
-    const bonus = CFG.serie[Math.min(S.serie, CFG.serie.length) - 1]; B.Eco.add(bonus);
+    const bonus = CFG.serie[Math.min(S.serie, CFG.serie.length) - 1]; B.Eco.add(bonus, 'accesso');
     let extra = '';
     if (S.serie >= CFG.serieLunga.giorni && !S.l7) { S.l7 = true; B.Eco.regala(CFG.serieLunga.premio); extra = ' + regalo speciale: ' + B.ARREDI.find(a => a.id === CFG.serieLunga.premio).nome + '!'; }
     salva(); toast('Giorno ' + S.serie + ' di fila: +' + bonus + ' coins' + extra); return { bonus, serie: S.serie };
@@ -12430,21 +12466,21 @@ body.arredando #joy,body.arredando #controlli,body.arredando #btn-contesto,body.
   };
 
   /* ---------- premi ---------- */
-  function paga(n) { const k = Math.max(0, Math.min(n, CFG.tettoGiornaliero - S.guad)); S.guad += k; if (k) B.Eco.add(k); return k; }
+  function paga(n) { const k = Math.max(0, Math.min(n, CFG.tettoGiornaliero - S.guad)); S.guad += k; if (k) B.Eco.add(k, 'missioni'); return k; }
   function riscuotiQ(q) {
     const d = def(q.id); if (!q.ok || q.rit) return; q.rit = true; const k = paga(d.r);
     if (S.settN < CFG.settimanale.n) S.settN++;
     toast(k >= d.r ? '+' + k + ' coins' : k ? '+' + k + ' coins (raggiunto il tetto di oggi)' : 'Tetto giornaliero raggiunto: torna domani'); salva(); badge(); disegna();
   }
   function riscuotiS() {
-    if (S.settN < CFG.settimanale.n || S.settRit) return; S.settRit = true; B.Eco.add(CFG.settimanale.coins); B.Eco.regala(CFG.settimanale.premio);
+    if (S.settN < CFG.settimanale.n || S.settRit) return; S.settRit = true; B.Eco.add(CFG.settimanale.coins, 'missioni'); B.Eco.regala(CFG.settimanale.premio);
     toast('Missione settimanale! +' + CFG.settimanale.coins + ' coins e ' + B.ARREDI.find(a => a.id === CFG.settimanale.premio).nome); salva(); badge(); disegna();
   }
   function ctx() {
     const e = B.Eco.stato, p = e.piazzati, n = id => p.filter(x => x.id === id).length;
     return { mobili: p.length, pedane: n('pedana'), fontane: n('fontana'), liv: e.liv, dormito: S.dormito };
   }
-  function riscuotiC(m) { if (S.build[m.id]) return; S.build[m.id] = 1; B.Eco.add(m.r); toast('+' + m.r + ' coins'); salva(); badge(); disegna(); }
+  function riscuotiC(m) { if (S.build[m.id]) return; S.build[m.id] = 1; B.Eco.add(m.r, 'costruzione'); toast('+' + m.r + ' coins'); salva(); badge(); disegna(); }
   const daRiscuotere = () => S.q.filter(q => q.ok && !q.rit).length + (S.settN >= CFG.settimanale.n && !S.settRit ? 1 : 0) + CFG.costruzione.filter(m => !S.build[m.id] && m.cur(ctx()) >= m.n).length;
 
   /* ---------- pannello ---------- */
@@ -12563,9 +12599,10 @@ body.arredando #joy,body.arredando #controlli,body.arredando #btn-contesto,body.
     pontile: { x: 38, z0: 33.6, z1: 41.2, w: 1.8, h: 0.28 },
     ruota: { x: 34, z: 3, R: 8, hub: 11.0, cabine: 8, giro: 40, appeso: 2.75 },
     mercato: { z: 5, xs: [-13.5, -6.5, 6.5, 13.5] },
-    pesca: { tettoPescheria: 600, attesa: [2.2, 6.5], finestra: 1.15, trofeo: 8 },
+    pesca: { tettoPescheria: Math.round(B.Eco.quota('piazza') * 0.8),   // la piazza ha la sua quota dell'economia (B.ECONOMIA)
+            attesa: [2.2, 6.5], finestra: 1.15, trofeo: 8 },
     usato: { quota: 0.55, prezzoEsclusivi: 400 },          // i banchi ti ricomprano i mobili liberi al 55% del negozio
-    carte: { C: 8, R: 25, SR: 70, alt: 1000, tetto: 1200 },  // banco Belinverse TCG: coins per carta (pacchetto 150 = 6 carte) e massimo al giorno
+    carte: { C: 8, R: 25, SR: 70, alt: 1000, tetto: Math.round(B.Eco.quota('piazza') * 0.8) },  // banco Belinverse TCG: coins per carta (pacchetto 150 = 6 carte) e massimo al giorno
     annunci: { max: 10, consigliato: 2 }                     // carte in vendita agli amici: quante e prezzo proposto (x valore del banco; Alternative a 1000)
   };
   const RAR = {
@@ -13237,7 +13274,7 @@ body.arredando #joy,body.arredando #controlli,body.arredando #btn-contesto,body.
   function vendiPesci(ids, ven) {
     let guad = 0, resta = CF.pesca.tettoPescheria - S.vend.c, finito = false;
     ids.forEach(id => { const sp = SPECIE.find(s => s.id === id), p = prezzoPesce(sp); while (S.secchio[id] > 0) { if (p > resta) { finito = true; break; } S.secchio[id]--; guad += p; resta -= p; } if (!S.secchio[id]) delete S.secchio[id]; });
-    S.vend.c += guad; salva(); if (guad && B.Eco) B.Eco.add(guad); if (guad) missione('mercato');
+    S.vend.c += guad; salva(); if (guad && B.Eco) B.Eco.add(guad, 'piazza'); if (guad) missione('mercato');
     ov.dire(guad ? 'Venduto! +' + guad + ' coins' + (finito ? ' (per oggi ha finito i soldi)' : '') : 'Per oggi la Pescheria non compra più: torna domani');
     if (ven && guad && app.mostraBolla) app.mostraBolla(ven.o, 'Che bel pescato!', 3);
     aggSecchio(); Mercato.disegna();
@@ -13254,7 +13291,7 @@ body.arredando #joy,body.arredando #controlli,body.arredando #btn-contesto,body.
       const b = el('button', 'att-bt', 'Vendi a 🪙 ' + prezzo);
       b.addEventListener('click', () => {
         if (B.Eco.liberi(a.id) <= 0) return;
-        B.Eco.stato.inv[a.id]--; B.Eco.salva(); B.Eco.add(prezzo); missione('mercato');
+        B.Eco.stato.inv[a.id]--; B.Eco.salva(); B.Eco.add(prezzo, 'rivendita'); missione('mercato');
         ov.dire('Venduto: ' + a.nome + ' (+' + prezzo + ' coins)'); if (ven && app.mostraBolla) app.mostraBolla(ven.o, 'Affare fatto!', 3);
         Mercato.disegna();
       });
@@ -13336,7 +13373,7 @@ body.arredando #joy,body.arredando #controlli,body.arredando #btn-contesto,body.
   function vendutoA(i, id, p, nick) {
     const a = S.annunci.find(x => x.i === i && x.id === id && x.p === p); if (!a) return false;
     S.annunci.splice(S.annunci.indexOf(a), 1); salva();
-    if (B.Eco) B.Eco.add(p); missione('mercato');
+    if (B.Eco) B.Eco.add(p, 'amici'); missione('mercato');
     toast('🃏 ' + nick + ' ha comprato ' + nomeCarta(id) + ' dal tuo banco (+' + p + ' coins)');
     if (Mercato.aperto >= 0 && ov.aperta()) Mercato.disegna();
     return true;
@@ -13344,7 +13381,7 @@ body.arredando #joy,body.arredando #controlli,body.arredando #btn-contesto,body.
   function vendiCarte(lista, ven) {
     const BV = B.Belinverse; let guad = 0, n = 0, resta = CF.carte.tetto - S.vendC.c, finito = false;
     lista.forEach(o => { const p = CF.carte[rarCarta(o.k)]; for (let q = 0; q < o.n; q++) { if (p > resta) { finito = true; break; } if (!BV.vendi(o.k.id, 1)) break; guad += p; resta -= p; n++; } });
-    S.vendC.c += guad; salva(); if (guad && B.Eco) B.Eco.add(guad); if (guad) missione('mercato');
+    S.vendC.c += guad; salva(); if (guad && B.Eco) B.Eco.add(guad, 'piazza'); if (guad) missione('mercato');
     ov.dire(guad ? 'Vendut' + (n > 1 ? 'e ' + n + ' carte' : 'a') + '! +' + guad + ' coins' + (finito ? ' (per oggi ha finito i soldi)' : '') : 'Per oggi il banco non compra più carte: torna domani');
     if (ven && guad && app.mostraBolla) app.mostraBolla(ven.o, 'Bella carta!', 3);
     Mercato.disegna();
@@ -13714,7 +13751,7 @@ body.orizz #pesca-pan{left:auto;right:136px;bottom:16px}
   const B = window.B3;
   const { CARTE, LEADER, PER_ID } = B.BELIN_CARTE;
   const CHIAVE = 'borg_belinverse_v1';
-  const PREMIO = 60, PREMI_GIORNO = 5;                   // coins per vittoria, vittorie premiate al giorno
+  const PREMI_GIORNO = 8;                                // partite premiate al giorno (il premio lo decide B.ECONOMIA)
 
   /* ---------- salvataggio: mazzo personale, Belinone scelto, statistiche ---------- */
   const SAV = { mazzo: null, leader: '101', vinte: 0, perse: 0, premiDi: '', premi: 0, coll: {}, pacchettoDi: '', pacchetti: 0 };
@@ -14113,9 +14150,9 @@ body.orizz #pesca-pan{left:auto;right:136px;bottom:16px}
     const vinto = S.fine.vince === 0;
     if (vinto) SAV.vinte++; else SAV.perse++;
     let premio = 0;
-    if (vinto && B.Eco) {
+    if (B.Eco && B.Eco.premioGioco) {   // vittoria o sconfitta: il premio viene dall'economia del borgo (B.ECONOMIA)
       const oggi = new Date().toDateString(); if (SAV.premiDi !== oggi) { SAV.premiDi = oggi; SAV.premi = 0; }
-      if (SAV.premi < PREMI_GIORNO) { SAV.premi++; premio = PREMIO; B.Eco.add(PREMIO); }
+      if (SAV.premi < PREMI_GIORNO) { SAV.premi++; premio = B.Eco.premioGioco('belinverse', vinto ? 1.4 : 0.5); }
     }
     salva(); UI.render(); UI.fine(vinto, S.fine.motivo, premio);
   }
@@ -14660,7 +14697,7 @@ body.bv-attivo #barra-alto,body.bv-attivo #controlli,body.bv-attivo #btn-contest
     attacco(p, ch) { if (B.Audio && B.Audio.bip) try { B.Audio.bip(true); } catch (e) { /* ok */ } },
     fine(vinto, motivo, premio) {
       selez = null; disegnaAzioni();
-      chiediUI('<div style="text-align:center"><div class="disp" style="font-size:28px;margin-bottom:6px">' + (vinto ? '🏆 Hai vinto!' : 'Hai perso') + '</div><div style="font-weight:400;font-size:13px;color:var(--ink)">' + esc(risolvi(motivo, 0)) + (premio ? '<br>+' + premio + ' coins' : '') + '<br><small>Vittorie ' + SAV.vinte + ' · Sconfitte ' + SAV.perse + '</small></div></div>', ON ? ['Menu'] : ['Rivincita', 'Menu']).then(r => { if (ON) { ON = null; menu(); return; } if (r === 0) avviaPartita(); else menu(); });
+      chiediUI('<div style="text-align:center"><div class="disp" style="font-size:28px;margin-bottom:6px">' + (vinto ? '🏆 Hai vinto!' : 'Hai perso') + '</div><div style="font-weight:400;font-size:13px;color:var(--ink)">' + esc(risolvi(motivo, 0)) + (premio ? '<br>+' + B.Eco.fmt(premio) : '') + '<br><small>Vittorie ' + SAV.vinte + ' · Sconfitte ' + SAV.perse + '</small></div></div>', ON ? ['Menu'] : ['Rivincita', 'Menu']).then(r => { if (ON) { ON = null; menu(); return; } if (r === 0) avviaPartita(); else menu(); });
     },
     render() {
       if (!root || !S) return;
@@ -14719,7 +14756,7 @@ body.bv-attivo #barra-alto,body.bv-attivo #controlli,body.bv-attivo #btn-contest
 <h2>Mazzo</h2><p>${mio ? 'Userai il tuo mazzo personale (40 carte).' : tot >= 40 ? 'Hai ' + tot + ' carte: puoi costruire il tuo mazzo. Finché non lo fai giochi con un mazzo in prestito.' : 'Hai ' + tot + ' carte su 40 che servono per un mazzo tuo: intanto giochi con un mazzo in prestito. Le carte si trovano nei pacchetti.'}</p>
 <div class="riga-b"><button class="pri" data-m="gioca">▶ Gioca</button><button class="sec" data-m="mazzo">✎ ${mio ? 'Modifica il tuo mazzo' : 'Costruisci il tuo mazzo'}</button>${mio ? '<button class="sec" data-m="casuale">Gioca con mazzo in prestito</button>' : ''}<button class="sec" data-m="pacchetti">🎁 Pacchetti${gratisOggi() ? ' (1 gratis)' : ''}</button><button class="sec" data-m="regole">Regole</button></div>
 <div class="amici-bv"></div>
-<p style="margin-top:10px;opacity:.7;font-size:12px">Le tue carte: ${tot} (${carteDiverse()} diverse su ${CARTE.length}) · Vittorie ${SAV.vinte} · Sconfitte ${SAV.perse} · Ogni vittoria vale ${PREMIO} coins (fino a ${PREMI_GIORNO} al giorno)</p>`;
+<p style="margin-top:10px;opacity:.7;font-size:12px">Le tue carte: ${tot} (${carteDiverse()} diverse su ${CARTE.length}) · Vittorie ${SAV.vinte} · Sconfitte ${SAV.perse} · Ogni partita ti fa guadagnare ${B.ECONOMIA ? B.ECONOMIA.moneta.nome : "coins"}, di più se vinci (fino a ${PREMI_GIORNO} partite premiate al giorno)</p>`;
     const ls = $('.leaders', mn);
     LEADER.filter(l => leaderOk(l.id)).forEach(l => {
       const d = cartaEl(l, { cls: SAV.leader === l.id ? 'sel' : '', click: () => { SAV.leader = l.id; salva(); ls.querySelectorAll('.carta').forEach(n => n.classList.remove('sel')); d.classList.add('sel'); $('.ldesc', mn).textContent = l.n + ': ' + l.desc; } });
@@ -17131,7 +17168,7 @@ body.orizz #pagina-zaino .zn-carte{grid-template-columns:repeat(auto-fill,minmax
     const k = chiaveA(nick, i), c = inAttesa.get(k); if (!c) return; inAttesa.delete(k);
     const nome = ((B.BELIN_CARTE && B.BELIN_CARTE.PER_ID && B.BELIN_CARTE.PER_ID[c.id]) || {}).n || 'la carta';
     if (ok && B.Belinverse && B.Belinverse.aggiungi(c.id)) { G.emetti('toast', '🃏 Hai comprato ' + nome + ' da ' + c.nick + ': la trovi nello zaino'); if (B.Miss) B.Miss.ev('mercato'); }
-    else { if (B.Eco) B.Eco.add(c.p); G.emetti('toast', ok ? 'Acquisto non riuscito: coins restituiti' : nome + ' era già stata venduta: ti tornano ' + c.p + ' coins'); }
+    else { if (B.Eco) B.Eco.add(c.p, 'rimborso'); G.emetti('toast', ok ? 'Acquisto non riuscito: coins restituiti' : nome + ' era già stata venduta: ti tornano ' + c.p + ' coins'); }
     G.emetti('annunci');
   }
   // se il venditore esce prima di rispondere, i coins tornano indietro

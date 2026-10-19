@@ -1770,14 +1770,17 @@
     ui.pan.querySelector('#rd-menu').onclick = () => menu();
   }
   function avviaPercorso(k) { if (!PERCORSI[k]) return intro(k); audio(); prepara(k, true); pannello(''); stato = 'gioco'; toast(enc.nome + ': raggiungi ' + NOMI_INC[k]); }
+  // premio in moneta del borgo per un incontro completato: di piu' a difficolta' alta e per l'ultimo incontro
+  function premioCripta(i) { if (!B.Eco || !B.Eco.premioGioco) return 0; return B.Eco.premioGioco('cripta', [1, 1.25, 1.5][liv] * (i === INCONTRI.length - 1 ? 1.3 : 1)); }
   function completa() {
     if (stato !== 'gioco') return;
     if (enc.percorso) { intro(encI); return; }   // fine del percorso: si entra nel prossimo incontro
     if (enc.fatto) return; enc.fatto = true; completati[encI] = 1; salvaProgressi();
+    const pr = premioCripta(encI), prT = pr ? ' · +' + B.Eco.fmt(pr) : ''; if (ON) ON.fz = [(ON.fz ? ON.fz[0] : 0) + 1, encI];   // gli ospiti ricevono il premio con il prossimo fotogramma
     const t = Math.floor(tEnc / 60) + ':' + String(Math.floor(tEnc % 60)).padStart(2, '0'), ultimo = encI === INCONTRI.length - 1;
-    if (!ultimo) { toast('Incontro completato in ' + t + '. Avanti verso ' + NOMI_INC[encI + 1], 'bene'); tPassa = 3; return; }   // si prosegue a piedi
+    if (!ultimo) { toast('Incontro completato in ' + t + prT + '. Avanti verso ' + NOMI_INC[encI + 1], 'bene'); tPassa = 3; return; }   // si prosegue a piedi
     stato = 'fatto'; sparo = false;
-    pannello('<div class="kick bene">Incontro completato · ' + t + '</div><h2>' + enc.nome + '</h2>' +
+    pannello('<div class="kick bene">Incontro completato · ' + t + prT + '</div><h2>' + enc.nome + '</h2>' +
       (ultimo ? '<p class="sotto">Hai superato i primi quattro passi del raid. Le Gemelle del Velo e il Re Senza Luce in persona ti aspettano nella prossima versione.</p>' : '<p class="sotto">Prossimo: <b>' + NOMI_INC[encI + 1] + '</b></p>') +
       '<div class="pul">' + (ultimo ? '<button id="rd-menu">Stanza d\'attesa</button>' : '<button id="rd-avanti">Avanti</button><button class="sec" id="rd-menu">Stanza d\'attesa</button>') + '</div>');
     const av = ui.pan.querySelector('#rd-avanti'); if (av) av.onclick = () => intro(encI + 1);
@@ -2097,7 +2100,7 @@ body.pc #rd-hud .tasto,body.pc #rd-hud .base{display:none}
     const ne = nemici.filter(e => e.vivo).sort((a, b) => (b.boss ? 1 : 0) - (a.boss ? 1 : 0)).slice(0, 26)
       .map(e => [e.id, TIPIK.indexOf(e.tipo), f2(e.pos.x), f2(e.pos.y), f2(e.pos.z), f2(e.yaw), Math.round(e.hp), e.max, e.imm ? 1 : 0, e.camm ? 1 : 0, e.anN || 0, e.anK || '']);
     const tp = {}; umani().forEach(u => { if (u.remoto && ON.tp[u.k]) tp[u.k] = ON.tp[u.k]; });
-    const o = { id: mioId, st: 'raid', g: ON.g, ru: 'h', mem: ON.mem || [], sto: stato, ei: encI, pe: enc && enc.percorso ? 1 : 0, pn: prepN, lv: liv, wm: ON.wm, sq, ne, pj: ON.pj, to: ON.to, tp, ra: radioRete, es: enc && enc.foto ? enc.foto() : null };
+    const o = { id: mioId, st: 'raid', g: ON.g, ru: 'h', mem: ON.mem || [], sto: stato, ei: encI, pe: enc && enc.percorso ? 1 : 0, pn: prepN, lv: liv, wm: ON.wm, sq, ne, pj: ON.pj, to: ON.to, tp, ra: radioRete, fz: ON.fz || null, es: enc && enc.foto ? enc.foto() : null };
     if (JSON.stringify(o).length > 3500) { o.pj = ON.pj.slice(-3); o.to = ON.to.slice(-2); o.ra = radioRete.slice(-2); o.ne = ne.slice(0, 16); }
     return o;
   }
@@ -2105,7 +2108,7 @@ body.pc #rd-hud .tasto,body.pc #rd-hud .base{display:none}
   /* ---------- ospite ---------- */
   function liberaFantasmi() { if (!SEGUI) return; SEGUI.fant.forEach(f => { scena.remove(f.mesh); if (f.av && B.liberaAvatar) B.liberaAvatar(f.av); }); SEGUI.fant.clear(); }
   function unisciti(r) {
-    SEGUI = { r, g: r.d.g, pn: -1, rp: -1, fant: new Map(), d: null, pan: '', pjN: maxN(r.d.pj), toN: maxN(r.d.to), tpN: maxN(r.d.tp && r.d.tp[mioId]), raN: maxN(r.d.ra), lp: io.pos.clone(), v: 0 };
+    SEGUI = { r, g: r.d.g, pn: -1, rp: -1, fant: new Map(), d: null, pan: '', pjN: maxN(r.d.pj), toN: maxN(r.d.to), tpN: maxN(r.d.tp && r.d.tp[mioId]), raN: maxN(r.d.ra), fzN: r.d.fz ? nnum(r.d.fz[0], 0) : 0, lp: io.pos.clone(), v: 0 };
     toast(r.nick + ' ha dato il via: si parte!', 'bene', true);
   }
   // si torna nella stanza d'attesa (la squadra resta la stessa, se non la lasci)
@@ -2189,6 +2192,7 @@ body.pc #rd-hud .tasto,body.pc #rd-hud .base{display:none}
       liberaFantasmi(); prepara(clamp(d.ei | 0, 0, INCONTRI.length - 1), !!d.pe); SEGUI.rp = -1; SEGUI.d = null; SEGUI.pan = ''; stato = 'intro';
     }
     if (SEGUI.d !== d) { SEGUI.d = d; seguiDati(d); }
+    if (Array.isArray(d.fz) && nnum(d.fz[0], 0) > SEGUI.fzN) { SEGUI.fzN = nnum(d.fz[0], 0); const i = clamp(nnum(d.fz[1], 0) | 0, 0, INCONTRI.length - 1); completati[i] = 1; salvaProgressi(); const pr = premioCripta(i); if (pr) toast(NOMI_INC[i] + ' completato · +' + B.Eco.fmt(pr), 'bene', true); }
     pannelloOspite(String(d.sto));
     // muovo compagni e nemici verso dove li vede lui
     const k = Math.min(1, dt * 10);

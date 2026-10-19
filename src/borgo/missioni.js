@@ -10,8 +10,9 @@
 
   /* ---------- TABELLA DI BILANCIAMENTO ---------- */
   const CFG = B.MISSIONI_CFG = {
-    tettoGiornaliero: 300,                         // massimo di coins al giorno dalle missioni quotidiane/settimanali (le "di costruzione" non contano)
-    serie: [100, 120, 150, 180, 200, 220],         // bonus di accesso al giorno 1, 2, 3...; dall'ultimo in poi resta uguale
+    // i numeri vengono dall'economia (B.ECONOMIA in coins-arredi.js): quota missioni e quota accesso
+    tettoGiornaliero: Math.round(B.Eco.quota('missioni') * 1.5),   // massimo al giorno dalle missioni quotidiane/settimanali (le "di costruzione" non contano)
+    serie: [0.65, 0.8, 1, 1.2, 1.35, 1.5].map(k => Math.round(B.Eco.quota('accesso') * k / 5) * 5),   // bonus di accesso al giorno 1, 2, 3...; dall'ultimo in poi resta uguale
     saltoGiorno: 2,                                // se salti un giorno la serie scende di tanti giorni (non si azzera)
     nQuotidiane: 5,
     pool: [
@@ -21,14 +22,14 @@
       { id: 'bici', t: 'Fai un giro in bicicletta', ev: 'bici', n: 150, r: 25 },
       { id: 'siedi', t: 'Siediti da qualche parte', ev: 'siediti', n: 1, r: 15 },
       { id: 'bib', t: 'Passa dalla biblioteca', ev: 'biblioteca', n: 1, r: 20 },
-      { id: 'gioco', t: 'Fai una partita (go-kart o paintball)', ev: 'gioco', n: 1, r: 40 },
+      { id: 'gioco', t: 'Fai una partita a un minigioco', ev: 'gioco', n: 1, r: 40 },
       { id: 'stanze', t: 'Visita 4 luoghi diversi', ev: 'stanza', n: 4, r: 25, unici: true },
       { id: 'posa', t: 'Posa un mobile in casa', ev: 'posa', n: 1, r: 20 },
       { id: 'pesca', t: 'Pesca 3 pesci al laghetto', ev: 'pesca', n: 3, r: 25 },
       { id: 'ruota', t: 'Fai un giro sulla ruota panoramica', ev: 'ruota', n: 1, r: 20 },
       { id: 'mercato', t: 'Compra o vendi qualcosa al mercatino', ev: 'mercato', n: 1, r: 20 }
     ],
-    settimanale: { t: 'Completa 5 missioni quotidiane in una settimana', n: 5, coins: 150, premio: 'statua' },
+    settimanale: { t: 'Completa 5 missioni quotidiane in una settimana', n: 5, coins: Math.round(B.Eco.quota('missioni') * 1.5 / 5) * 5, premio: 'statua' },
     serieLunga: { giorni: 7, premio: 'lanterna' },
     costruzione: [
       { id: 'm5', t: 'Metti 5 mobili in casa', n: 5, r: 60, cur: c => c.mobili },
@@ -72,7 +73,7 @@
     if (!S.ultimo) S.serie = 1;
     else { const gap = giorni(o) - giorni(S.ultimo); S.serie = gap <= 1 ? S.serie + 1 : Math.max(0, S.serie - CFG.saltoGiorno) + 1; }
     S.ultimo = o;
-    const bonus = CFG.serie[Math.min(S.serie, CFG.serie.length) - 1]; B.Eco.add(bonus);
+    const bonus = CFG.serie[Math.min(S.serie, CFG.serie.length) - 1]; B.Eco.add(bonus, 'accesso');
     let extra = '';
     if (S.serie >= CFG.serieLunga.giorni && !S.l7) { S.l7 = true; B.Eco.regala(CFG.serieLunga.premio); extra = ' + regalo speciale: ' + B.ARREDI.find(a => a.id === CFG.serieLunga.premio).nome + '!'; }
     salva(); toast('Giorno ' + S.serie + ' di fila: +' + bonus + ' coins' + extra); return { bonus, serie: S.serie };
@@ -91,21 +92,21 @@
   };
 
   /* ---------- premi ---------- */
-  function paga(n) { const k = Math.max(0, Math.min(n, CFG.tettoGiornaliero - S.guad)); S.guad += k; if (k) B.Eco.add(k); return k; }
+  function paga(n) { const k = Math.max(0, Math.min(n, CFG.tettoGiornaliero - S.guad)); S.guad += k; if (k) B.Eco.add(k, 'missioni'); return k; }
   function riscuotiQ(q) {
     const d = def(q.id); if (!q.ok || q.rit) return; q.rit = true; const k = paga(d.r);
     if (S.settN < CFG.settimanale.n) S.settN++;
     toast(k >= d.r ? '+' + k + ' coins' : k ? '+' + k + ' coins (raggiunto il tetto di oggi)' : 'Tetto giornaliero raggiunto: torna domani'); salva(); badge(); disegna();
   }
   function riscuotiS() {
-    if (S.settN < CFG.settimanale.n || S.settRit) return; S.settRit = true; B.Eco.add(CFG.settimanale.coins); B.Eco.regala(CFG.settimanale.premio);
+    if (S.settN < CFG.settimanale.n || S.settRit) return; S.settRit = true; B.Eco.add(CFG.settimanale.coins, 'missioni'); B.Eco.regala(CFG.settimanale.premio);
     toast('Missione settimanale! +' + CFG.settimanale.coins + ' coins e ' + B.ARREDI.find(a => a.id === CFG.settimanale.premio).nome); salva(); badge(); disegna();
   }
   function ctx() {
     const e = B.Eco.stato, p = e.piazzati, n = id => p.filter(x => x.id === id).length;
     return { mobili: p.length, pedane: n('pedana'), fontane: n('fontana'), liv: e.liv, dormito: S.dormito };
   }
-  function riscuotiC(m) { if (S.build[m.id]) return; S.build[m.id] = 1; B.Eco.add(m.r); toast('+' + m.r + ' coins'); salva(); badge(); disegna(); }
+  function riscuotiC(m) { if (S.build[m.id]) return; S.build[m.id] = 1; B.Eco.add(m.r, 'costruzione'); toast('+' + m.r + ' coins'); salva(); badge(); disegna(); }
   const daRiscuotere = () => S.q.filter(q => q.ok && !q.rit).length + (S.settN >= CFG.settimanale.n && !S.settRit ? 1 : 0) + CFG.costruzione.filter(m => !S.build[m.id] && m.cur(ctx()) >= m.n).length;
 
   /* ---------- pannello ---------- */

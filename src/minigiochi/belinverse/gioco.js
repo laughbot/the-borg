@@ -10,7 +10,7 @@
   const B = window.B3;
   const { CARTE, LEADER, PER_ID } = B.BELIN_CARTE;
   const CHIAVE = 'borg_belinverse_v1';
-  const PREMIO = 60, PREMI_GIORNO = 5;                   // coins per vittoria, vittorie premiate al giorno
+  const PREMI_GIORNO = 8;                                // partite premiate al giorno (il premio lo decide B.ECONOMIA)
 
   /* ---------- salvataggio: mazzo personale, Belinone scelto, statistiche ---------- */
   const SAV = { mazzo: null, leader: '101', vinte: 0, perse: 0, premiDi: '', premi: 0, coll: {}, pacchettoDi: '', pacchetti: 0 };
@@ -409,9 +409,9 @@
     const vinto = S.fine.vince === 0;
     if (vinto) SAV.vinte++; else SAV.perse++;
     let premio = 0;
-    if (vinto && B.Eco) {
+    if (B.Eco && B.Eco.premioGioco) {   // vittoria o sconfitta: il premio viene dall'economia del borgo (B.ECONOMIA)
       const oggi = new Date().toDateString(); if (SAV.premiDi !== oggi) { SAV.premiDi = oggi; SAV.premi = 0; }
-      if (SAV.premi < PREMI_GIORNO) { SAV.premi++; premio = PREMIO; B.Eco.add(PREMIO); }
+      if (SAV.premi < PREMI_GIORNO) { SAV.premi++; premio = B.Eco.premioGioco('belinverse', vinto ? 1.4 : 0.5); }
     }
     salva(); UI.render(); UI.fine(vinto, S.fine.motivo, premio);
   }
@@ -956,7 +956,7 @@ body.bv-attivo #barra-alto,body.bv-attivo #controlli,body.bv-attivo #btn-contest
     attacco(p, ch) { if (B.Audio && B.Audio.bip) try { B.Audio.bip(true); } catch (e) { /* ok */ } },
     fine(vinto, motivo, premio) {
       selez = null; disegnaAzioni();
-      chiediUI('<div style="text-align:center"><div class="disp" style="font-size:28px;margin-bottom:6px">' + (vinto ? '🏆 Hai vinto!' : 'Hai perso') + '</div><div style="font-weight:400;font-size:13px;color:var(--ink)">' + esc(risolvi(motivo, 0)) + (premio ? '<br>+' + premio + ' coins' : '') + '<br><small>Vittorie ' + SAV.vinte + ' · Sconfitte ' + SAV.perse + '</small></div></div>', ON ? ['Menu'] : ['Rivincita', 'Menu']).then(r => { if (ON) { ON = null; menu(); return; } if (r === 0) avviaPartita(); else menu(); });
+      chiediUI('<div style="text-align:center"><div class="disp" style="font-size:28px;margin-bottom:6px">' + (vinto ? '🏆 Hai vinto!' : 'Hai perso') + '</div><div style="font-weight:400;font-size:13px;color:var(--ink)">' + esc(risolvi(motivo, 0)) + (premio ? '<br>+' + B.Eco.fmt(premio) : '') + '<br><small>Vittorie ' + SAV.vinte + ' · Sconfitte ' + SAV.perse + '</small></div></div>', ON ? ['Menu'] : ['Rivincita', 'Menu']).then(r => { if (ON) { ON = null; menu(); return; } if (r === 0) avviaPartita(); else menu(); });
     },
     render() {
       if (!root || !S) return;
@@ -1015,7 +1015,7 @@ body.bv-attivo #barra-alto,body.bv-attivo #controlli,body.bv-attivo #btn-contest
 <h2>Mazzo</h2><p>${mio ? 'Userai il tuo mazzo personale (40 carte).' : tot >= 40 ? 'Hai ' + tot + ' carte: puoi costruire il tuo mazzo. Finché non lo fai giochi con un mazzo in prestito.' : 'Hai ' + tot + ' carte su 40 che servono per un mazzo tuo: intanto giochi con un mazzo in prestito. Le carte si trovano nei pacchetti.'}</p>
 <div class="riga-b"><button class="pri" data-m="gioca">▶ Gioca</button><button class="sec" data-m="mazzo">✎ ${mio ? 'Modifica il tuo mazzo' : 'Costruisci il tuo mazzo'}</button>${mio ? '<button class="sec" data-m="casuale">Gioca con mazzo in prestito</button>' : ''}<button class="sec" data-m="pacchetti">🎁 Pacchetti${gratisOggi() ? ' (1 gratis)' : ''}</button><button class="sec" data-m="regole">Regole</button></div>
 <div class="amici-bv"></div>
-<p style="margin-top:10px;opacity:.7;font-size:12px">Le tue carte: ${tot} (${carteDiverse()} diverse su ${CARTE.length}) · Vittorie ${SAV.vinte} · Sconfitte ${SAV.perse} · Ogni vittoria vale ${PREMIO} coins (fino a ${PREMI_GIORNO} al giorno)</p>`;
+<p style="margin-top:10px;opacity:.7;font-size:12px">Le tue carte: ${tot} (${carteDiverse()} diverse su ${CARTE.length}) · Vittorie ${SAV.vinte} · Sconfitte ${SAV.perse} · Ogni partita ti fa guadagnare ${B.ECONOMIA ? B.ECONOMIA.moneta.nome : "coins"}, di più se vinci (fino a ${PREMI_GIORNO} partite premiate al giorno)</p>`;
     const ls = $('.leaders', mn);
     LEADER.filter(l => leaderOk(l.id)).forEach(l => {
       const d = cartaEl(l, { cls: SAV.leader === l.id ? 'sel' : '', click: () => { SAV.leader = l.id; salva(); ls.querySelectorAll('.carta').forEach(n => n.classList.remove('sel')); d.classList.add('sel'); $('.ldesc', mn).textContent = l.n + ': ' + l.desc; } });

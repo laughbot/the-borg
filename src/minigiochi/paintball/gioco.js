@@ -349,7 +349,8 @@
   function fineMatch() {
     stato = 'fine'; messaggio('');
     const vinto = punti[io.team] > punti[1 - io.team], segui = gara && !capo();
-    ui.fine.innerHTML = '<h3>' + (vinto ? '&#x1F3C6; Hai vinto la partita!' : '&#x1F4A5; Partita persa') + '</h3><div style="font-size:26px;font-weight:900;margin:4px 0 8px">Blu ' + punti[0] + ' &ndash; ' + punti[1] + ' Rossi</div>' + (segui ? '<div style="font-size:13px;margin-bottom:6px">Aspetta che ' + esc(nomeCapo()) + ' riparta, oppure esci.</div>' : '<button id="pb-ri">Rigioca</button>') + '<button class="s" id="pb-sc">' + (gara ? 'Torna al menu' : 'Cambia squadre') + '</button><button class="s" id="pb-ex">Esci</button>';
+    const premio = B.Eco && B.Eco.premioGioco ? B.Eco.premioGioco('paintball', (vinto ? 1.5 : punti[io.team] === punti[1 - io.team] ? 0.9 : 0.6) * (gara ? 1.2 : 1)) : 0;
+    ui.fine.innerHTML = '<h3>' + (vinto ? '&#x1F3C6; Hai vinto la partita!' : '&#x1F4A5; Partita persa') + '</h3><div style="font-size:26px;font-weight:900;margin:4px 0 8px">Blu ' + punti[0] + ' &ndash; ' + punti[1] + ' Rossi</div>' + (premio ? '<div style="font-size:14px;font-weight:800;margin-bottom:8px">' + B.ECONOMIA.moneta.icona + ' +' + B.Eco.fmt(premio) + '</div>' : '') + (segui ? '<div style="font-size:13px;margin-bottom:6px">Aspetta che ' + esc(nomeCapo()) + ' riparta, oppure esci.</div>' : '<button id="pb-ri">Rigioca</button>') + '<button class="s" id="pb-sc">' + (gara ? 'Torna al menu' : 'Cambia squadre') + '</button><button class="s" id="pb-ex">Esci</button>';
     ui.fine.style.display = 'block';
     if (!segui) ui.fine.querySelector('#pb-ri').onclick = () => { punti = [0, 0]; nuovoRound(); };
     ui.fine.querySelector('#pb-sc').onclick = () => menu();

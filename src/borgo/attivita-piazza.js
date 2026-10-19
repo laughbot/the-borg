@@ -24,9 +24,10 @@
     pontile: { x: 38, z0: 33.6, z1: 41.2, w: 1.8, h: 0.28 },
     ruota: { x: 34, z: 3, R: 8, hub: 11.0, cabine: 8, giro: 40, appeso: 2.75 },
     mercato: { z: 5, xs: [-13.5, -6.5, 6.5, 13.5] },
-    pesca: { tettoPescheria: 600, attesa: [2.2, 6.5], finestra: 1.15, trofeo: 8 },
+    pesca: { tettoPescheria: Math.round(B.Eco.quota('piazza') * 0.8),   // la piazza ha la sua quota dell'economia (B.ECONOMIA)
+            attesa: [2.2, 6.5], finestra: 1.15, trofeo: 8 },
     usato: { quota: 0.55, prezzoEsclusivi: 400 },          // i banchi ti ricomprano i mobili liberi al 55% del negozio
-    carte: { C: 8, R: 25, SR: 70, alt: 1000, tetto: 1200 },  // banco Belinverse TCG: coins per carta (pacchetto 150 = 6 carte) e massimo al giorno
+    carte: { C: 8, R: 25, SR: 70, alt: 1000, tetto: Math.round(B.Eco.quota('piazza') * 0.8) },  // banco Belinverse TCG: coins per carta (pacchetto 150 = 6 carte) e massimo al giorno
     annunci: { max: 10, consigliato: 2 }                     // carte in vendita agli amici: quante e prezzo proposto (x valore del banco; Alternative a 1000)
   };
   const RAR = {
@@ -698,7 +699,7 @@
   function vendiPesci(ids, ven) {
     let guad = 0, resta = CF.pesca.tettoPescheria - S.vend.c, finito = false;
     ids.forEach(id => { const sp = SPECIE.find(s => s.id === id), p = prezzoPesce(sp); while (S.secchio[id] > 0) { if (p > resta) { finito = true; break; } S.secchio[id]--; guad += p; resta -= p; } if (!S.secchio[id]) delete S.secchio[id]; });
-    S.vend.c += guad; salva(); if (guad && B.Eco) B.Eco.add(guad); if (guad) missione('mercato');
+    S.vend.c += guad; salva(); if (guad && B.Eco) B.Eco.add(guad, 'piazza'); if (guad) missione('mercato');
     ov.dire(guad ? 'Venduto! +' + guad + ' coins' + (finito ? ' (per oggi ha finito i soldi)' : '') : 'Per oggi la Pescheria non compra più: torna domani');
     if (ven && guad && app.mostraBolla) app.mostraBolla(ven.o, 'Che bel pescato!', 3);
     aggSecchio(); Mercato.disegna();
@@ -715,7 +716,7 @@
       const b = el('button', 'att-bt', 'Vendi a 🪙 ' + prezzo);
       b.addEventListener('click', () => {
         if (B.Eco.liberi(a.id) <= 0) return;
-        B.Eco.stato.inv[a.id]--; B.Eco.salva(); B.Eco.add(prezzo); missione('mercato');
+        B.Eco.stato.inv[a.id]--; B.Eco.salva(); B.Eco.add(prezzo, 'rivendita'); missione('mercato');
         ov.dire('Venduto: ' + a.nome + ' (+' + prezzo + ' coins)'); if (ven && app.mostraBolla) app.mostraBolla(ven.o, 'Affare fatto!', 3);
         Mercato.disegna();
       });
@@ -797,7 +798,7 @@
   function vendutoA(i, id, p, nick) {
     const a = S.annunci.find(x => x.i === i && x.id === id && x.p === p); if (!a) return false;
     S.annunci.splice(S.annunci.indexOf(a), 1); salva();
-    if (B.Eco) B.Eco.add(p); missione('mercato');
+    if (B.Eco) B.Eco.add(p, 'amici'); missione('mercato');
     toast('🃏 ' + nick + ' ha comprato ' + nomeCarta(id) + ' dal tuo banco (+' + p + ' coins)');
     if (Mercato.aperto >= 0 && ov.aperta()) Mercato.disegna();
     return true;
@@ -805,7 +806,7 @@
   function vendiCarte(lista, ven) {
     const BV = B.Belinverse; let guad = 0, n = 0, resta = CF.carte.tetto - S.vendC.c, finito = false;
     lista.forEach(o => { const p = CF.carte[rarCarta(o.k)]; for (let q = 0; q < o.n; q++) { if (p > resta) { finito = true; break; } if (!BV.vendi(o.k.id, 1)) break; guad += p; resta -= p; n++; } });
-    S.vendC.c += guad; salva(); if (guad && B.Eco) B.Eco.add(guad); if (guad) missione('mercato');
+    S.vendC.c += guad; salva(); if (guad && B.Eco) B.Eco.add(guad, 'piazza'); if (guad) missione('mercato');
     ov.dire(guad ? 'Vendut' + (n > 1 ? 'e ' + n + ' carte' : 'a') + '! +' + guad + ' coins' + (finito ? ' (per oggi ha finito i soldi)' : '') : 'Per oggi il banco non compra più carte: torna domani');
     if (ven && guad && app.mostraBolla) app.mostraBolla(ven.o, 'Bella carta!', 3);
     Mercato.disegna();
