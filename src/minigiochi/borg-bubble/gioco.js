@@ -798,7 +798,7 @@
      INTERFACCIA (finestra a tutto schermo dentro l'app)
      ==================================================================== */
   const CSS = `
-#bb{position:absolute;inset:0;z-index:70;display:none;background:#0b0714;color:#fbf3dc;font:600 15px system-ui,sans-serif;touch-action:none;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none}
+#bb{position:absolute;inset:0;z-index:450;display:none;background:#0b0714;color:#fbf3dc;font:600 15px system-ui,sans-serif;touch-action:none;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none}
 #bb.on{display:flex}
 #bb .bb-campo{flex:1;position:relative;display:flex;align-items:center;justify-content:center;min-width:0;min-height:0}
 #bb canvas{display:block;image-rendering:auto;border-radius:6px;box-shadow:0 0 0 2px #2a1d40,0 8px 30px rgba(0,0,0,.6)}
@@ -813,6 +813,13 @@ body:not(.pc) #bb .bb-lato{display:flex}
 #bb [data-bb].giu{background:rgba(242,199,110,.45);border-color:#f2c76e}
 #bb [data-bb=bolla]{width:clamp(58px,10vw,80px);height:clamp(58px,10vw,80px);background:rgba(90,180,255,.18);border-color:rgba(90,180,255,.6)}
 #bb [data-bb=salto]{margin-right:clamp(28px,6vw,60px)}
+#bb.on.vert{display:grid;grid-template-columns:1fr 1fr;grid-template-rows:auto minmax(0,1fr)}
+#bb.vert .bb-campo{grid-column:1/3;grid-row:1;padding-top:calc(env(safe-area-inset-top,0px) + 48px);box-sizing:border-box;align-items:flex-start}
+#bb.vert .bb-lato.sx{grid-column:1;grid-row:2;width:auto}
+#bb.vert .bb-lato.dx{grid-column:2;grid-row:2;width:auto;justify-content:center;padding-bottom:calc(24px + env(safe-area-inset-bottom,0px))}
+#bb.vert .bb-joy{width:120px;height:120px;margin-left:-60px;bottom:calc(50% - 60px)}
+#bb.vert [data-bb]{width:72px;height:72px}
+#bb.vert [data-bb=bolla]{width:88px;height:88px}
 #bb .bb-alto{position:absolute;top:calc(env(safe-area-inset-top,0px) + 8px);right:max(10px,env(safe-area-inset-right,0px));display:flex;gap:8px;z-index:3}
 #bb .bb-alto button{border:0;border-radius:14px;padding:7px 12px;background:rgba(40,26,64,.85);color:#fbf3dc;font:800 14px system-ui,sans-serif;cursor:pointer}
 #bb .bb-pan{position:absolute;inset:0;z-index:4;display:none;align-items:center;justify-content:center;background:rgba(8,4,16,.72);padding:14px;box-sizing:border-box;overflow:auto}
@@ -877,10 +884,20 @@ body.bb-attivo #controlli,body.bb-attivo #joy,body.bb-attivo #btn-contesto,body.
     root.addEventListener('contextmenu', e => e.preventDefault());
   }
   let ultimaMisura = '';
+  // telefono dritto: schermo del gioco in alto a tutta larghezza e comandi sotto; telefono di lato: comandi ai lati
   function misura() {
     if (!cv) return;
-    const box = cv.parentElement, w = box.clientWidth, h = box.clientHeight, dpr = Math.min(3, window.devicePixelRatio || 1);
-    const firma = w + 'x' + h + 'x' + dpr; if (firma === ultimaMisura) return; ultimaMisura = firma;
+    const RW = root.clientWidth, RH = root.clientHeight, vert = RH > RW * 1.05, dpr = Math.min(3, window.devicePixelRatio || 1);
+    const firmaR = RW + 'x' + RH + 'x' + dpr; if (firmaR === ultimaMisura) return;
+    root.classList.toggle('vert', vert);
+    const box = cv.parentElement;
+    if (vert) {
+      const sopra = 0, comandi = document.body.classList.contains('pc') ? 70 : Math.min(260, Math.max(190, RH * 0.3));
+      const s0 = Math.min((RW - 8) / W, (RH - comandi - 56) / H);
+      box.style.height = Math.floor(H * s0 + 56 + sopra) + 'px';
+    } else box.style.height = '';
+    ultimaMisura = firmaR;
+    const w = box.clientWidth, h = box.clientHeight - (vert ? 48 : 0);
     const s = Math.max(0.5, Math.min((w - 8) / W, (h - 8) / H));
     cv.style.width = Math.floor(W * s) + 'px'; cv.style.height = Math.floor(H * s) + 'px';
     cv.width = Math.floor(W * s * dpr); cv.height = Math.floor(H * s * dpr); K = cv.width / W;
@@ -938,6 +955,7 @@ body.bb-attivo #controlli,body.bb-attivo #joy,body.bb-attivo #btn-contesto,body.
   /* ====================================================================
      APERTURA / CHIUSURA
      ==================================================================== */
+  window.addEventListener('resize', () => { if (BB.attivo) { ultimaMisura = ''; misura(); if (!gioca) disegnaSfondoMenu(); } });
   const BB = B.Bubble = {
     attivo: false,
     apri() {
@@ -947,8 +965,6 @@ body.bb-attivo #controlli,body.bb-attivo #joy,body.bb-attivo #btn-contesto,body.
       }
       BB.attivo = true; root.classList.add('on'); document.body.classList.add('bb-attivo');
       if (B.app && B.app.joy) B.app.joy.x = B.app.joy.y = 0;
-      try { screen.orientation.lock('landscape').catch(() => { }); } catch (e) { /* ok */ }
-      if (B.orienta) B.orienta(true);
       ultimaMisura = ''; setTimeout(() => { ultimaMisura = ''; misura(); disegnaSfondoMenu(); }, 120);
       sprite(mioLook());
       menu();
@@ -957,8 +973,6 @@ body.bb-attivo #controlli,body.bb-attivo #joy,body.bb-attivo #btn-contesto,body.
       BB.attivo = false; cancelAnimationFrame(rafId); gioca = null; S = null; ON = null; invito = null; accetto = 0; dita.clear(); if (BB._lasciaJoy) BB._lasciaJoy();
       if (root) { root.classList.remove('on'); chiudiPannelli(); }
       document.body.classList.remove('bb-attivo');
-      try { screen.orientation.unlock(); } catch (e) { /* ok */ }
-      if (B.orienta) B.orienta(false);
     },
     rete, amico,
     // per le prove
