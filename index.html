@@ -2,7 +2,7 @@
 <html lang="it">
 <head>
   <meta charset="utf-8">
-  <meta name="versione" content="f027abf08eab">
+  <meta name="versione" content="219937764dee">
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="mobile-web-app-capable" content="yes">
@@ -4759,6 +4759,7 @@ body.kart-attivo #kart-hud{display:block}
 #kart-hud #k-vel .bar{height:6px;border-radius:4px;background:rgba(255,255,255,.18);overflow:hidden}
 #kart-hud #k-vel i{display:block;height:100%;width:0;background:linear-gradient(90deg,#5ad6c4,#ffd36a,#e05a6d)}
 #kart-hud #k-bt{position:absolute;right:16px;bottom:calc(var(--h-tab,64px) + 22px);display:flex;flex-direction:column;align-items:flex-end;gap:12px;pointer-events:auto;touch-action:none}
+#kart-hud #k-bt,#kart-hud #k-sterzo,#kart-hud #k-bt button,#kart-hud #k-sterzo button{-webkit-user-select:none;user-select:none;-webkit-touch-callout:none;-webkit-tap-highlight-color:transparent}
 body.kart-attivo #joy{display:none!important}
 body.kart-attivo #tabbar{display:none!important}
 body.kart-attivo #app{--h-tab:0px;transition:none}
@@ -4819,6 +4820,11 @@ body.kart-attivo #kart-hud #k-fine ol{max-height:30vh}
     PATT.forEach((n, i) => { const b = document.createElement('button'); b.textContent = n; b.dataset.p = i; b.addEventListener('click', () => { sel.patt = i; applica(); }); ui.pat.appendChild(b); });
     ui.via.addEventListener('click', () => premiVia());
     hud.querySelectorAll('button[data-b]').forEach(b => { const n = b.dataset.b; const on = e => { bt[n] = true; b.classList.add('on'); try { b.setPointerCapture(e.pointerId); } catch (x) { } e.preventDefault(); }, off = e => { bt[n] = false; b.classList.remove('on'); }; b.addEventListener('pointerdown', on); ['pointerup', 'pointercancel', 'lostpointercapture'].forEach(ev => b.addEventListener(ev, off)); });
+    // telefono: niente lente d'ingrandimento (pressione lunga), zoom con doppio tocco, menu o selezione sui comandi
+    [hud.querySelector('#k-bt'), hud.querySelector('#k-sterzo')].forEach(z => {
+      ['touchstart', 'touchmove', 'touchend'].forEach(ev => z.addEventListener(ev, e => { if (e.cancelable) e.preventDefault(); }, { passive: false }));
+      ['contextmenu', 'selectstart', 'dblclick'].forEach(ev => z.addEventListener(ev, e => e.preventDefault()));
+    });
     window.addEventListener('keydown', e => { tasti[e.key.toLowerCase()] = true; if (K.attivo && ['arrowleft', 'arrowright', 'arrowup', 'arrowdown'].includes(e.key.toLowerCase())) e.preventDefault(); });
     window.addEventListener('keyup', e => { tasti[e.key.toLowerCase()] = false; });
   }
