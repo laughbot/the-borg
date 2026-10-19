@@ -4,7 +4,7 @@
    - B.ARREDI: catalogo dei mobili (modellati da codice)
    - B.NegozioArredi: schermata del negozio (si apre dall'edificio "Arredamenti" in piazza)
    - B.Arredo: modalita' "Arreda" in casa (scegli un mobile, cammini per spostarlo, lo posi)
-   Tutto DIMOSTRATIVO: i coins si guadagnano solo con il bonus giornaliero.
+   - B.ECONOMIA: le regole dell'economia, a percentuali (vedi sotto)
    ===================================================================== */
 (function () {
   'use strict';
@@ -14,23 +14,19 @@
 
   /* ---------- portafoglio e zaino ---------- */
   const ascolta = [];
-  const S = { coins: 600, inv: {}, piazzati: [], bonus: '', liv: 0, avvio: 0, stili: { pav: 'parquet', par: 'crema' }, stiliPos: ['parquet', 'crema'] };
-  try { const r = JSON.parse(localStorage.getItem(CHIAVE) || 'null'); if (r) { S.coins = r.coins | 0; S.inv = r.inv || {}; S.piazzati = r.piazzati || []; S.bonus = r.bonus || ''; S.liv = r.liv | 0; S.avvio = r.avvio | 0; if (r.stili) S.stili = Object.assign(S.stili, r.stili); if (Array.isArray(r.stiliPos)) S.stiliPos = r.stiliPos.concat(['parquet', 'crema']); } } catch (e) { /* ok */ }
+  const S = { coins: 600, inv: {}, piazzati: [], bonus: '', st: null, storico: [], liv: 0, avvio: 0, stili: { pav: 'parquet', par: 'crema' }, stiliPos: ['parquet', 'crema'] };
+  try { const r = JSON.parse(localStorage.getItem(CHIAVE) || 'null'); if (r) { S.coins = r.coins | 0; S.inv = r.inv || {}; S.piazzati = r.piazzati || []; S.bonus = r.bonus || ''; S.liv = r.liv | 0; S.avvio = r.avvio | 0; if (r.st) S.st = r.st; if (Array.isArray(r.storico)) S.storico = r.storico; if (r.stili) S.stili = Object.assign(S.stili, r.stili); if (Array.isArray(r.stiliPos)) S.stiliPos = r.stiliPos.concat(['parquet', 'crema']); } } catch (e) { /* ok */ }
   function salva() { try { localStorage.setItem(CHIAVE, JSON.stringify(S)); } catch (e) { /* ok */ } }
-  function avvisa() { ascolta.forEach(f => f()); const pl = document.getElementById('pill-coins'); if (pl && !pl.firstChild) pl.innerHTML = '\u{1FA99} <b></b>'; const p = document.querySelector('#pill-coins b'); if (p) p.textContent = S.coins; document.querySelectorAll('.coins-val').forEach(n => { n.textContent = S.coins; }); }
+  function avvisa() { ascolta.forEach(f => f()); const pl = document.getElementById('pill-coins'); if (pl && !pl.firstChild) pl.innerHTML = Eco.ico + ' <b></b>'; const p = document.querySelector('#pill-coins b'); if (p) p.textContent = S.coins; document.querySelectorAll('.coins-val').forEach(n => { n.textContent = S.coins; }); }
   const Eco = B.Eco = {
     get coins() { return S.coins; },
     su(f) { ascolta.push(f); },
-    add(n) { S.coins += n; salva(); avvisa(); const p = document.getElementById('pill-coins'); if (p) { p.classList.remove('pop'); void p.offsetWidth; p.classList.add('pop'); } },
+    add(n, fonte) { n = Math.round(n) || 0; if (!n) return; S.coins += n; registra(fonte || 'altro', n); salva(); avvisa(); const p = document.getElementById('pill-coins'); if (p) { p.classList.remove('pop'); void p.offsetWidth; p.classList.add('pop'); } },
     spendi(n) { if (S.coins < n) return false; S.coins -= n; salva(); avvisa(); return true; },
     posseduti(id) { return S.inv[id] || 0; },
     liberi(id) { return (S.inv[id] || 0) - S.piazzati.filter(p => p.id === id).length; },
     regala(id) { S.inv[id] = (S.inv[id] || 0) + 1; salva(); avvisa(); },
     compra(id) { const a = B.ARREDI.find(x => x.id === id); if (!a || !Eco.spendi(a.prezzo)) return false; S.inv[id] = (S.inv[id] || 0) + 1; salva(); avvisa(); return true; },
-    bonusGiornaliero() {
-      const oggi = new Date().toISOString().slice(0, 10);
-      if (S.bonus === oggi) return 0; S.bonus = oggi; Eco.add(100); return 100;
-    },
     COSTI_AMPL: [400, 900, 1800],
     get liv() { return S.liv; },
     costoAmpliamento() { return S.liv < Eco.COSTI_AMPL.length ? Eco.COSTI_AMPL[S.liv] : 0; },
@@ -46,6 +42,42 @@
     },
     stato: S, salva, avvisa
   };
+
+  /* ---------- ECONOMIA A PERCENTUALI ----------
+     Un solo numero di partenza: quanto guadagna in media in un giorno chi gioca (giorno).
+     Ogni fonte di guadagno ne riceve una fetta (quote, la somma fa 1): missioni, accesso, piazza e minigiochi
+     leggono da qui i loro premi e i loro tetti. Aggiungendo un minigioco o un negozio si sposta solo una quota.
+     Ogni guadagno viene registrato per fonte e per giorno (Eco.statistiche), cosi' si vede se una fonte rende troppo. */
+  const ECO = B.ECONOMIA = {
+    moneta: { nome: 'Starlight', articolo: 'gli' },   // il nome della moneta: si cambia solo qui (l'icona e' la classe CSS .sl-ico in stile.css)
+    giorno: 500,                                     // guadagno medio in un giorno di gioco (circa 45 minuti)
+    quote: { minigiochi: 0.40, missioni: 0.20, accesso: 0.15, piazza: 0.25 },
+    partite: 6,                                      // partite premiate a pieno al giorno, su tutti i minigiochi insieme
+    dopoTetto: 0.2,                                  // oltre la quota del giorno una partita rende solo il 20%
+    giochi: { kart: 1, paintball: 1, cripta: 1.6, belinverse: 1 }   // peso di una partita (la Cripta dura di piu')
+  };
+  const oggiG = () => { const d = new Date(); return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); };
+  function registra(fonte, n) {
+    const g = oggiG(); if (!S.st || S.st.g !== g) { if (S.st && S.st.g) { S.storico = (S.storico || []).concat([S.st]).slice(-30); } S.st = { g, f: {} }; }
+    S.st.f[fonte] = (S.st.f[fonte] || 0) + n;
+  }
+  const tondo = n => n >= 20 ? Math.round(n / 5) * 5 : Math.max(1, Math.round(n));
+  Object.assign(Eco, {
+    quota: f => Math.round(ECO.giorno * (ECO.quote[f] || 0)),
+    oggi: f => (S.st && S.st.g === oggiG() ? S.st.f[f] || 0 : 0),
+    fmt: n => n + ' ' + ECO.moneta.nome,
+    get nome() { return ECO.moneta.nome; },
+    get gli() { return ECO.moneta.articolo + ' ' + ECO.moneta.nome; },   // "gli Starlight"
+    ico: '<i class="sl-ico" aria-hidden="true"></i>',
+    /* premio di fine partita: molt = quanto e' andata (0.6 partecipazione ... 1.6 vittoria) */
+    premioGioco(gioco, molt) {
+      const base = Eco.quota('minigiochi') / ECO.partite * (ECO.giochi[gioco] || 1) * (molt || 1);
+      const resto = Math.max(0, Eco.quota('minigiochi') - Eco.oggi('minigiochi'));
+      const k = tondo(Math.min(base, resto) + Math.max(0, base - resto) * ECO.dopoTetto);
+      Eco.add(k, 'minigiochi'); return k;
+    },
+    statistiche: () => ({ oggi: S.st && S.st.g === oggiG() ? S.st.f : {}, giorni: (S.storico || []).slice() })
+  });
 
   /* ---------- catalogo dei mobili (origine al centro sul pavimento, fronte verso +z) ---------- */
   const box = (g, w, h, d, col, x, y, z, lb) => { const m = mesh(new T.BoxGeometry(w, h, d), M(col), { x, y, z, lb: lb === undefined ? 0.02 : lb }); g.add(m); return m; };
@@ -263,7 +295,7 @@ body.arredando #joy,body.arredando #controlli,body.arredando #btn-contesto,body.
       c.innerHTML = '<div class="im">🏠</div>';
       c.appendChild(el('b', '', max ? 'La tua casa è al massimo' : 'Amplia la stanza'));
       c.appendChild(el('small', '', 'Ora: ' + dim(liv) + (max ? '' : '  →  ' + dim(liv + 1)) + ' · livello ' + (liv + 1) + '/' + L.length));
-      const b = el('button', 'bt', max ? 'Livello massimo' : '🪙 ' + Eco.costoAmpliamento()); b.disabled = max || Eco.coins < Eco.costoAmpliamento();
+      const b = el('button', 'bt', max ? 'Livello massimo' : B3.Eco.ico + ' ' + Eco.costoAmpliamento()); b.disabled = max || Eco.coins < Eco.costoAmpliamento();
       b.addEventListener('click', () => { if (Eco.amplia()) { dire('Stanza ampliata! La trovi più grande in casa.'); aggiornaNegozio(); } });
       c.appendChild(b); gr.appendChild(c);
     }
@@ -272,7 +304,7 @@ body.arredando #joy,body.arredando #controlli,body.arredando #btn-contesto,body.
       B.STILI[tipo].forEach(a => {
         const c = el('div', 'cd'), im = el('div', 'im'), uso = Eco.stileInUso(tipo) === a.id, ho = Eco.haStile(a.id);
         im.style.background = B.STILI.anteprima(tipo, a); im.style.backgroundSize = a.dis || a.tex ? '48px' : '';
-        const b = el('button', 'bt', uso ? 'In uso' : ho ? 'Usa' : '🪙 ' + a.prezzo); b.disabled = uso || (!ho && Eco.coins < a.prezzo);
+        const b = el('button', 'bt', uso ? 'In uso' : ho ? 'Usa' : B3.Eco.ico + ' ' + a.prezzo); b.disabled = uso || (!ho && Eco.coins < a.prezzo);
         b.addEventListener('click', () => { if (Eco.stile(tipo, a.id)) { dire(ho ? 'Applicato: ' + a.nome : 'Comprato e applicato: ' + a.nome); aggiornaNegozio(); } });
         c.appendChild(im); c.appendChild(el('b', '', a.nome)); c.appendChild(b); gr.appendChild(c);
       });
@@ -281,7 +313,7 @@ body.arredando #joy,body.arredando #controlli,body.arredando #btn-contesto,body.
     mobili.filter(a => !a.esclusivo).forEach(a => {
       const c = el('div', 'cd'), im = el('div', 'im'), src = anteprima(a.id);
       if (src) { const i = new Image(); i.src = src; i.alt = a.nome; im.appendChild(i); } else im.textContent = EMO[a.id] || '🪑';
-      const b = el('button', 'bt', '🪙 ' + a.prezzo); b.disabled = Eco.coins < a.prezzo;
+      const b = el('button', 'bt', B3.Eco.ico + ' ' + a.prezzo); b.disabled = Eco.coins < a.prezzo;
       b.addEventListener('click', () => { if (Eco.compra(a.id)) { dire('Comprato: ' + a.nome + ' (lo trovi in casa, “Arreda”)'); aggiornaNegozio(); } });
       c.appendChild(im); c.appendChild(el('b', '', a.nome)); c.appendChild(el('small', '', 'Ne hai: ' + Eco.posseduti(a.id))); c.appendChild(b); gr.appendChild(c);
     });
@@ -289,7 +321,7 @@ body.arredando #joy,body.arredando #controlli,body.arredando #btn-contesto,body.
   function dire(t) { msg.textContent = t; msg.classList.add('on'); clearTimeout(tmsg); tmsg = setTimeout(() => msg.classList.remove('on'), 2200); }
   function creaNegozio() {
     ov = el('div'); ov.id = 'arr-ov';
-    ov.innerHTML = '<div class="sb"><button class="bk">← Torna al gioco</button><b>Arredamenti</b><span class="mon">🪙 <span class="coins-val">' + Eco.coins + '</span></span></div><div class="gr"></div><div class="msg"></div>';
+    ov.innerHTML = '<div class="sb"><button class="bk">← Torna al gioco</button><b>Arredamenti</b><span class="mon">' + B3.Eco.ico + ' <span class="coins-val">' + Eco.coins + '</span></span></div><div class="gr"></div><div class="msg"></div>';
     document.body.appendChild(ov); gr = ov.querySelector('.gr'); msg = ov.querySelector('.msg');
     ov.querySelector('.bk').addEventListener('click', () => NegozioArredi.chiudi());
     window.addEventListener('keydown', e => { if (e.key === 'Escape' && NegozioArredi.aperto) NegozioArredi.chiudi(); });
@@ -437,12 +469,12 @@ body.arredando #joy,body.arredando #controlli,body.arredando #btn-contesto,body.
       B.STILI[tab].forEach(a => {
         const uso = Eco.stileInUso(tab) === a.id, ho = Eco.haStile(a.id), b = el('button', uso ? 'sel' : ''), sw = el('div', 'sw');
         sw.style.background = B.STILI.anteprima(tab, a); if (a.dis || a.tex) sw.style.backgroundSize = '36px';
-        b.appendChild(sw); b.appendChild(document.createTextNode(a.nome)); b.appendChild(el('small', '', uso ? 'in uso' : ho ? 'tuo' : '🪙 ' + a.prezzo));
+        b.appendChild(sw); b.appendChild(document.createTextNode(a.nome)); b.appendChild(el('small', '', uso ? 'in uso' : ho ? 'tuo' : Eco.ico + ' ' + a.prezzo));
         if (!ho && Eco.coins < a.prezzo) b.style.opacity = '.5';
         b.addEventListener('click', () => { if (Eco.stile(tab, a.id)) app.G.emetti('toast', ho ? 'Applicato: ' + a.nome : 'Comprato e applicato: ' + a.nome); else app.G.emetti('toast', 'Coins insufficienti per ' + a.nome); });
         ch.appendChild(b);
       });
-      tt.textContent = tab === 'pav' ? 'Scegli il pavimento: quelli che non hai si comprano qui con i coins' : 'Scegli il colore delle pareti: quelle che non hai si comprano qui con i coins';
+      tt.textContent = tab === 'pav' ? 'Scegli il pavimento: quelli che non hai si comprano qui con ' + B3.Eco.gli : 'Scegli il colore delle pareti: quelle che non hai si comprano qui con ' + B3.Eco.gli;
       bPosa.disabled = true; ui(); return;
     }
     mobili.forEach(a => {

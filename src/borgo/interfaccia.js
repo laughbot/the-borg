@@ -634,7 +634,7 @@
     // ricomincia da capo: cancella i progressi su questo dispositivo (si tengono il codice amici e le impostazioni di audio e comandi)
     { const b = $('#btn-ricomincia'); let sicuro = 0, tt = 0;
       if (b) b.addEventListener('click', () => {
-        if (!sicuro) { sicuro = 1; b.textContent = 'Sicuro? Perdi coins, mobili e carte: tocca ancora'; clearTimeout(tt); tt = setTimeout(() => { sicuro = 0; b.textContent = 'Ricomincia da capo'; }, 4000); return; }
+        if (!sicuro) { sicuro = 1; b.textContent = 'Sicuro? Perdi ' + B3.Eco.nome + ', mobili e carte: tocca ancora'; clearTimeout(tt); tt = setTimeout(() => { sicuro = 0; b.textContent = 'Ricomincia da capo'; }, 4000); return; }
         const tieni = ['borg_amici', 'theborg.musica', 'theborg.effetti', 'theborg.muto', 'theborg.comandi.v1', 'theborg.raid.vibra'];
         try { Object.keys(localStorage).forEach(k => { if ((k.indexOf('borg') === 0 || k.indexOf('theborg') === 0 || k === CFG.chiaveSalvataggio) && tieni.indexOf(k) < 0) localStorage.removeItem(k); }); } catch (e) { /* ok */ }
         location.reload();

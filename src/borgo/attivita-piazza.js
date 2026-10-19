@@ -24,9 +24,11 @@
     pontile: { x: 38, z0: 33.6, z1: 41.2, w: 1.8, h: 0.28 },
     ruota: { x: 34, z: 3, R: 8, hub: 11.0, cabine: 8, giro: 40, appeso: 2.75 },
     mercato: { z: 5, xs: [-13.5, -6.5, 6.5, 13.5] },
-    pesca: { tettoPescheria: 600, attesa: [2.2, 6.5], finestra: 1.15, trofeo: 8 },
+    pesca: { tettoPescheria: Math.round(B.Eco.quota('piazza') * 0.8),   // la piazza ha la sua quota dell'economia (B.ECONOMIA)
+            attesa: [2.2, 6.5], finestra: 1.15, trofeo: 8 },
     usato: { quota: 0.55, prezzoEsclusivi: 400 },          // i banchi ti ricomprano i mobili liberi al 55% del negozio
-    carte: { C: 8, R: 25, SR: 70, alt: 1000, tetto: 1200 },  // banco Belinverse TCG: coins per carta (pacchetto 150 = 6 carte) e massimo al giorno
+    carte: { C: 8, R: 25, SR: 70, alt: 1000, tetto: Math.round(B.Eco.quota('piazza') * 0.8) },  // banco Belinverse TCG: coins per carta (pacchetto 150 = 6 carte) e massimo al giorno
+    cratere: { x: -38, z: 40, r: 3.6, cartelloA: PI / 2 },   // il Cratere della Cometa (cartello verso est, verso la piazza)
     annunci: { max: 10, consigliato: 2 }                     // carte in vendita agli amici: quante e prezzo proposto (x valore del banco; Alternative a 1000)
   };
   const RAR = {
@@ -78,6 +80,7 @@
     costruisciLago(ctx);
     costruisciRuota(ctx);
     costruisciMercato(ctx);
+    costruisciCratere(ctx);
     // voci per la mappa grande (solo nome e ingombro, niente trasparenza)
     ctx.edifici.push({ g: null, x: CF.lago.x, z: CF.lago.z, w: CF.lago.rx * 2, d: CF.lago.rz * 2, nome: 'Laghetto', mappa: 'acqua' });
     ctx.edifici.push({ g: null, x: CF.ruota.x, z: CF.ruota.z, w: 11, d: 3.6, nome: 'Ruota panoramica' });
@@ -668,8 +671,8 @@
       offerte(i).forEach(o => {
         const a = (B.ARREDI || []).find(q => q.id === o.id); if (!a) return;
         const d = el('div', 'att-cd' + (o.top ? ' top' : '')); d.appendChild(immagineMobile(a));
-        d.appendChild(el('b', '', a.nome)); d.appendChild(el('small', '', o.pieno && o.pieno > o.prezzo ? '<s>🪙 ' + o.pieno + '</s> −' + Math.round((1 - o.prezzo / o.pieno) * 100) + '%' : a.esclusivo ? 'Esclusivo' : 'Ne hai: ' + (B.Eco ? B.Eco.posseduti(a.id) : 0)));
-        const bt = el('button', 'att-bt', o.venduto ? 'Venduto' : '🪙 ' + o.prezzo); bt.disabled = o.venduto || !B.Eco || B.Eco.coins < o.prezzo;
+        d.appendChild(el('b', '', a.nome)); d.appendChild(el('small', '', o.pieno && o.pieno > o.prezzo ? '<s>' + B3.Eco.ico + ' ' + o.pieno + '</s> −' + Math.round((1 - o.prezzo / o.pieno) * 100) + '%' : a.esclusivo ? 'Esclusivo' : 'Ne hai: ' + (B.Eco ? B.Eco.posseduti(a.id) : 0)));
+        const bt = el('button', 'att-bt', o.venduto ? 'Venduto' : B3.Eco.ico + ' ' + o.prezzo); bt.disabled = o.venduto || !B.Eco || B.Eco.coins < o.prezzo;
         bt.addEventListener('click', () => {
           if (!B.Eco.spendi(o.prezzo)) return; B.Eco.regala(o.id); S.merc.presi.push(o.k); salva(); missione('mercato');
           ov.dire('Comprato: ' + a.nome + ' (lo trovi in casa, “Arreda”)'); if (ven && app.mostraBolla) app.mostraBolla(ven.o, 'Grazie! Buona giornata!', 3);
@@ -682,24 +685,24 @@
   };
   function disegnaPescheria(c, ven) {
     const resta = Math.max(0, CF.pesca.tettoPescheria - S.vend.c);
-    c.appendChild(el('p', 'att-intro', (ven ? '<b>' + ven.o.nick + '</b> · ' : '') + 'Compra i pesci del laghetto. Prezzi di oggi; può spendere ancora 🪙 ' + resta + '.'));
+    c.appendChild(el('p', 'att-intro', (ven ? '<b>' + ven.o.nick + '</b> · ' : '') + 'Compra i pesci del laghetto. Prezzi di oggi; può spendere ancora ' + B3.Eco.ico + ' ' + resta + '.'));
     const ids = SPECIE.filter(s => S.secchio[s.id]);
     if (!ids.length) { c.appendChild(el('p', 'att-vuoto', 'Il tuo secchio è vuoto. Vai a pescare al laghetto, a est della piazza!')); return; }
     let tot = 0; ids.forEach(s => { tot += prezzoPesce(s) * S.secchio[s.id]; });
     const tutto = el('div', 'att-cd big'); tutto.appendChild(el('b', '', 'Nel secchio: ' + pesci(nelSecchio())));
-    tutto.appendChild(el('small', '', 'Valgono 🪙 ' + tot + ' in tutto'));
+    tutto.appendChild(el('small', '', 'Valgono ' + B3.Eco.ico + ' ' + tot + ' in tutto'));
     const bt = el('button', 'att-bt', 'Vendi tutto'); bt.disabled = !resta; bt.addEventListener('click', () => vendiPesci(ids.map(s => s.id), ven)); tutto.appendChild(bt); c.appendChild(tutto);
     ids.forEach(s => {
       const d = el('div', 'att-cd'), im = el('div', 'att-im pesce'); const i = new Image(); i.src = disegnaPesce(s); im.appendChild(i); d.appendChild(im);
-      d.appendChild(el('b', '', s.nome + ' ×' + S.secchio[s.id])); d.appendChild(el('small', '', '🪙 ' + prezzoPesce(s) + ' l\'uno'));
+      d.appendChild(el('b', '', s.nome + ' ×' + S.secchio[s.id])); d.appendChild(el('small', '', B3.Eco.ico + ' ' + prezzoPesce(s) + ' l\'uno'));
       const b = el('button', 'att-bt', 'Vendi'); b.disabled = !resta; b.addEventListener('click', () => vendiPesci([s.id], ven)); d.appendChild(b); c.appendChild(d);
     });
   }
   function vendiPesci(ids, ven) {
     let guad = 0, resta = CF.pesca.tettoPescheria - S.vend.c, finito = false;
     ids.forEach(id => { const sp = SPECIE.find(s => s.id === id), p = prezzoPesce(sp); while (S.secchio[id] > 0) { if (p > resta) { finito = true; break; } S.secchio[id]--; guad += p; resta -= p; } if (!S.secchio[id]) delete S.secchio[id]; });
-    S.vend.c += guad; salva(); if (guad && B.Eco) B.Eco.add(guad); if (guad) missione('mercato');
-    ov.dire(guad ? 'Venduto! +' + guad + ' coins' + (finito ? ' (per oggi ha finito i soldi)' : '') : 'Per oggi la Pescheria non compra più: torna domani');
+    S.vend.c += guad; salva(); if (guad && B.Eco) B.Eco.add(guad, 'piazza'); if (guad) missione('mercato');
+    ov.dire(guad ? 'Venduto! +' + guad + ' ' + B3.Eco.nome + (finito ? ' (per oggi ha finito i soldi)' : '') : 'Per oggi la Pescheria non compra più: torna domani');
     if (ven && guad && app.mostraBolla) app.mostraBolla(ven.o, 'Che bel pescato!', 3);
     aggSecchio(); Mercato.disegna();
   }
@@ -712,11 +715,11 @@
     liberi.forEach(a => {
       const prezzo = a.esclusivo || !a.prezzo ? CF.usato.prezzoEsclusivi : Math.max(10, Math.round(a.prezzo * CF.usato.quota)), d = el('div', 'att-cd');
       d.appendChild(immagineMobile(a)); d.appendChild(el('b', '', a.nome)); d.appendChild(el('small', '', 'Ne hai liberi: ' + B.Eco.liberi(a.id)));
-      const b = el('button', 'att-bt', 'Vendi a 🪙 ' + prezzo);
+      const b = el('button', 'att-bt', 'Vendi a ' + B3.Eco.ico + ' ' + prezzo);
       b.addEventListener('click', () => {
         if (B.Eco.liberi(a.id) <= 0) return;
-        B.Eco.stato.inv[a.id]--; B.Eco.salva(); B.Eco.add(prezzo); missione('mercato');
-        ov.dire('Venduto: ' + a.nome + ' (+' + prezzo + ' coins)'); if (ven && app.mostraBolla) app.mostraBolla(ven.o, 'Affare fatto!', 3);
+        B.Eco.stato.inv[a.id]--; B.Eco.salva(); B.Eco.add(prezzo, 'rivendita'); missione('mercato');
+        ov.dire('Venduto: ' + a.nome + ' (+' + prezzo + ' ' + B3.Eco.nome + ')'); if (ven && app.mostraBolla) app.mostraBolla(ven.o, 'Affare fatto!', 3);
         Mercato.disegna();
       });
       d.appendChild(b); c.appendChild(d);
@@ -748,10 +751,10 @@
     loro.forEach(l => {
       const k = BC.PER_ID[l.id]; if (!k) return;
       const d = riquadroCarta(k, '· da <b>' + esc(l.nick) + '</b>');
-      const b = el('button', 'att-bt', l.attesa ? 'In attesa di ' + esc(l.nick) + '…' : 'Compra a 🪙 ' + l.p); b.disabled = l.attesa || !B.Eco || B.Eco.coins < l.p;
+      const b = el('button', 'att-bt', l.attesa ? 'In attesa di ' + esc(l.nick) + '…' : 'Compra a ' + B3.Eco.ico + ' ' + l.p); b.disabled = l.attesa || !B.Eco || B.Eco.coins < l.p;
       b.addEventListener('click', () => {
         const r = ON.compra(l.nick, l.i);
-        ov.dire({ ok: 'Pagato 🪙 ' + l.p + ': aspetta che ' + l.nick + ' ti passi la carta', soldi: 'Non hai abbastanza coins', esaurito: 'Questa carta non è più in vendita', offline: l.nick + ' non è più online', attesa: 'Stai già aspettando questa carta' }[r] || '');
+        ov.dire({ ok: 'Pagato ' + l.p + ' ' + B3.Eco.nome + ': aspetta che ' + l.nick + ' ti passi la carta', soldi: 'Non hai abbastanza ' + B3.Eco.nome, esaurito: 'Questa carta non è più in vendita', offline: l.nick + ' non è più online', attesa: 'Stai già aspettando questa carta' }[r] || '');
         Mercato.disegna();
       });
       d.appendChild(b); c.appendChild(d);
@@ -759,10 +762,10 @@
     // 2) le mie carte in vendita
     c.appendChild(el('h3', '', '🏷️ Le tue carte in vendita <small>' + S.annunci.length + ' / ' + CF.annunci.max + '</small>'));
     if (!S.annunci.length) c.appendChild(el('p', 'att-vuoto', 'Non hai carte in vendita.'));
-    else c.appendChild(el('p', 'att-intro', 'Le vedono i tuoi amici quando siete online insieme: quando uno la compra, i coins arrivano a te.'));
+    else c.appendChild(el('p', 'att-intro', 'Le vedono i tuoi amici quando siete online insieme: quando uno la compra, ' + B3.Eco.gli + ' arrivano a te.'));
     S.annunci.forEach(a => {
       const k = BC.PER_ID[a.id]; if (!k) return;
-      const d = riquadroCarta(k, '🪙 ' + a.p);
+      const d = riquadroCarta(k, B3.Eco.ico + ' ' + a.p);
       const b = el('button', 'att-bt sec', 'Ritira'); b.addEventListener('click', () => { ritiraAnnuncio(a); ov.dire('Ritirata: ' + k.n + ' (torna nello zaino)'); Mercato.disegna(); });
       d.appendChild(b); c.appendChild(d);
     });
@@ -771,20 +774,20 @@
     const lista = BC.CARTE.concat(BC.LEADER.filter(l => l.alt)).filter(k => BV.vendibili(k.id) > 0);
     c.appendChild(el('h3', '', '🃏 Metti in vendita le tue carte'));
     if (!lista.length) { c.appendChild(el('p', 'att-vuoto', Object.keys(coll).length ? 'Le carte che hai le usi tutte nel tuo mazzo.' : 'Non hai ancora carte. Il venditore della sala TCG ti regala un pacchetto al giorno.')); return; }
-    c.appendChild(el('p', 'att-intro', 'Scegli il prezzo (quello proposto dipende dalla rarità). Le copie del tuo mazzo e il Belinone scelto restano tue. Se hai fretta, ' + (ven ? ven.o.nick : 'il banco') + ' te le compra subito a meno: Comune 🪙 ' + CF.carte.C + ', Rara 🪙 ' + CF.carte.R + ', Super rara 🪙 ' + CF.carte.SR + ', Alternative 🪙 ' + CF.carte.alt + ' (oggi può spendere ancora 🪙 ' + resta + ').'));
+    c.appendChild(el('p', 'att-intro', 'Scegli il prezzo (quello proposto dipende dalla rarità). Le copie del tuo mazzo e il Belinone scelto restano tue. Se hai fretta, ' + (ven ? ven.o.nick : 'il banco') + ' te le compra subito a meno: Comune ' + B3.Eco.ico + ' ' + CF.carte.C + ', Rara ' + B3.Eco.ico + ' ' + CF.carte.R + ', Super rara ' + B3.Eco.ico + ' ' + CF.carte.SR + ', Alternative ' + B3.Eco.ico + ' ' + CF.carte.alt + ' (oggi può spendere ancora ' + B3.Eco.ico + ' ' + resta + ').'));
     const pieno = S.annunci.length >= CF.annunci.max;
     lista.forEach(k => {
       const nv = BV.vendibili(k.id), d = riquadroCarta(k, nv > 1 ? '· ne hai ' + nv + ' da vendere' : '');
       const riga = el('div', 'att-prezzo'), inp = el('input'); inp.type = 'number'; inp.min = 1; inp.max = 99999; inp.inputMode = 'numeric'; inp.value = prezzoConsigliato(k);
-      riga.append(el('span', '', '🪙'), inp); d.appendChild(riga);
+      riga.append(el('span', '', B3.Eco.ico), inp); d.appendChild(riga);
       const b = el('button', 'att-bt', pieno ? 'Banco pieno' : 'Metti in vendita'); b.disabled = pieno;
       b.addEventListener('click', () => {
         const p = Math.round(+inp.value); if (!(p >= 1 && p <= 99999)) { ov.dire('Scrivi un prezzo da 1 a 99999'); return; }
         if (S.annunci.length >= CF.annunci.max || !BV.vendi(k.id, 1)) return;
         S.annunci.push({ i: ++S.nAnn, id: k.id, p }); salva(); missione('mercato');
-        ov.dire('In vendita: ' + k.n + ' a 🪙 ' + p); Mercato.disegna();
+        ov.dire('In vendita: ' + k.n + ' a ' + p + ' ' + B3.Eco.nome); Mercato.disegna();
       });
-      const sub = el('button', 'att-bt sec', 'Vendi subito a 🪙 ' + CF.carte[rarCarta(k)]); sub.disabled = CF.carte[rarCarta(k)] > resta;
+      const sub = el('button', 'att-bt sec', 'Vendi subito a ' + B3.Eco.ico + ' ' + CF.carte[rarCarta(k)]); sub.disabled = CF.carte[rarCarta(k)] > resta;
       sub.addEventListener('click', () => vendiCarte([{ k, n: 1 }], ven));
       d.append(b, sub); c.appendChild(d);
     });
@@ -797,16 +800,16 @@
   function vendutoA(i, id, p, nick) {
     const a = S.annunci.find(x => x.i === i && x.id === id && x.p === p); if (!a) return false;
     S.annunci.splice(S.annunci.indexOf(a), 1); salva();
-    if (B.Eco) B.Eco.add(p); missione('mercato');
-    toast('🃏 ' + nick + ' ha comprato ' + nomeCarta(id) + ' dal tuo banco (+' + p + ' coins)');
+    if (B.Eco) B.Eco.add(p, 'amici'); missione('mercato');
+    toast('🃏 ' + nick + ' ha comprato ' + nomeCarta(id) + ' dal tuo banco (+' + p + ' ' + B3.Eco.nome + ')');
     if (Mercato.aperto >= 0 && ov.aperta()) Mercato.disegna();
     return true;
   }
   function vendiCarte(lista, ven) {
     const BV = B.Belinverse; let guad = 0, n = 0, resta = CF.carte.tetto - S.vendC.c, finito = false;
     lista.forEach(o => { const p = CF.carte[rarCarta(o.k)]; for (let q = 0; q < o.n; q++) { if (p > resta) { finito = true; break; } if (!BV.vendi(o.k.id, 1)) break; guad += p; resta -= p; n++; } });
-    S.vendC.c += guad; salva(); if (guad && B.Eco) B.Eco.add(guad); if (guad) missione('mercato');
-    ov.dire(guad ? 'Vendut' + (n > 1 ? 'e ' + n + ' carte' : 'a') + '! +' + guad + ' coins' + (finito ? ' (per oggi ha finito i soldi)' : '') : 'Per oggi il banco non compra più carte: torna domani');
+    S.vendC.c += guad; salva(); if (guad && B.Eco) B.Eco.add(guad, 'piazza'); if (guad) missione('mercato');
+    ov.dire(guad ? 'Vendut' + (n > 1 ? 'e ' + n + ' carte' : 'a') + '! +' + guad + ' ' + B3.Eco.nome + (finito ? ' (per oggi ha finito i soldi)' : '') : 'Per oggi il banco non compra più carte: torna domani');
     if (ven && guad && app.mostraBolla) app.mostraBolla(ven.o, 'Bella carta!', 3);
     Mercato.disegna();
   }
@@ -915,6 +918,12 @@ body.orizz #pesca-pan{left:auto;right:136px;bottom:16px}
 .att-ov .prog{height:10px;border-radius:5px;background:rgba(255,255,255,.14);overflow:hidden;margin-top:6px;width:100%}.att-ov .prog i{display:block;height:100%;background:#f2c76e}
 .att-ov .msg{position:absolute;left:50%;bottom:calc(env(safe-area-inset-bottom,0px) + 26px);transform:translateX(-50%);background:#f2c76e;color:#2a1a2e;font-weight:800;padding:10px 16px;border-radius:14px;opacity:0;transition:opacity .25s;pointer-events:none;max-width:90vw;text-align:center}
 .att-ov .msg.on{opacity:1}
+.cr-storia{grid-column:1/-1;width:100%;max-width:600px;margin:0 auto;justify-self:center;padding:6px 4px 30px;color:#f4ead6;line-height:1.55;font-size:15.5px}
+.cr-storia h2{font-family:Georgia,serif;font-weight:700;font-size:24px;margin:6px 0 12px;color:#ffe08a;text-align:center;text-shadow:0 0 14px rgba(255,214,110,.4)}
+.cr-storia .cr-ico{text-align:center;font-size:30px;margin-top:6px}
+.cr-storia p{margin:0 0 12px}.cr-storia b{color:#ffe7a8}
+.cr-storia .cr-firma{opacity:.6;font-style:italic;font-size:13px;text-align:right}
+.cr-storia .cr-tuoi{text-align:center;font-weight:800;background:rgba(255,214,110,.1);border:1px solid rgba(255,214,110,.35);border-radius:14px;padding:8px}
 `;
   document.head.appendChild(css);
 
@@ -923,7 +932,7 @@ body.orizz #pesca-pan{left:auto;right:136px;bottom:16px}
     let nodo = null, gr = null, msg = null, tm = 0, alChiudere = null;
     function crea() {
       nodo = el('div', 'att-ov');
-      nodo.innerHTML = '<div class="sb"><button class="bk">← Torna al gioco</button><b></b><span class="mon">🪙 <span class="coins-val">' + (B.Eco ? B.Eco.coins : 0) + '</span></span></div><div class="gr"></div><div class="msg"></div>';
+      nodo.innerHTML = '<div class="sb"><button class="bk">← Torna al gioco</button><b></b><span class="mon">' + B3.Eco.ico + ' <span class="coins-val">' + (B.Eco ? B.Eco.coins : 0) + '</span></span></div><div class="gr"></div><div class="msg"></div>';
       document.body.appendChild(nodo); gr = nodo.querySelector('.gr'); msg = nodo.querySelector('.msg');
       nodo.querySelector('.bk').addEventListener('click', () => o.chiudi());
       window.addEventListener('keydown', e => { if (e.key === 'Escape' && nodo.classList.contains('on')) o.chiudi(); });
@@ -937,6 +946,110 @@ body.orizz #pesca-pan{left:auto;right:136px;bottom:16px}
     };
     return o;
   })();
+
+  /* =====================================================================
+     IL CRATERE DELLA COMETA: da qui viene la moneta del borgo (B.ECONOMIA.moneta).
+     Una roccia scura mezza sepolta, piena di Starlight (bastoncini che brillano come la luce del giorno);
+     attorno il bordo del cratere, sassi e qualche Starlight sparso. Il cartello racconta la storia (si legge toccandolo o dal pulsante).
+     ===================================================================== */
+  // la storia usa il nome della moneta (B.ECONOMIA.moneta), cosi' resta giusta se il nome cambia
+  const STORIA = {
+    titolo: 'La notte della Cometa',
+    pagine: () => { const N = B.Eco.nome, Gli = B.Eco.gli.charAt(0).toUpperCase() + B.Eco.gli.slice(1); return [
+      'Tanto tempo fa, in piena notte, il cielo sopra il borgo si accese all\'improvviso, come se fosse sorto il sole. Una luce enorme attraversò il cielo e <b>si schiantò proprio qui</b>, scavando questo cratere.',
+      'Non era il sole: era una cometa. Quando la polvere si posò, gli abitanti trovarono la sua roccia piena di cristalli che brillavano come la luce del giorno. E non si spegnevano mai, nemmeno nelle notti più buie.',
+      'Li chiamarono <b>' + N + '</b>. All\'inizio servivano a illuminare le case d\'inverno; poi tutti cominciarono a scambiarseli, e in poco tempo diventarono la moneta del borgo.',
+      'La roccia ne è ancora piena, ma nessuno è mai riuscito a staccarne uno con le mani. Si dice che la cometa ne liberi uno nuovo ogni volta che qualcuno gioca, vince una sfida o aiuta il borgo. ' + Gli + ' non si comprano: <b>si guadagnano</b>.'
+    ]; }
+  };
+  function apriStoria() {
+    const c = ov.corpo(); c.textContent = '';
+    const s = el('div', 'cr-storia');
+    s.innerHTML = '<div class="cr-ico">' + B.Eco.ico + B.Eco.ico + B.Eco.ico + '</div><h2>' + STORIA.titolo + '</h2>' + STORIA.pagine().map(p => '<p>' + p + '</p>').join('') +
+      '<p class="cr-firma">— dal cartello del Cratere della Cometa</p><p class="cr-tuoi">Hai ' + B.Eco.ico + ' <b>' + B.Eco.coins + '</b> ' + B.Eco.nome + '</p>';
+    c.appendChild(s); ov.apri('Il Cratere della Cometa');
+  }
+  function costruisciCratere(ctx) {
+    const C = CF.cratere, sc = ctx.scene, gm = M('#fff').gradientMap;
+    const g = new T.Group(); g.position.set(C.x, 0, C.z); sc.add(g); W.gCratere = g;
+    const toon = (col, extra) => new T.MeshToonMaterial(Object.assign({ color: new T.Color(col), gradientMap: gm }, extra || {}));
+    const disco = (r, col, y, extra) => { const m = new T.Mesh(new T.CircleGeometry(r, 48), toon(col, Object.assign({ polygonOffset: true, polygonOffsetFactor: -1, polygonOffsetUnits: -1 }, extra))); m.rotation.x = -PI / 2; m.position.y = y; m.receiveShadow = true; g.add(m); return m; };
+    // terra bruciata attorno, fondo scuro con un bagliore verde al centro
+    disco(C.r + 1.3, '#a48b72', 0.011); disco(C.r + 0.55, '#7a6656', 0.014); disco(C.r, '#463b36', 0.018);
+    const fondo = disco(C.r * 0.55, '#5a4a2e', 0.022, { emissive: new T.Color('#c99a3a'), emissiveIntensity: 0.35 });
+    // crepe luminose che partono dal centro
+    for (let i = 0; i < 9; i++) {
+      const a = i / 9 * PI * 2 + rnd(-0.2, 0.2), L = rnd(C.r * 0.6, C.r + 0.6);
+      const cr = new T.Mesh(new T.PlaneGeometry(0.07, L), B.Mluce('#ffe9a8', 0.8)); cr.rotation.set(-PI / 2, 0, -a); cr.position.set(Math.sin(a) * L / 2, 0.026, Math.cos(a) * L / 2); g.add(cr);
+    }
+    // bordo: anello di terra sollevata e sassi
+    const anello = mesh(new T.TorusGeometry(C.r, 0.45, 8, 40), M('#8a7563'), { y: 0.05, l: 0.02 }); anello.rotation.x = PI / 2; anello.scale.z = 0.55; g.add(anello);
+    for (let i = 0; i < 26; i++) {
+      const a = i / 26 * PI * 2 + rnd(-0.1, 0.1), r = C.r + rnd(-0.1, 0.5), s = rnd(0.22, 0.48);
+      const sasso = mesh(new T.DodecahedronGeometry(s, 0), M(['#7d6b5c', '#6a5a4e', '#94806d'][i % 3]), { x: Math.sin(a) * r, y: s * 0.45, z: Math.cos(a) * r, l: 0.02 });
+      sasso.rotation.set(rnd(0, 3), rnd(0, 3), rnd(0, 3)); g.add(sasso);
+    }
+    // la roccia della cometa, mezza sepolta
+    const roccia = new T.Group(); roccia.position.y = 0.15; roccia.rotation.set(0.25, 0.6, -0.15); g.add(roccia);
+    const corpo = mesh(new T.IcosahedronGeometry(1.15, 1), M('#3b3640'), { l: 0.03 }); corpo.scale.set(1.25, 0.85, 1); roccia.add(corpo);
+    roccia.add(mesh(new T.IcosahedronGeometry(0.6, 0), M('#2e2a33'), { x: 0.9, y: 0.25, z: 0.3, l: 0.025 }));
+    roccia.add(mesh(new T.IcosahedronGeometry(0.5, 0), M('#4a4450'), { x: -0.95, y: 0.1, z: -0.35, l: 0.025 }));
+    // gli Starlight: bastoncini luminosi color luce del giorno (bianco caldo e oro), nucleo piu' chiaro e alone
+    const guscio = new T.MeshBasicMaterial({ color: new T.Color('#ffe7a0'), transparent: true, opacity: 0.85 });
+    const nucleo = B.Mluce('#fffbea', 1), GC = new T.CapsuleGeometry(0.075, 0.42, 4, 10), GN = new T.CapsuleGeometry(0.04, 0.3, 3, 8);
+    const aloni = [];
+    function stick(gr, x, y, z, rx, rz, s, alone) {
+      const st = new T.Group(); st.position.set(x, y, z); st.rotation.set(rx, 0, rz); st.scale.setScalar(s || 1); gr.add(st);
+      st.add(new T.Mesh(GC, guscio)); st.add(new T.Mesh(GN, nucleo));
+      if (alone) { const al = new T.Sprite(new T.SpriteMaterial({ map: B.texAlone(), color: new T.Color('#ffd76a'), transparent: true, blending: T.AdditiveBlending, depthWrite: false, opacity: 0.55 })); al.scale.set(1.3, 1.3, 1); st.add(al); aloni.push({ al, k: Math.random() * 6 }); }
+      return st;
+    }
+    for (let i = 0; i < 16; i++) {   // conficcati nella roccia, inclinati verso l'esterno
+      const a = i / 16 * PI * 2 * 1.6 + rnd(-0.3, 0.3), h = rnd(-0.1, 0.75), r = 0.85 + (0.75 - h) * 0.35;
+      stick(roccia, Math.sin(a) * r * 1.2, h, Math.cos(a) * r, Math.cos(a) * 0.9, -Math.sin(a) * 0.9, rnd(0.8, 1.35), i % 3 === 0);
+    }
+    for (let i = 0; i < 14; i++) {   // sparsi nel cratere
+      const a = rnd(0, PI * 2), r = rnd(1.7, C.r - 0.4);
+      stick(g, Math.sin(a) * r, 0.08, Math.cos(a) * r, PI / 2 - rnd(0, 0.3), rnd(0, PI), rnd(0.7, 1.1), i % 4 === 0);
+    }
+    const grande = new T.Sprite(new T.SpriteMaterial({ map: B.texAlone(), color: new T.Color('#ffdf80'), transparent: true, blending: T.AdditiveBlending, depthWrite: false, opacity: 0.5 }));
+    grande.scale.set(4.6, 4.6, 1); grande.position.y = 1.1; g.add(grande);
+    ctx.anim.push(t => {
+      const p = 0.5 + Math.sin(t * 1.6) * 0.5; fondo.material.emissiveIntensity = 0.28 + p * 0.22; grande.material.opacity = 0.16 + p * 0.16;
+      aloni.forEach(o => { o.al.material.opacity = 0.35 + Math.sin(t * 2.3 + o.k) * 0.2; });
+      roccia.position.y = 0.15 + Math.sin(t * 0.8) * 0.015;
+    });
+    // paletti con la corda attorno (non si entra nel cratere)
+    const NP = 12, RP = C.r + 1.25, pal = [];
+    for (let i = 0; i < NP; i++) {
+      const a = i / NP * PI * 2; if (Math.abs(a - C.cartelloA) < 0.25) { pal.push(null); continue; }
+      const p = new T.Vector3(Math.sin(a) * RP, 0.75, Math.cos(a) * RP); pal.push(p);
+      g.add(mesh(new T.CylinderGeometry(0.06, 0.07, 0.9, 6), M('#5c3822'), { x: p.x, y: 0.45, z: p.z, l: 0.015 }));
+      g.add(mesh(new T.SphereGeometry(0.08, 8, 6), M('#7a4a2a'), { x: p.x, y: 0.92, z: p.z }));
+    }
+    pal.forEach((p, i) => { const q = pal[(i + 1) % NP]; if (p && q) trave(g, p, q, 0.025, '#d9b98a', 0); });
+    // cartello con la storia
+    const ca = new T.Group(), A = C.cartelloA; ca.position.set(Math.sin(A) * (RP + 0.2), 0, Math.cos(A) * (RP + 0.2)); ca.rotation.y = A; g.add(ca);
+    [-0.75, 0.75].forEach(x => ca.add(mesh(new T.CylinderGeometry(0.07, 0.08, 1.9, 8), M('#5c3822'), { x, y: 0.95, l: 0.02 })));
+    ca.add(mesh(new T.BoxGeometry(1.9, 1.15, 0.1), M('#8a5a35'), { y: 1.45, lb: 0.02 }));
+    const [cv, x] = B.tela(512, 300);
+    x.fillStyle = '#f1e2c2'; B.rr(x, 6, 6, 500, 288, 18); x.fill(); x.lineWidth = 6; x.strokeStyle = '#5c3822'; x.stroke();
+    x.textAlign = 'center'; x.fillStyle = '#2b180f'; x.font = 'bold 44px Georgia, serif'; x.fillText('Il Cratere', 256, 70); x.fillText('della Cometa', 256, 120);
+    x.strokeStyle = '#c99a3a'; x.lineWidth = 3; x.beginPath(); x.moveTo(140, 146); x.lineTo(372, 146); x.stroke();
+    x.font = '28px Georgia, serif'; x.fillStyle = '#4a2f1e'; ['Qui si schiantò la Cometa.', 'Dalla sua roccia nascono', B.Eco.gli + ' del borgo.'].forEach((r, i) => x.fillText(r, 256, 192 + i * 34));
+    x.font = 'italic 22px Georgia, serif'; x.fillStyle = '#8a5a1e'; x.fillText('Tocca per leggere la storia', 256, 282);
+    const tav = new T.Mesh(new T.PlaneGeometry(1.75, 1.03), new T.MeshToonMaterial({ map: B.tex(cv), gradientMap: gm })); tav.position.set(0, 1.45, 0.056); ca.add(tav);
+    const tetto = mesh(new T.BoxGeometry(2.1, 0.1, 0.36), M('#6a3f27'), { y: 2.1, lb: 0.015 }); ca.add(tetto);
+    const pr = new T.Mesh(new T.BoxGeometry(2.1, 2.2, 0.7), new T.MeshBasicMaterial()); pr.position.set(0, 1.1, 0); pr.visible = false; ca.add(pr);
+    // ostacoli (coordinate del mondo)
+    ctx.ostacoli.push({ t: 'c', x: C.x, z: C.z, r: RP + 0.1 });
+    const cx = C.x + Math.sin(A) * (RP + 0.2), cz = C.z + Math.cos(A) * (RP + 0.2);
+    ctx.ostacoli.push({ t: 'c', x: cx, z: cz, r: 0.35 });
+    ctx.toccabili.push({ obj: pr, testo: 'Il Cratere della Cometa', fn: apriStoria });
+    ctx.toccabili.push({ obj: corpo, testo: 'La roccia della Cometa: è piena di Starlight, ma non si staccano con le mani. Gli Starlight si guadagnano giocando!' });
+    ctx.porte.push({ id: 'cratere', nome: 'Cratere della Cometa', testo: '📜 Leggi la storia', x: C.x + Math.sin(A) * (RP + 1.4), z: C.z + Math.cos(A) * (RP + 1.4), r: 1.6, fn: apriStoria });
+    ctx.edifici.push({ g: null, x: C.x, z: C.z, w: RP * 2, d: RP * 2, nome: 'Cratere della Cometa' });
+  }
 
   /* ---------- collezione dei pesci ---------- */
   function apriCollezione() {
@@ -991,7 +1104,7 @@ body.orizz #pesca-pan{left:auto;right:136px;bottom:16px}
     carta_.innerHTML = '<img alt=""><b></b><span class="rar"></span><small class="d"></small><small class="nuovo"></small>';
     carta_.querySelector('img').src = disegnaPesce(sp); carta_.querySelector('b').textContent = sp.nome;
     const rr = carta_.querySelector('.rar'); rr.textContent = r.nome; rr.style.background = r.col;
-    carta_.querySelector('.d').textContent = sp.curiosita ? 'Non vale niente, ma finisce in collezione' : cm + ' cm · alla Pescheria vale 🪙 ' + prezzoPesce(sp);
+    carta_.querySelector('.d').textContent = sp.curiosita ? 'Non vale niente, ma finisce in collezione' : cm + ' cm · alla Pescheria vale ' + prezzoPesce(sp) + ' ' + B3.Eco.nome;
     carta_.querySelector('.nuovo').textContent = premio === 'trofeo' ? '🏆 ' + CF.pesca.trofeo + ' specie! Hai vinto il Trofeo di pesca' : nuovo ? '✨ Nuova specie per la collezione!' : record ? '📏 Nuovo record!' : '';
     carta_.classList.add('on'); clearTimeout(tCarta); tCarta = setTimeout(() => carta_.classList.remove('on'), premio ? 4500 : 2800);
   }

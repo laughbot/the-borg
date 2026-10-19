@@ -138,7 +138,7 @@ body.orizz #pagina-zaino .zn-carte{grid-template-columns:repeat(auto-fill,minmax
     else {
       c.appendChild(el('p', 'zn-nota', 'Li vendi alla Pescheria del mercatino, in piazza.'));
       const g = el('div', 'zn-griglia');
-      nel.forEach(s => g.appendChild(tile({ bg: 'radial-gradient(circle at 50% 55%,' + s.col2 + ' 0 22%,' + s.col + ' 23% 60%,rgba(0,0,0,.18) 61%)', testo: '' }, s.nome, '<span style="color:' + (RAR[s.rar] || '#ccc') + '">' + (NOMI_RAR[s.rar] || '') + '</span> · 🪙 ' + s.prezzo, P.secchio[s.id])));
+      nel.forEach(s => g.appendChild(tile({ bg: 'radial-gradient(circle at 50% 55%,' + s.col2 + ' 0 22%,' + s.col + ' 23% 60%,rgba(0,0,0,.18) 61%)', testo: '' }, s.nome, '<span style="color:' + (RAR[s.rar] || '#ccc') + '">' + (NOMI_RAR[s.rar] || '') + '</span> · ' + B3.Eco.ico + ' ' + s.prezzo, P.secchio[s.id])));
       c.appendChild(g);
     }
     // collezione
@@ -197,7 +197,7 @@ body.orizz #pagina-zaino .zn-carte{grid-template-columns:repeat(auto-fill,minmax
     const coll = BV.collezione(), mazzo = BV.mazzo, inMazzo = {}; (mazzo || []).forEach(id => { inMazzo[id] = (inMazzo[id] || 0) + 1; });
     const tot = BC.CARTE.reduce((a, k) => a + (coll[k.id] | 0), 0), diverse = BV.carteDiverse();
     c.appendChild(el('h3', '', '🃏 Belinverse 2 <small>' + tot + ' carte · ' + diverse + ' diverse su ' + BC.CARTE.length + '</small>'));
-    c.appendChild(el('p', 'zn-nota', (BV.gratisOggi() ? '🎁 Oggi hai un pacchetto gratis dal venditore nella sala TCG. ' : 'Il pacchetto gratis di oggi l\'hai già preso: gli altri si comprano a coins dal venditore nella sala TCG. ') + (mazzo ? 'Il tuo mazzo è pronto.' : tot >= 40 ? 'Hai abbastanza carte per costruire il tuo mazzo.' : 'Ti servono 40 carte per un mazzo tuo.')));
+    c.appendChild(el('p', 'zn-nota', (BV.gratisOggi() ? '🎁 Oggi hai un pacchetto gratis dal venditore nella sala TCG. ' : 'Il pacchetto gratis di oggi l\'hai già preso: gli altri si comprano con ' + B3.Eco.gli + ' dal venditore nella sala TCG. ') + (mazzo ? 'Il tuo mazzo è pronto.' : tot >= 40 ? 'Hai abbastanza carte per costruire il tuo mazzo.' : 'Ti servono 40 carte per un mazzo tuo.')));
     const r = el('div', 'zn-riga');
     const pk = el('button', 'zn-bt', BV.gratisOggi() ? '🎁 Apri il pacchetto' : '🎁 Pacchetti'); pk.type = 'button';
     pk.addEventListener('click', () => vaiAlMondo(() => BV.negozio()));
@@ -243,7 +243,7 @@ body.orizz #pagina-zaino .zn-carte{grid-template-columns:repeat(auto-fill,minmax
     const pesci = P ? Object.keys(P.secchio).reduce((a, k) => a + P.secchio[k], 0) : 0;
     const coll = B.Belinverse ? B.Belinverse.collezione() : {}, nCarte = Object.keys(coll).reduce((a, k) => a + (k < '101' ? coll[k] : 0), 0);
     const nMob = E ? (B.ARREDI || []).reduce((a, m) => a + E.posseduti(m.id), 0) : 0;
-    pagina.querySelector('.zn-soldi').innerHTML = '<span class="zn-pill">🪙 <b>' + (E ? E.coins : 0) + '</b> coins</span><span class="zn-pill">🛋️ <b>' + nMob + '</b> mobili</span><span class="zn-pill">🃏 <b>' + nCarte + '</b> carte</span><span class="zn-pill">🐟 <b>' + pesci + '</b> nel secchio</span>';
+    pagina.querySelector('.zn-soldi').innerHTML = '<span class="zn-pill">' + B3.Eco.ico + ' <b>' + (E ? E.coins : 0) + '</b> ' + B3.Eco.nome + '</span><span class="zn-pill">🛋️ <b>' + nMob + '</b> mobili</span><span class="zn-pill">🃏 <b>' + nCarte + '</b> carte</span><span class="zn-pill">🐟 <b>' + pesci + '</b> nel secchio</span>';
     const c = document.getElementById('zaino-griglia'); c.innerHTML = '';
     if (scheda === 'oggetti') oggetti(c); else if (scheda === 'mobili') mobili(c); else carte(c);
   }
