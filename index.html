@@ -8429,7 +8429,8 @@ float rumoreC(vec3 x) { vec3 i = floor(x); vec3 f = fract(x); f = f * f * (3.0 -
 <script>
 /* =====================================================================
    THE BORG - LA CRIPTA DEL RE SENZA LUCE (DEMO): raid originale, nomi e forme nostri.
-   Prima persona, squadra da 6: tu + 5 compagni bot. Tre incontri: Il Portale Sigillato (totem e piastre),
+   Prima persona, squadra da 6: tu + 5 compagni (amici o bot). Quattro incontri: La Soglia delle Lanterne (fiamme e veli),
+   Il Portale Sigillato (totem e piastre),
    Gran Officiante (glifi e Occhio Ardente), Bruthak (Sguardo e pozze di luce).
    Telefono in orizzontale: sinistra = muoviti, destra = trascina per guardare, tasto rosso = spara.
    PC: WASD, mouse per guardare (clic per bloccare il puntatore), clic = spara, spazio = salta.
@@ -8470,12 +8471,13 @@ float rumoreC(vec3 x) { vec3 i = floor(x); vec3 f = fract(x); f = f * f * (3.0 -
   const mv = { x: 0, y: 0, id: null, ox: 0, oy: 0 }, sg = { id: null, lx: 0, ly: 0 }, fu = { id: null, lx: 0, ly: 0 }, tasti = {};
   let sparo = false, cdFuoco = 0, rinculo = 0, salto = false, ora = 0;
   const SENS_T = 0.0062, SENS_M = 0.0024;
-  let completati = {}; try { completati = JSON.parse(localStorage.getItem('theborg.raid') || '{}'); } catch (e) { }
+  // progressi: dalla v2 c'e' la Soglia come primo incontro (i vecchi indici scalano di uno)
+  let completati = {}; try { const v2 = localStorage.getItem('theborg.raid.v2'); if (v2) completati = JSON.parse(v2); else { const v1 = JSON.parse(localStorage.getItem('theborg.raid') || '{}'); Object.keys(v1).forEach(k => { completati[+k + 1] = v1[k]; }); } } catch (e) { }
   // difficolta': piu' nemici per ondata, ondate piu' fitte, nemici piu' resistenti e cattivi
   const LIVELLI = [['Facile', { n: 1.3, int: 1, cap: 16, dmg: 1, hp: 1 }], ['Medio', { n: 1.9, int: 0.85, cap: 20, dmg: 1.0, hp: 1.1 }], ['Difficile', { n: 2.5, int: 0.7, cap: 26, dmg: 1.15, hp: 1.2 }]];
   let liv = 0; try { liv = clamp(+localStorage.getItem('theborg.raid.liv') || 0, 0, 2); } catch (e) { }
   let D = LIVELLI[liv][1];
-  const salvaProgressi = () => { try { localStorage.setItem('theborg.raid', JSON.stringify(completati)); } catch (e) { } };
+  const salvaProgressi = () => { try { localStorage.setItem('theborg.raid.v2', JSON.stringify(completati)); } catch (e) { } };
   // armi: tre a disposizione, se ne portano due e si alternano in partita (danno al secondo simile, ritmo diverso)
   const ARMI = {
     rondine: { nome: 'Rondine', tipo: 'automatico', cd: 0.11, dmg: 12, disp: 0.008, dispMira: 0.002, rinc: 0.012, assist: 1, bocca: -0.62, lampo: 0.07, cap: 32, tRic: 1.6, zoom: 1.3 },
@@ -9042,13 +9044,14 @@ float rumoreC(vec3 x) { vec3 i = floor(x); vec3 f = fract(x); f = f * f * (3.0 -
   }
   function ferisci(u, d, causa) {
     if (SEGUI || u.morto || stato !== 'gioco') return;
-    d *= D.dmg; u.hp -= d; u.ultimoColpo = ora;
+    d *= D.dmg; u.hp -= d; u.ultimoColpo = ora; if (R._danni) R._danni[(u.io ? 'io' : u.remoto ? 'amico' : 'bot') + ':' + (causa || '?')] = (R._danni[(u.io ? 'io' : u.remoto ? 'amico' : 'bot') + ':' + (causa || '?')] || 0) + Math.round(d);   // per le prove
     if (u.io) { flashDanno = Math.min(1, flashDanno + d / 40); scuoti = Math.max(scuoti, 0.12); vibrazione(d > 18); }
     if (u.hp <= 0) abbatti(u, causa);
   }
   function abbatti(u, causa) {
     if (u.morto || SEGUI) return; u.morto = true; u.hp = 0; u.marchio = 0;
-    if (u.io) { u.tRin = 8; avvisa(u, 'Sei a terra' + (causa ? ' (' + causa + ')' : '') + '. Rientri tra 8 secondi', u.nome + ' è a terra' + (causa ? ' (' + causa + ')' : ''), 'male'); suono('caduta'); }
+    if (u.io) { u.tRin = 8; avvisa(u, 'Sei a terra' + (causa ? ' (' + causa + ')' : '') + '. Rientri tra 8 secondi', u.nome + ' è a terra' + (causa ? ' (' + causa + ')' : ''), 'male'); suono('caduta'); const b = bots.find(x => !x.morto && !x.remoto); if (b) radio(b, ['Tieni duro ' + nickMio() + ', ti copro io!', 'Giù ' + nickMio() + '! Teniamo la posizione', 'Ci penso io finché rientri'][Math.floor(Math.random() * 3)], 0.7); }
+    else if (u.remoto) { const b = bots.find(x => !x.morto && !x.remoto); if (b) radio(b, 'Tieni duro ' + u.nome + '!', 0.5); }
     else if (u.remoto) { u.tRin = 8; u.mesh.rotation.x = -PI / 2; avvisa(u, 'Sei a terra' + (causa ? ' (' + causa + ')' : '') + '. Rientri tra 8 secondi', u.nome + ' è a terra' + (causa ? ' (' + causa + ')' : ''), 'male'); }
     else { u.tRin = 14; u.mesh.rotation.x = -PI / 2; u.mesh.position.y = 0.25; toast(u.nome + ' è a terra' + (causa ? ' (' + causa + ')' : ''), 'male'); }
     if (squadra.every(s => s.morto)) wipe('Tutta la squadra è caduta.');
@@ -9063,28 +9066,145 @@ float rumoreC(vec3 x) { vec3 i = floor(x); vec3 f = fract(x); f = f * f * (3.0 -
     for (const e of nemici) { if (!e.vivo || e.imm || e.noBot) continue; const d = b.pos.distanceTo(e.pos); if (d < bd && vede(b.pos, e.pos)) { bd = d; best = e; } }
     return best;
   }
+  /* ---------- compagni bot: giocano come persone ----------
+     Ognuno ha uno stile (assalto, tiratore, supporto): distanza preferita dal bersaglio, mira, tempo di
+     reazione, caricatore e ritmo. Quando l'incontro non gli da' un compito (b.meta), ogni 1-2 secondi scelgono
+     da soli dove stare: vicino alla squadra, alla loro distanza, con la linea di tiro libera, non ammassati;
+     se sono feriti cercano un pilastro dietro cui ripararsi. Sparano con un attimo di ritardo quando cambiano
+     bersaglio, a volte sbagliano, ricaricano, difendono i compagni umani e parlano alla radio di squadra. */
+  const STILI = [
+    { ruolo: 'assalto', dist: 6.5, mira: 0.8, reaz: [0.22, 0.45], cap: 26, ric: 1.7, cad: [0.11, 0.15] },
+    { ruolo: 'tiratore', dist: 13, mira: 0.88, reaz: [0.32, 0.6], cap: 10, ric: 2.0, cad: [0.38, 0.5] },
+    { ruolo: 'supporto', dist: 9, mira: 0.76, reaz: [0.28, 0.5], cap: 30, ric: 1.6, cad: [0.12, 0.17] },
+    { ruolo: 'assalto', dist: 7, mira: 0.78, reaz: [0.2, 0.42], cap: 24, ric: 1.8, cad: [0.1, 0.14] },
+    { ruolo: 'tiratore', dist: 12, mira: 0.86, reaz: [0.3, 0.55], cap: 8, ric: 2.1, cad: [0.5, 0.65] }
+  ];
+  const DPS_BOT = 32;   // danno al secondo di un compagno che colpisce: meno di un giocatore con la Rondine (circa 100), ma abbastanza da tenere la sala
+  function stileBot(b) {
+    if (b.st) return b.st; const s = Object.assign({}, STILI[b.i % STILI.length]);
+    s.dmg = DPS_BOT * (s.cad[0] + s.cad[1]) / 2 / s.mira; s.colpi = s.cap; s.tRic = 0; s.reazione = 0; s.tPiano = rnd(0, 0.6); s.posto = null;
+    s.fermo = 0; s.ultimaPos = b.pos.clone(); s.lato = Math.random() < 0.5 ? -1 : 1; s.tLato = rnd(1, 3); s.ferito = false;
+    return (b.st = s);
+  }
+  // radio di squadra: frasi brevi dei compagni bot (non tutte: c'e' un tempo minimo tra una e l'altra)
+  let tRadio = -9, radioN = 0; const radioVisti = {}, radioRete = [];
+  function radio(b, testo, prob, chiave) {
+    if (!b || b.io || b.remoto || SEGUI || !ui.radio) return;
+    if (chiave && radioVisti[chiave]) return;
+    if (ora - tRadio < 2.2 || ora - (b.tRadio || -9) < 6) return;
+    if (chiave) radioVisti[chiave] = 1;
+    if (prob !== undefined && Math.random() > prob) return;
+    tRadio = ora; b.tRadio = ora; mostraRadio(b.nome, testo, b.col);
+    if (ON) { radioN++; radioRete.push([radioN, b.nome, testo, b.col]); if (radioRete.length > 4) radioRete.shift(); }
+  }
+  function mostraRadio(nome, testo, col) {
+    const d = document.createElement('div'); d.className = 'rd-r';
+    const n = document.createElement('b'); n.textContent = nome; n.style.color = col || '#e9e1c9'; d.append(n, document.createTextNode(' ' + testo));
+    ui.radio.appendChild(d); while (ui.radio.children.length > 3) ui.radio.firstChild.remove();
+    setTimeout(() => { d.classList.add('via'); setTimeout(() => d.remove(), 500); }, 5200);
+  }
+  const ancoraBot = b => {
+    const zb = enc.zonaBot && enc.zonaBot(b); if (zb) return zb;
+    const u = umani().filter(v => !v.morto); if (!u.length) return enc.rinascita || { x: 0, z: 0 };
+    let x = 0, z = 0; u.forEach(v => { x += v.pos.x; z += v.pos.z; }); return { x: x / u.length, z: z / u.length };
+  };
+  const posDi = t => t.pos || t.c;
+  function scegliPosto(b, st) {
+    const a = ancoraBot(b), t = b.mira && b.mira.vivo !== false ? b.mira : null, ferito = b.hp < b.max * 0.5;
+    let best = null, bs = -1e9;
+    const prova = (x, z) => {
+      const p = { x, y: b.pos.y, z }; collidi(p, 0.45);
+      let s = -Math.hypot(p.x - a.x, p.z - a.z) * 0.18 - Math.hypot(p.x - b.pos.x, p.z - b.pos.z) * 0.07;
+      if (t) { const tp = posDi(t), dd = Math.hypot(p.x - tp.x, p.z - tp.z), lib = vede(p, tp); s -= Math.abs(dd - st.dist) * 0.5; s += ferito ? (lib ? -4 : 3) : (lib ? 2.5 : -3); if (dd < 3) s -= 6; }
+      for (const u of squadra) { if (u === b || u.morto) continue; const d = Math.hypot(u.pos.x - p.x, u.pos.z - p.z); if (d < 2.4) s -= (2.4 - d) * 3; }
+      for (const e of nemici) { if (!e.vivo) continue; const d = Math.hypot(e.pos.x - p.x, e.pos.z - p.z); if (d < 3.5) s -= (3.5 - d) * 2.5; }
+      if (enc.evita && enc.evita(p, b)) s -= 12;
+      if (s > bs) { bs = s; best = p; }
+    };
+    prova(b.pos.x, b.pos.z);
+    for (let k = 0; k < 9; k++) { const ang = rnd(0, PI * 2), r = rnd(2, 7.5); prova(a.x + Math.sin(ang) * r, a.z + Math.cos(ang) * r); }
+    if (ferito && t) for (const c of ostacoli) {   // dietro un pilastro, dalla parte opposta al bersaglio
+      if (c.h < 2.5 || Math.hypot(c.x - b.pos.x, c.z - b.pos.z) > 12) continue;
+      const tp = posDi(t), dx = c.x - tp.x, dz = c.z - tp.z, d = Math.hypot(dx, dz) || 1; prova(c.x + dx / d * (c.r + 0.9), c.z + dz / d * (c.r + 0.9));
+    }
+    return best;
+  }
+  function scegliMira(b) {
+    let vicino = null, vd = 7;
+    for (const e of nemici) { if (!e.vivo || e.imm || e.noBot) continue; const d = b.pos.distanceTo(e.pos); if (d < vd && vede(b.pos, e.pos)) { vd = d; vicino = e; } }
+    if (vicino) return vicino;   // prima chi gli sta addosso
+    const m = enc.miraBot && enc.miraBot(b); if (m) return m;   // poi quello che chiede l'incontro
+    let best = null, bs = -1e9;
+    for (const e of nemici) {
+      if (!e.vivo || e.imm || e.noBot) continue; const d = b.pos.distanceTo(e.pos); if (d > 46 || !vede(b.pos, e.pos)) continue;
+      let s = -d * 0.5 + (1 - e.hp / e.max) * 6 + (e.tipo === 'cavaliere' || e.tipo === 'cantore' ? 4 : 0) + (e.tipo === 'maledetto' ? 3 : 0);
+      if (e.tgt && (e.tgt.io || e.tgt.remoto) && Math.hypot(e.pos.x - e.tgt.pos.x, e.pos.z - e.tgt.pos.z) < 8) s += 5;   // difende i compagni umani
+      if (s > bs) { bs = s; best = e; }
+    }
+    return best;
+  }
+  const FRASI_BERSAGLIO = { cavaliere: ['Guardacripta! Concentriamo il fuoco', 'Guardacripta in arrivo, lo prendo io'], cantore: ['Cantrice! Tutti su di lei', 'C\'è una Cantrice, la vedo'], maledetto: ['Striscianti maledetti, state lontani!', 'Maledetto in arrivo, lo abbatto da qui'] };
   function aggBot(b, dt) {
     if (b.remoto) { aggRemoto(b, dt); return; }
-    if (b.morto) { b.tRin -= dt; if (b.tRin <= 0) rientra(b); b.mesh.position.set(b.pos.x, b.pos.y + 0.25, b.pos.z); if (b.av) b.av.aggiorna(dt, 0, ora); return; }
+    if (b.morto) { b.tRin -= dt; if (b.tRin <= 0) { rientra(b); radio(b, rnd(0, 1) < 0.5 ? 'Rientro, ci sono' : 'Di nuovo in piedi', 0.6); } b.mesh.position.set(b.pos.x, b.pos.y + 0.25, b.pos.z); if (b.av) b.av.aggiorna(dt, 0, ora); return; }
+    const st = stileBot(b);
+    // bersaglio: lo rivede ogni mezzo secondo circa; cambiandolo ci mette un attimo a prendere la mira
+    b.tMira -= dt;
+    if (b.tMira <= 0 || (b.mira && b.mira.vivo === false)) {
+      let n = b.porta ? null : scegliMira(b); b.tMira = rnd(0.4, 0.7);
+      // come un giocatore: non salta da un bersaglio all'altro, a meno che qualcuno non gli arrivi addosso
+      const cur = b.mira && b.mira.vivo !== false && !b.porta && vede(b.pos, posDi(b.mira)) && b.pos.distanceTo(posDi(b.mira)) < 46 ? b.mira : null;
+      const urgente = n && n.pos && b.pos.distanceTo(n.pos) < 4 && (!cur || !cur.pos || b.pos.distanceTo(cur.pos) > 5);
+      if (cur && n !== cur && !urgente) n = cur;
+      // gia' in combattimento passa al prossimo bersaglio in fretta; da fermo ci mette un attimo
+      if (n !== b.mira) { st.reazione = b.mira && b.mira.vivo !== false ? rnd(0.06, 0.15) : rnd(st.reaz[0], st.reaz[1]); b.mira = n; if (n && n.tipo && FRASI_BERSAGLIO[n.tipo]) radio(b, FRASI_BERSAGLIO[n.tipo][Math.random() < 0.5 ? 0 : 1], 0.6, 'n' + n.id); }
+    }
+    // dove andare: il compito dell'incontro, se c'e'; se no un posto scelto da lui
     let g = b.meta;
-    if (!g) { const a = b.i / 5 * PI * 2 + 0.4; g = { x: io.pos.x + Math.sin(a) * 3.2, z: io.pos.z + Math.cos(a) * 3.2 }; }
+    if (!g) {
+      st.tPiano -= dt;
+      if (st.tPiano <= 0 || !st.posto) { st.posto = scegliPosto(b, st) || { x: b.pos.x, z: b.pos.z }; st.tPiano = rnd(1.0, 1.9); }
+      g = st.posto;
+      // mentre spara si sposta di lato, come un giocatore
+      if (b.mira && st.reazione <= 0) {
+        st.tLato -= dt; if (st.tLato <= 0) { st.lato = -st.lato; st.tLato = rnd(0.8, 2.2); }
+        const tp = posDi(b.mira), ax = tp.x - b.pos.x, az = tp.z - b.pos.z, L = Math.hypot(ax, az) || 1;
+        g = { x: g.x - az / L * st.lato * 0.9, z: g.z + ax / L * st.lato * 0.9 };
+      }
+    }
     const dx = g.x - b.pos.x, dz = g.z - b.pos.z, d = Math.hypot(dx, dz);
     let vel = 0;
-    if (d > 0.3) { const s = Math.min(d, (b.meta && b.meta.corri ? 7.5 : b.vel) * dt); b.pos.x += dx / d * s; b.pos.z += dz / d * s; vel = s / dt; }
+    if (d > 0.3) {
+      const corre = (b.meta && b.meta.corri) || d > 6;
+      const v = (corre ? 7.2 : b.vel) * (b.porta ? 0.8 : 1), s = Math.min(d, v * dt);
+      b.pos.x += dx / d * s; b.pos.z += dz / d * s; vel = s / dt;
+    }
     collidi(b.pos, 0.42);
+    // incastrato: un saltello e un altro posto
+    st.fermo += dt; if (st.fermo > 1) { if (d > 1.2 && b.pos.distanceTo(st.ultimaPos) < 0.25) { st.posto = null; st.tPiano = 0; b.salto = 0.35; } st.fermo = 0; st.ultimaPos.copy(b.pos); }
     // nei percorsi i compagni salgono sulle piattaforme e saltano i baratri da soli
     let hop = 0;
     if (piani.length) { const gy = suolo(b.pos.x, b.pos.z, b.pos.y + 1.3); if (gy > BARATRO) b.pos.y += (gy - b.pos.y) * Math.min(1, dt * 12); else hop = 0.9; }
-    // spara: al bersaglio che l'incontro chiede, se no al nemico piu' vicino
-    b.tMira -= dt; if (b.tMira <= 0) { const v = nemicoVicino(b); b.mira = v && v.pos.distanceTo(b.pos) < 7 ? v : (enc.miraBot && enc.miraBot(b)) || v; b.tMira = 0.5; }   // prima chi gli sta addosso
-    const s = b.mira && b.mira.vivo ? b.mira : null; b.cd -= dt;
+    if (b.salto > 0) { b.salto -= dt; hop = Math.max(hop, Math.sin((0.35 - b.salto) / 0.35 * PI) * 0.6); }
+    // fuoco: raffiche con caricatore e ricarica; mira peggiore da lontano e in corsa
+    const s = b.mira && b.mira.vivo !== false && !b.porta ? b.mira : null; b.cd -= dt; st.reazione -= dt;
+    if (st.tRic > 0) { st.tRic -= dt; if (st.tRic <= 0) st.colpi = st.cap; }
     if (s) {
-      b.yaw += angDiff(b.yaw, Math.atan2(s.c.x - b.pos.x, s.c.z - b.pos.z)) * Math.min(1, dt * 10);
-      if (b.cd <= 0) {
-        b.cd = rnd(0.26, 0.36); const da = new T.Vector3(b.pos.x + Math.sin(b.yaw) * 0.6, b.pos.y + 1.3, b.pos.z + Math.cos(b.yaw) * 0.6);
-        if (Math.random() < 0.82) { s.colpisci(6 * (1 + (D.n - 1.3) * 0.4) * molt(b, s), b); scia(da, s.c, 0xe8f4ff, 0.05); } else scia(da, s.c.clone().add(new T.Vector3(rnd(-2, 2), rnd(-1, 1), rnd(-2, 2))), 0xe8f4ff, 0.05);
+      const tp = s.c || posDi(s);
+      b.yaw += angDiff(b.yaw, Math.atan2(tp.x - b.pos.x, tp.z - b.pos.z)) * Math.min(1, dt * 10);
+      if (b.cd <= 0 && st.reazione <= 0 && st.tRic <= 0 && vede(b.pos, posDi(s))) {
+        b.cd = rnd(st.cad[0], st.cad[1]); st.colpi--; R._spari = (R._spari || 0) + 1;
+        const da = new T.Vector3(b.pos.x + Math.sin(b.yaw) * 0.6, b.pos.y + 1.3, b.pos.z + Math.cos(b.yaw) * 0.6), dist = b.pos.distanceTo(tp);
+        const p = st.mira * clamp(1.15 - dist / 60, 0.45, 1) * (vel > 4 ? 0.82 : 1) * ((s.r || 1) > 1.4 ? 1.12 : 1);
+        if (Math.random() < p) { s.colpisci(st.dmg * (1 + (D.n - 1.3) * 0.4) * molt(b, s), b); scia(da, tp, 0xe8f4ff, 0.05); }
+        else scia(da, tp.clone().add(new T.Vector3(rnd(-2, 2), rnd(-1, 1), rnd(-2, 2))), 0xe8f4ff, 0.05);
+        if (st.colpi <= 0) { st.tRic = st.ric; radio(b, Math.random() < 0.5 ? 'Ricarico!' : 'Ricarico, coprimi', 0.25); }
       }
     } else if (vel > 0.5) b.yaw += angDiff(b.yaw, Math.atan2(dx, dz)) * Math.min(1, dt * 8);
+    else if (st.colpi < st.cap && st.tRic <= 0 && !b.mira) { st.tRic = st.ric; }   // tra un'ondata e l'altra ricarica
+    // ferito: lo dice e cerca riparo (scegliPosto lo sa da solo)
+    if (b.hp < b.max * 0.35 && !st.ferito) { st.ferito = true; st.tPiano = 0; radio(b, Math.random() < 0.5 ? 'Sono messo male, mi copro' : 'Ho poca vita, mi riparo', 0.7); }
+    if (b.hp > b.max * 0.8) st.ferito = false;
     if (ora - b.ultimoColpo > 4) b.hp = Math.min(b.max, b.hp + 25 * dt);
     b.mesh.position.set(b.pos.x, b.pos.y + hop + (!b.av && vel > 0.5 ? Math.abs(Math.sin(ora * 10 + b.i)) * 0.06 : 0), b.pos.z); b.mesh.rotation.y = b.yaw;
     if (b.av) { b.v += (vel - b.v) * Math.min(1, dt * 8); b.av.aggiorna(dt, b.v, ora); }
@@ -9108,9 +9228,14 @@ float rumoreC(vec3 x) { vec3 i = floor(x); vec3 f = fract(x); f = f * f * (3.0 -
       const l = parte(g, GSF, mb(0xfff1c4, { transparent: true, opacity: 0.9, depthWrite: false }), 0, 0.03, a.bocca, a.lampo); l.visible = false;
       g.scale.setScalar(0.42); g.visible = false; arma.add(g); modArmi[k] = { g, lampo: l, anim };
     });
+    // la Fiamma dell'Anima in mano (Soglia delle Lanterne): al posto dell'arma
+    fiammaMano = new T.Group(); fiammaMano.position.set(0.17, -0.2, -0.5); fiammaMano.visible = false; arma.add(fiammaMano);
+    parte(fiammaMano, GSF, mb(0xdfffe4), 0, 0, 0, 0.07);
+    parte(fiammaMano, GSF, mb(0x7fe08a, { transparent: true, opacity: 0.35, depthWrite: false }), 0, 0, 0, 0.13);
     mostraArma();
   }
-  function mostraArma() { Object.keys(modArmi).forEach(k => modArmi[k].g.visible = k === scelta[ia]); aggArmiHud(); }
+  let fiammaMano = null;
+  function mostraArma() { Object.keys(modArmi).forEach(k => modArmi[k].g.visible = k === scelta[ia] && !io.porta); if (fiammaMano) fiammaMano.visible = !!io.porta; arma.userData.porto = !!io.porta; aggArmiHud(); }
   function cambiaArma(i) {
     if (stato !== 'gioco' || io.morto || tCambio > 0) return; const n = i === undefined ? 1 - ia : i; if (n === ia) return;
     const vecchia = armaSt(scelta[ia]); if (vecchia) vecchia.annulla();
@@ -9131,6 +9256,8 @@ float rumoreC(vec3 x) { vec3 i = floor(x); vec3 f = fract(x); f = f * f * (3.0 -
       cam.position.set(io.pos.x, io.pos.y + 0.45, io.pos.z); cam.rotation.set(io.pitch * 0.3 - 0.1, io.yaw, 0.25); arma.visible = false; return;
     }
     arma.visible = true;
+    if (!!io.porta !== arma.userData.porto) mostraArma();   // presa o posata la Fiamma: niente armi in mano
+    if (fiammaMano && io.porta) { fiammaMano.position.y = -0.2 + Math.sin(ora * 3) * 0.008; fiammaMano.children[1].scale.setScalar(0.13 * (1 + Math.sin(ora * 7) * 0.08)); }
     const c = C ? C.leggi(dt, mirinoSuNemico) : null;
     let mx = c ? c.dir.x : mv.x, my = c ? c.dir.y : mv.y;
     if (!c) { if (tasti.a || tasti.arrowleft) mx -= 1; if (tasti.d || tasti.arrowright) mx += 1; if (tasti.w || tasti.arrowup) my -= 1; if (tasti.s || tasti.arrowdown) my += 1; }
@@ -9139,7 +9266,7 @@ float rumoreC(vec3 x) { vec3 i = floor(x); vec3 f = fract(x); f = f * f * (3.0 -
     // corpo: scatto, scivolata, accovacciato e a terra cambiano velocita' e altezza degli occhi
     if (c && corpo) corpo.tick(dt, c, io.aTerra);
     const corsa = c ? (c.corsa || R._corsa ? 1.3 : 1) : (tasti.shift || R._corsa ? 1.3 : 1);
-    const sp = 6.2 * (corpo && c ? corpo.vel * (c.corsa || R._corsa ? 1 : 1) : corsa);
+    const sp = 6.2 * (corpo && c ? corpo.vel * (c.corsa || R._corsa ? 1 : 1) : corsa) * (io.porta ? 0.8 : 1);
     const sy = Math.sin(io.yaw), cy = Math.cos(io.yaw), px = io.pos.x, pz = io.pos.z;
     io.pos.x += (mx * cy + my * sy) * sp * dt; io.pos.z += (-mx * sy + my * cy) * sp * dt;
     // nei percorsi: le piattaforme piu' alte di un gradino sono muri
@@ -9175,11 +9302,11 @@ float rumoreC(vec3 x) { vec3 i = floor(x); vec3 f = fract(x); f = f * f * (3.0 -
     if (c && c.prendi('ricarica') && st && st.ricarica()) { suono('cambio'); c.lasciaMira(); }
     if (c && c.prendi('cambia')) cambiaArma();
     if (c && c.eventi.armaN) { const n = c.eventi.armaN - 1; c.eventi.armaN = 0; if (n < 2) cambiaArma(n); }
-    if (c && c.prendi('granata')) lanciaGranata();
-    const grilletto = (sparo || (c && c.sparo)) && !(c && c.corsa && !R._corsa) && tCambio <= 0;
+    if (c && c.prendi('granata') && !io.porta) lanciaGranata();
+    const grilletto = (sparo || (c && c.sparo)) && !(c && c.corsa && !R._corsa) && tCambio <= 0 && !io.porta;
     let colpo = null;
     if (st) { colpo = cdFuoco <= 0 ? st.tick(dt, grilletto, { mira, moto: L, giu: c && c.giu, terra: c && c.terra, aria: !io.aTerra }) : (st.tick(dt, false, null), null); if (st.inRicarica() && c && c.mira) c.lasciaMira(); }
-    else if ((sparo || raffica > 0) && cdFuoco <= 0 && tCambio <= 0) {
+    else if ((sparo || raffica > 0) && cdFuoco <= 0 && tCambio <= 0 && !io.porta) {
       if (a.raffica) { if (raffica <= 0) raffica = a.raffica; raffica--; cdFuoco = raffica > 0 ? a.cd : a.pausa; } else cdFuoco = a.cd;
       colpo = { disp: a.disp, kick: a.rinc, lato: 0 };
     }
@@ -9311,6 +9438,183 @@ float rumoreC(vec3 x) { vec3 i = floor(x); vec3 f = fract(x); f = f * f * (3.0 -
   const linea = (txt, cls) => '<div class="ln ' + (cls || '') + '"><span>' + txt + '</span></div>';
   const marchioTxt = u => u.marchio >= 0.5 ? ' · Cenere ' + Math.floor(u.marchio) : '';
 
+  /* ---------- 0. LA SOGLIA DELLE LANTERNE (missione d'apertura, senza boss) ----------
+     Due Fiamme dell'Anima da portare a mano (chi porta non spara e va piu' piano) in sei lanterne,
+     accese a coppie. Ogni lanterna e' chiusa da un Velo d'Ombra da abbattere a colpi. Le due fiamme
+     vanno posate INSIEME (entro 4 secondi): se no si spengono e tornano sul piedistallo.
+     Dopo la terza coppia si apre il Portale delle Anime. */
+  function soglia() {
+    const E = { nome: 'La Soglia delle Lanterne', luogo: 'L\'Atrio delle Anime', rinascita: { x: 0, z: 12 } };
+    E.guida = ['Il Portale delle Anime si apre accendendo le <b>sei lanterne</b>, due alla volta. Le lanterne da accendere hanno l\'anello acceso.',
+      'Sui piedistalli vicino all\'ingresso ci sono due <b>Fiamme dell\'Anima</b>: passaci sopra per prenderne una. Chi porta una fiamma va più piano e <b>non può sparare</b>.',
+      'Ogni lanterna è chiusa da un <b>Velo d\'Ombra</b>: abbattilo a colpi, poi entra con la fiamma. Le due fiamme vanno posate <b>insieme</b>, entro 4 secondi l\'una dall\'altra.',
+      'Se chi porta una fiamma cade, la fiamma resta a terra per 12 secondi: riprendila prima che torni al piedistallo. Proteggete i portatori: i Guardacripta arrivano a ogni coppia.'];
+    const POSA = 4, A_TERRA = 12, VELO_HP = 300;
+    const LANT = [[-13, 2], [13, 2], [-13, -8], [13, -8], [-13, -18], [13, -18]];
+    let lanterne = [], fiamme = [], giro = 0, onda = 4, nOnda = 0, aperto = -1, porta = null, runa = null, guardia = 0, avvisoPosa = 0;
+    const attivi = () => giro < 3 ? [lanterne[giro * 2], lanterne[giro * 2 + 1]] : [];
+    function velo(L) {
+      const m = new T.Mesh(new T.CylinderGeometry(2.0, 2.0, 3.4, 28, 1, true), mb(0x13281c, { transparent: true, opacity: 0.6, side: T.DoubleSide, depthWrite: false }));
+      m.position.set(L.x, 1.7, L.z); scena.add(m);
+      const anelloV = new T.Mesh(new T.TorusGeometry(2.0, 0.07, 6, 28), mbc(COL.verde)); anelloV.rotation.x = PI / 2; anelloV.position.y = 1.2; m.add(anelloV);
+      const ost = { x: L.x, z: L.z, r: 1.7, h: 2.4 }; ostacoli.push(ost);   // basso: non toglie la vista, ma non si passa
+      const v = { nome: 'Velo d\'Ombra', c: new T.Vector3(L.x, 1.5, L.z), r: 1.9, vivo: true, hp: VELO_HP * D.hp, max: VELO_HP * D.hp, m, ost, velo: true,
+        colpisci(d, u) { if (!v.vivo) return 'no'; v.hp -= d; v.lampo = 0.12; if (v.hp <= 0) giu(v, u); return 'ok'; }, esitoC: () => 'ok' };
+      bersagli.push(v); return v;
+    }
+    function giu(v, u) {
+      v.vivo = false; v.m.visible = false; const i = ostacoli.indexOf(v.ost); if (i >= 0) ostacoli.splice(i, 1);
+      scoppio(v.c, 0x7fe08a, 18, 4); suono('esplo'); toast('Velo d\'Ombra abbattuto' + (u && u.nome && !u.io ? ' da ' + u.nome : ''), 'bene');
+    }
+    function torna(F, perche) {
+      if (F.k) F.k.porta = null; F.k = null; F.posata = null; F.terra = -1; F.pos.set(F.base.x, 1.3, F.base.z); F.bot = null;
+      if (perche) toast(perche, 'male');
+    }
+    E.costruisci = () => {
+      nuovaScena(64); arena({ x0: -22, x1: 22, z0: -30, z1: 16, h: 15, mosaicoZ: -4 });
+      // portale delle anime in fondo, con sigillo che si alza
+      arcoPietra(0, 0, -28.8, 5.0, 6.0, 1.2);
+      const buio = new T.Mesh(formaArco(5.1, 6.0), new T.MeshBasicMaterial({ color: 0x050407 })); buio.position.set(0, 0, -29.4); scena.add(buio);
+      runa = TMx({ map: texRunaPorta, emissive: 0x7fe08a, emissiveMap: texRunaPorta, emissiveIntensity: 0.1 });
+      porta = new T.Group(); porta.position.set(0, 5.6, -28.6); porta.userData.mobile = 1; scena.add(porta);
+      const disco = pz(new T.CylinderGeometry(5.0, 5.0, 0.6, 40), [TM('#4a4352'), runa, TM('#4a4352')], 0, 0, 0, 0.04, porta); disco.rotation.x = PI / 2;
+      pz(new T.TorusGeometry(5.0, 0.26, 8, 40), TM(C2.oro), 0, 0, 0.12, 0.02, porta);
+      // pilastri per ripararsi
+      [[-5.5, -3], [5.5, -3], [-5.5, -13], [5.5, -13], [0, -21]].forEach(p => pilastro(p[0], p[1], 1.1, 15));
+      // lanterne: piastra con braciere spento e un anello che si accende quando tocca a lei
+      lanterne = LANT.map((q, i) => {
+        const pl = piastra(q[0], q[1], 1.5, ''), fu = braciere(q[0], 0.15, q[1]);
+        fu.f.visible = false; fu.a.visible = false;
+        const an = new T.Mesh(new T.TorusGeometry(2.3, 0.08, 6, 36), mb(COL.verde, { transparent: true, opacity: 0.0 })); an.rotation.x = PI / 2; an.position.set(q[0], 0.25, q[1]); scena.add(an);
+        ostacoli.push({ x: q[0], z: q[1], r: 0.55, h: 1.9 });
+        return { i, x: q[0], z: q[1], r: 1.7, pl, fu, an, acceso: false, v: null, nome: (q[0] < 0 ? 'sinistra' : 'destra') };
+      });
+      // piedistalli con le Fiamme dell'Anima
+      fiamme = [-1, 1].map((s, lato) => {
+        const base = { x: s * 4, z: 8 };
+        pz(tornio([[0.7, 0], [0.7, 0.2], [0.45, 0.35], [0.38, 1.0], [0.55, 1.1], [0, 1.12]], 16), TM(C2.pietraC), base.x, 0, base.z, 0.03);
+        ostacoli.push({ x: base.x, z: base.z, r: 0.5, h: 1.1 });
+        const m = new T.Mesh(GSF, mb(0xbff7c8)); m.scale.setScalar(0.32); scena.add(m);
+        const alone = sprite(texPunto, 0x7fe08a, 2.4, 2.4, 0.55); m.add(alone); alone.scale.set(7, 7, 1);
+        const F = { lato, base, pos: new T.Vector3(base.x, 1.3, base.z), k: null, terra: -1, posata: null, m, bot: null, nome: lato ? 'destra' : 'sinistra' };
+        return F;
+      });
+      accendiBracieri(3);
+      for (let i = 0; i < 5; i++) creaBot(i, -4 + i * 2, 13);
+      io.pos.set(0, 0, 13); io.yaw = 0; io.pitch = -0.05;
+      nuovoGiro();
+    };
+    function nuovoGiro() {
+      lanterne.forEach(L => { L.an.material.opacity = 0; });
+      attivi().forEach(L => { L.v = velo(L); L.an.material.opacity = 0.85; });
+      if (giro > 0) toast('Coppia ' + (giro + 1) + ' di 3: abbattete i veli delle lanterne ' + (giro === 1 ? 'centrali' : 'in fondo'), '');
+      guardia = 6;   // tra poco arriva un Guardacripta
+    }
+    // a chi tocca portare: chi ha gia' la fiamma; se no un compagno bot libero (un umano vicino ha la precedenza)
+    function assegna(F) {
+      if (F.k || F.posata) { F.bot = null; return; }
+      if (umani().some(u => !u.morto && !u.porta && Math.hypot(u.pos.x - F.pos.x, u.pos.z - F.pos.z) < 3.5)) { F.bot = null; return; }
+      if (F.bot && (F.bot.morto || F.bot.remoto || F.bot.porta)) F.bot = null;
+      // un bot va a prendere la fiamma solo quando il velo della lanterna sta per cadere: prima serve a sparare
+      const L = lanternaPer(F); if (!F.bot && L && L.v && L.v.vivo && L.v.hp > L.v.max * 0.35) return;
+      if (!F.bot) {
+        const altra = fiamme[1 - F.lato], pref = F.lato ? [1, 3, 0, 2, 4] : [0, 2, 1, 3, 4];
+        F.bot = pref.map(i => bots[i]).find(b => b && !b.morto && !b.remoto && !b.porta && altra.bot !== b) || null;
+      }
+    }
+    function lanternaPer(F) {
+      const a = attivi().filter(L => !L.acceso && !fiamme.some(G => G !== F && G.posata === L)); if (!a.length) return null;
+      return a.sort((p, q) => Math.abs(p.x - (F.lato ? 13 : -13)) - Math.abs(q.x - (F.lato ? 13 : -13)))[0];
+    }
+    const pronto = (G) => {   // l'altra fiamma e' pronta (posata, o il suo portatore e' alla lanterna)
+      if (G.posata) return true; if (!G.k) return false; const L = lanternaPer(G); if (!L || (L.v && L.v.vivo)) return false;
+      return Math.hypot(G.k.pos.x - L.x, G.k.pos.z - L.z) < (G.k.io || G.k.remoto ? 7 : 3.6);
+    };
+    E.agg = dt => {
+      if (aperto >= 0) { aperto += dt; porta.position.y = 5.6 + Math.min(1, aperto / 3) * 11; if (aperto > 3.8 && stato === 'gioco') completa(); return; }
+      // fiamme: raccolta, caduta, ritorno al piedistallo, posa
+      fiamme.forEach(F => {
+        if (F.k && F.k.morto) { const u = F.k; F.k.porta = null; F.k = null; F.terra = A_TERRA; F.pos.set(u.pos.x, 0.6, u.pos.z); toast('La Fiamma ' + F.nome + ' è a terra: riprendila entro ' + A_TERRA + ' secondi', 'male'); }
+        if (F.terra > 0) { F.terra -= dt; if (F.terra <= 0) torna(F, 'La Fiamma ' + F.nome + ' è tornata al piedistallo'); }
+        if (F.posata) { F.posata.t -= dt; if (F.posata.t <= 0) { torna(F, 'Fiamma spenta: le due fiamme vanno posate insieme!'); suono('allarme'); } return; }
+        if (!F.k) {
+          const u = squadra.find(s => !s.morto && !s.porta && Math.hypot(s.pos.x - F.pos.x, s.pos.z - F.pos.z) < 1.4 && Math.abs(s.pos.y - (F.terra > 0 ? 0 : 0)) < 1.5 && (s.io || s.remoto || F.bot === s));
+          if (u) { F.k = u; u.porta = F; F.terra = -1; F.bot = null; avvisa(u, 'Hai la Fiamma ' + F.nome + ': portala alla lanterna. Non puoi sparare', u.nome + ' ha la Fiamma ' + F.nome, 'bene'); if (u.io) suono('ok'); if (!u.io && !u.remoto) radio(u, 'Ho la fiamma ' + F.nome + ', vado alla lanterna'); }
+        }
+        if (F.k) {
+          const u = F.k; F.pos.set(u.pos.x, u.pos.y + 2.25, u.pos.z);
+          const L = attivi().find(L => !L.acceso && !(L.v && L.v.vivo) && !fiamme.some(G => G !== F && G.posata === L) && Math.hypot(u.pos.x - L.x, u.pos.z - L.z) < L.r + 0.4);
+          if (L) { F.posata = { L, t: POSA }; u.porta = null; F.k = null; F.pos.set(L.x, 2.4, L.z); suono('ok');
+            const altra = fiamme[1 - F.lato]; if (!altra.posata) toast('Fiamma posata nella lanterna ' + L.nome + ': ora l\'altra, entro ' + POSA + ' secondi!', ''); }
+        }
+      });
+      // due fiamme posate insieme: si accendono le lanterne
+      if (fiamme.every(F => F.posata)) {
+        fiamme.forEach(F => { const L = F.posata.L; L.acceso = true; L.fu.f.visible = L.fu.a.visible = true; L.an.material.opacity = 0; anello(L.x, L.z, 0xffc46b, 3); torna(F); });
+        giro++; suono('vittoria');
+        runa.emissiveIntensity = 0.1 + giro / 3 * 1.4;
+        if (giro >= 3) { aperto = 0; nemici.slice().forEach(e => muore(e)); toast('Sei lanterne accese: il Portale delle Anime si apre', 'bene'); return; }
+        toast('Lanterne accese: ' + giro * 2 + ' di 6', 'bene'); nuovoGiro();
+      }
+      // compagni bot: chi porta, chi aspetta, chi abbatte i veli
+      bots.forEach(b => { if (!b.remoto) b.meta = null; });
+      fiamme.forEach(F => {
+        assegna(F);
+        if (F.bot && !F.k) F.bot.meta = { x: F.pos.x, z: F.pos.z, corri: 1 };
+        const u = F.k; if (!u || u.io || u.remoto) return;
+        const L = lanternaPer(F); if (!L) return;
+        const fuori = { x: L.x * 0.5, z: L.z + 3 }, altra = fiamme[1 - F.lato];
+        if (L.v && L.v.vivo) { u.meta = fuori; radio(u, 'Il velo della lanterna ' + L.nome + ' è ancora su: abbattetelo!', 0.6, 'velo' + L.i); return; }
+        if (pronto(altra) || (altra.k && Math.hypot(altra.k.pos.x - u.pos.x, altra.k.pos.z - u.pos.z) < 2)) { u.meta = { x: L.x, z: L.z, corri: 1 }; radio(u, altra.posata ? 'Poso adesso!' : 'Al tre: tre, due, uno… dentro!', 0.8, 'posa' + giro); }
+        else { u.meta = { x: L.x * 0.82, z: L.z + 0.6 }; if (Math.hypot(u.pos.x - u.meta.x, u.pos.z - u.meta.z) < 1.5) radio(u, 'Pronto alla lanterna ' + L.nome + (altra.k && (altra.k.io || altra.k.remoto) ? ', aspetto te ' + altra.k.nome : ''), 0.9, 'pronto' + giro + F.lato); }
+      });
+      // avviso a chi porta: la tua lanterna e' pronta?
+      if (io.porta && ora - avvisoPosa > 6) { const L = lanternaPer(io.porta); if (L && !(L.v && L.v.vivo)) { avvisoPosa = ora; toast('Velo giù: porta la fiamma nella lanterna ' + L.nome + ' insieme all\'altro portatore', ''); } }
+      // nemici: ondate dai lati e un Guardacripta per coppia
+      onda -= dt; if (onda <= 0) { onda = 8 * D.int; nOnda++; spawnLato(nOnda % 3 === 0 ? ['accolito', 'accolito', 'schiavo'] : ['schiavo', 'schiavo', 'schiavo'], [-20, 20], [-16, 3]); }
+      if (guardia > 0) { guardia -= dt; if (guardia <= 0 && !SEGUI) { const L = attivi()[Math.random() < 0.5 ? 0 : 1]; if (L) { nemico('cavaliere', L.x * 0.55, L.z - 2); if (giro === 2) nemico('cavaliere', -L.x * 0.55, L.z - 2); toast('Un Guardacripta difende le lanterne!', 'male'); } } }
+      lanterne.forEach(L => { if (L.v && L.v.vivo) { L.v.lampo = Math.max(0, (L.v.lampo || 0) - dt); L.v.m.material.opacity = 0.5 + Math.sin(ora * 3 + L.i) * 0.08 + L.v.lampo * 2; } if (!L.acceso && L.an.material.opacity > 0) L.an.material.opacity = 0.55 + Math.sin(ora * 4) * 0.3; });
+      vediFiamme();
+    };
+    function vediFiamme() { fiamme.forEach(F => { F.m.position.copy(F.pos); F.m.position.y += Math.sin(ora * 3 + F.lato) * 0.08; F.m.visible = !(F.k && F.k.io); }); }
+    E.miraBot = b => { if (b.porta) return null; const v = attivi().map(L => L.v).filter(v => v && v.vivo).sort((p, q) => p.c.distanceTo(b.pos) - q.c.distanceTo(b.pos))[0]; return v || null; };
+    E.zonaBot = () => { const a = attivi(); if (!a.length) return null; return { x: 0, z: a[0].z + 3 }; };
+    E.hud = () => {
+      let h = lineaBarra('Lanterne accese: ' + giro * 2 + ' di 6', giro / 3, 'oro');
+      fiamme.forEach(F => {
+        const s = F.posata ? 'posata · si spegne tra ' + Math.ceil(F.posata.t) + ' s' : F.k ? (F.k.io ? 'la porti tu' : 'la porta ' + F.k.nome) : F.terra > 0 ? '<em>a terra · ' + Math.ceil(F.terra) + ' s</em>' : 'sul piedistallo';
+        h += linea('Fiamma ' + F.nome + ': ' + s, F.terra > 0 || F.posata ? 'male' : '');
+      });
+      attivi().forEach(L => { if (L.v && L.v.vivo) h += lineaBarra('Velo lanterna ' + L.nome, L.v.hp / L.v.max, 'male'); });
+      return h;
+    };
+    E.chips = () => io.porta && !io.morto ? ['<span class="oro">Porti la Fiamma ' + io.porta.nome + ' · non puoi sparare</span>'] : [];
+    E.dbg = () => ({ giro, fiamme, lanterne, aperto });
+    // online: stato per gli amici
+    E.foto = () => ({ g: giro, li: lanterne.map(L => L.acceso ? 1 : 0), f: fiamme.map(F => [f2(F.pos.x), f2(F.pos.y), f2(F.pos.z), F.k ? F.k.k || mioId : null, f1(F.terra), F.posata ? F.posata.L.i : -1, F.posata ? f1(F.posata.t) : 0]), v: lanterne.map(L => L.v ? (L.v.vivo ? f2(L.v.hp / L.v.max) : 0) : -1), ap: f2(aperto) });
+    E.specchio = q => {
+      const ng = clamp(nnum(q.g, giro) | 0, 0, 3); if (ng !== giro) { giro = ng; runa.emissiveIntensity = 0.1 + giro / 3 * 1.4; }
+      (q.li || []).forEach((a, i) => { const L = lanterne[i]; if (L && !!a !== L.acceso) { L.acceso = !!a; L.fu.f.visible = L.fu.a.visible = L.acceso; } });
+      (q.v || []).forEach((r, i) => {
+        const L = lanterne[i]; if (!L) return;
+        if (r === -1) { if (L.v) { L.v.vivo = false; L.v.m.visible = false; const j = ostacoli.indexOf(L.v.ost); if (j >= 0) ostacoli.splice(j, 1); } L.an.material.opacity = 0; return; }
+        if (!L.v) L.v = velo(L);
+        if (r <= 0 && L.v.vivo) giu(L.v); else if (r > 0) { L.v.hp = r * L.v.max; L.v.vivo = true; L.v.m.visible = true; }
+        L.an.material.opacity = L.acceso ? 0 : 0.7;
+      });
+      (q.f || []).forEach((a, i) => { const F = fiamme[i]; if (!F || !Array.isArray(a)) return; F.pos.set(nnum(a[0], F.pos.x), nnum(a[1], F.pos.y), nnum(a[2], F.pos.z)); F.chi = a[3]; F.terra = nnum(a[4], -1); F.posata = a[5] >= 0 ? { L: lanterne[a[5]], t: nnum(a[6], 0) } : null; });
+      io.porta = fiamme.find(F => F.chi === mioId) || null;
+      aperto = nnum(q.ap, -1);
+    };
+    E.vis = dt => {
+      if (aperto >= 0) { aperto += dt; porta.position.y = 5.6 + Math.min(1, aperto / 3) * 11; }
+      fiamme.forEach(F => { if (F.chi) { const u = unita(F.chi); if (u) F.pos.set(u.pos.x, u.pos.y + 2.25, u.pos.z); } F.k = F.chi === mioId ? io : null; });
+      lanterne.forEach(L => { if (!L.acceso && L.an.material.opacity > 0) L.an.material.opacity = 0.55 + Math.sin(ora * 4) * 0.3; });
+      vediFiamme();
+    };
+    return E;
+  }
+
   /* ---------- 1. APERTURA ---------- */
   function apertura() {
     const E = { nome: 'Il Portale Sigillato', luogo: 'La Sala dei Sigilli', rinascita: { x: 0, z: 12 } };
@@ -9398,7 +9702,7 @@ float rumoreC(vec3 x) { vec3 i = floor(x); vec3 f = fract(x); f = f * f * (3.0 -
         if (!t.morto) { if (p.holder === t) t.meta = t.marchio > 9.2 ? attesa : posto; else if (t.marchio < 5) t.meta = t.pretesa > 0 ? posto : alCentro; else t.meta = attesa; }
         if (!r.morto) {
           const cambio = r.marchio < 3.5 && ((p.holder === t && t.marchio > 6) || (p.holder !== t && (t.morto || t.marchio >= 5 || t.remoto)));
-          if (cambio) { r.meta = r.pretesa > 0 ? posto : alCentro; if (p.holder === r) { l.tit = r; l.ris = t; t.meta = attesa; } }
+          if (cambio) { r.meta = r.pretesa > 0 ? posto : alCentro; radio(r, r.pretesa > 0 ? 'Ho la Pretesa, do il cambio sulla piastra ' + p.nome : 'Vado a prendere la Pretesa per il cambio', 0.6, 'cambio' + l.p + '-' + Math.floor(tEnc / 20)); if (p.holder === r) { l.tit = r; l.ris = t; t.meta = attesa; } }
           else r.meta = attesa;
         }
       });
@@ -9407,7 +9711,7 @@ float rumoreC(vec3 x) { vec3 i = floor(x); vec3 f = fract(x); f = f * f * (3.0 -
       if (!cantore && tEnc >= prossimo) {
         cantore = nemico('cantore', rnd(-4, 4), -25, { noBot: true, ancora: { x: 0, z: -25 } }); canto = 24;
         cantore.onMorte = () => { cantore = null; prossimo = tEnc + 24; toast('Cantrice del Lutto uccisa', 'bene'); suono('ok'); };
-        toast('Una Cantrice del Lutto canta sopra il portale!', 'male'); suono('allarme');
+        toast('Una Cantrice del Lutto canta sopra il portale!', 'male'); suono('allarme'); radio(bots[4].remoto ? bots.find(b => !b.remoto && !b.morto) : bots[4], 'Cantrice sopra il portale, la prendo io!', 0.9);
       }
       if (cantore) { canto -= dt; if (canto <= 0) return wipe('Il Canto del Lutto si è compiuto.'); }
       // ondate dai lati
@@ -9671,10 +9975,12 @@ float rumoreC(vec3 x) { vec3 i = floor(x); vec3 f = fract(x); f = f * f * (3.0 -
     return E;
   }
 
-  const INCONTRI = [apertura, sacerdote, golgoroth];
+  // l'ordine del raid: Soglia -> (Scala del Baratro) -> Portale -> Officiante -> (Ponte delle Catene) -> Bruthak
+  const INCONTRI = [soglia, apertura, sacerdote, golgoroth];
 
   /* ---------- PERCORSI tra un incontro e l'altro: baratri da saltare e qualche nemico ---------- */
   // piani: [x0, x1, z0, z1, y]; ondate: quando superi z partono i nemici [tipo, x, z]; tappe: punti di controllo
+  // PERCORSI[k] porta all'incontro k (null: si entra subito)
   const PERCORSI = [null, {
     nome: 'La Scala del Baratro', x0: -6, x1: 6, z0: -92, z1: 6, fine: -90,
     piani: [[-6, 6, -12, 6, 0], [-6, 6, -28, -15, 0], [-6, 6, -32, -28, 0.9], [-6, 6, -36, -32, 1.8], [-6, 6, -54, -39, 1.8],
@@ -9685,7 +9991,7 @@ float rumoreC(vec3 x) { vec3 i = floor(x); vec3 f = fract(x); f = f * f * (3.0 -
     tappe: [{ z: -40, x: 0, y: 1.8, zc: -42 }, { z: -76, x: 0, y: 1.8, zc: -77.5 }],
     colonne: [[-4.6, -20], [4.6, -20], [-4.6, -46], [4.6, -46], [-4.4, -83], [4.4, -83]],
     suggerimenti: [[-48, -56, 'Aspetta la <b>nave-tomba</b> sul bordo, saltaci sopra e fatti portare dall\'altra parte']]
-  }, {
+  }, null, {
     nome: 'Il Ponte delle Catene', x0: -6, x1: 6, z0: -112, z1: 6, fine: -110,
     piani: [[-6, 6, -10, 6, 0], [-1.5, 1.5, -18, -10, 0], [-1.5, 1.5, -30, -21, 0], [-6, 6, -44, -30, 0], [-6, -1, -49, -44, 1.0], [-2, 6, -53, -49, 2.0],
       [-6, 6, -57, -53, 2.0], [-6, 6, -76, -60, 2.0], [-8.5, -3.5, -82, -78, 2.0, { ax: 'x', amp: 4, per: 4.5 }], [3.5, 8.5, -88, -84, 2.0, { ax: 'x', amp: 4, per: 4.5, verso: -1 }],
@@ -9778,7 +10084,7 @@ float rumoreC(vec3 x) { vec3 i = floor(x); vec3 f = fract(x); f = f * f * (3.0 -
     E.vis = () => { barriera.visible = !E.libero; };
     return E;
   }
-  const NOMI_INC = ['Il Portale Sigillato', 'Gran Officiante', 'Bruthak l\'Insaziabile'];
+  const NOMI_INC = ['La Soglia delle Lanterne', 'Il Portale Sigillato', 'Gran Officiante', 'Bruthak l\'Insaziabile'];
 
   /* =====================================================================
      FLUSSO: menu, introduzione, partita, wipe, completamento
@@ -9787,40 +10093,74 @@ float rumoreC(vec3 x) { vec3 i = floor(x); vec3 f = fract(x); f = f * f * (3.0 -
   function prepara(i, perc) {
     bots.forEach(b => { if (b.remoto) { if (b.av && B.liberaAvatar) B.liberaAvatar(b.av); if (b.rr) b.rr.u = null; } }); liberaFantasmi(); prepN++;
     encI = i; enc = perc ? percorso(i) : INCONTRI[i](); enc.costruisci(); compatta(); tEnc = 0; tFine = 0; tPassa = 0; raffica = 0; tCambio = 0; ia = 0; mostraArma();
-    io.hp = io.max; io.morto = false; io.marchio = 0; io.pretesa = 0; io.vy = 0; io.tRin = 0; flashDanno = 0;
+    for (const k in radioVisti) delete radioVisti[k];
+    io.hp = io.max; io.morto = false; io.marchio = 0; io.pretesa = 0; io.porta = null; io.vy = 0; io.tRin = 0; flashDanno = 0;
     ui.toasts.innerHTML = ''; aggHud(true);
   }
-  function pannello(html) { ui.pan.innerHTML = html; ui.pan.hidden = !html; hud.classList.toggle('fermo', !!html); }
+  function pannello(html) { ui.pan.innerHTML = html; ui.pan.hidden = !html; ui.pan.classList.toggle('lob', html.indexOf('class="lobby"') >= 0); hud.classList.toggle('fermo', !!html); }
+  /* ---------- stanza d'attesa: la squadra privata ----------
+     Come il raid vero: si gioca solo con un gruppo di amici (quelli collegati con il vostro codice amici),
+     niente sconosciuti. Ognuno entra nella Cripta con la sua squadra da 1; si invita o ci si unisce alla
+     squadra di un amico. Il capo sceglie da dove partire e la difficolta', gli altri dicono "pronto".
+     I posti liberi (fino a 6) li prendono i Custodi bot. */
+  const testoComandi = () => '<p class="com">' + (B.touch ? (CF ? 'Sinistra: muoviti (spingi in avanti fino in fondo per correre). Destra: trascina per guardare. Tasti: fuoco (anche a sinistra), mirino, salto, accovacciati (in corsa: scivolata; tieni premuto: a terra), ricarica, granata, cambia arma. In pausa trovi Comandi per sensibilità, fuoco automatico e posizione dei tasti.' : 'Sinistra: muoviti. Destra: trascina per guardare. Tasto rosso: spara (mira assistita). Tasto ▲: salta. Tasto ⇄: cambia arma.') : '<b>WASD</b> per muoverti, <b>clic</b> per catturare il mouse, poi muovi il mouse per guardare e tieni premuto per sparare. <b>Spazio</b> salta, <b>Maiusc</b> corre, <b>Q</b> o <b>rotella</b> cambia arma.' + (CF ? ' <b>Tasto destro</b> mirino, <b>R</b> ricarica, <b>G</b> granata, <b>C</b> accovacciati o scivola, <b>Z</b> a terra.' : '')) + '</p>';
   function menu() {
     if (SEGUI) { lascia(); return; }
     ON = null; stato = 'menu'; if (!scena || !enc) prepara(0);
-    const livelli = LIVELLI.map((l, i) => '<button class="lv' + (i === liv ? ' on' : '') + '" data-l="' + i + '">' + l[0] + '</button>').join('');
+    const capo = SQ.capo, cR = capo ? null : capoR(), mem = capo ? membri() : [], tutti = capo ? mem : membriDi(cR);
+    const pa = capo ? SQ.pa : clamp(cR ? nnum(cR.d.pa, 0) | 0 : 0, 0, INCONTRI.length - 1), lv = capo ? liv : clamp(cR ? nnum(cR.d.lv, 0) | 0 : 0, 0, 2);
+    // i 6 posti: capo, amici, poi i Custodi bot
+    const posti = [];
+    if (capo) { posti.push({ n: nickMio() + ' (tu)', capo: 1, pr: 1 }); mem.forEach(r => posti.push({ n: r.nick, pr: !!r.d.pr, id: r.d.id })); }
+    else { posti.push({ n: cR ? cR.nick : '…', capo: 1, pr: 1 }); tutti.forEach(q => posti.push(q.id === mioId ? { n: nickMio() + ' (tu)', pr: SQ.pronto } : { n: q.nick, pr: q.pr })); }
+    const nAmici = posti.length - 1;
+    for (let i = 0; i < 5 - nAmici; i++) posti.push({ n: nomeBot(i), bot: 1 });
+    const slot = q => '<div class="slot' + (q.bot ? ' bot' : '') + '"><span class="nome">' + (q.capo ? '👑 ' : q.bot ? '🤖 ' : '') + esc(q.n) + '</span><small>' + (q.bot ? 'Custode bot' : q.capo ? 'capo squadra' : q.pr ? '<i class="ok">pronto</i>' : 'non ancora pronto') + '</small>' + (capo && q.id ? '<button class="togli" data-id="' + esc(q.id) + '" aria-label="Togli ' + esc(q.n) + ' dalla squadra">Togli</button>' : '') + '</div>';
+    // da dove partire e difficolta': li sceglie il capo
+    let scelte;
+    if (capo) {
+      const lista = NOMI_INC.map((n, i) => '<button class="inc' + (i === pa ? ' on' : '') + '" data-i="' + i + '" aria-pressed="' + (i === pa) + '"><b>' + (i + 1) + '</b>' + n + (completati[i] ? ' <span class="ok">completato</span>' : '') + '</button>').join('');
+      scelte = '<div class="kick">Da dove partite</div><div class="lista">' + lista + '</div>' +
+        '<div class="livs" role="group" aria-label="Difficoltà"><span>Difficoltà</span>' + LIVELLI.map((l, i) => '<button class="lv' + (i === lv ? ' on' : '') + '" data-l="' + i + '">' + l[0] + '</button>').join('') + '</div>';
+    } else scelte = '<p class="sotto">Partenza: <b>' + NOMI_INC[pa] + '</b> · Difficoltà: <b>' + LIVELLI[lv][0] + '</b><br>Le sceglie ' + esc(cR ? cR.nick : 'il capo') + '.</p>';
     const armi = Object.keys(ARMI).map(k => '<button class="ar' + (scelta.includes(k) ? ' on' : '') + '" data-a="' + k + '" aria-pressed="' + scelta.includes(k) + '">' + ARMI[k].nome + '<small>' + ARMI[k].tipo + '</small></button>').join('');
-    const lista = NOMI_INC.map((n, i) => '<button class="inc" data-i="' + i + '"><b>' + (i + 1) + '</b>' + n + (completati[i] ? ' <span class="ok">completato</span>' : '') + '</button>').join('');
-    pannello('<div class="kick">Raid · squadra da 6</div><h2>La Cripta del Re Senza Luce</h2><p class="sotto">Tu e cinque Custodi contro la corte del Re Senza Luce. Scegli da quale incontro partire.</p>' + rigaAmici() +
-      '<div class="livs" role="group" aria-label="Difficoltà"><span>Difficoltà</span>' + livelli + '</div>' +
-      '<div class="livs armi" role="group" aria-label="Armi"><span>Armi (2 su 3)</span>' + armi + '</div>' + '<div class="livs" role="group" aria-label="Vibrazione"><span>Vibrazione</span><button class="lv vb' + (vibra ? ' on' : '') + '" data-v="1">Sì</button><button class="lv vb' + (vibra ? '' : ' on') + '" data-v="0">No</button></div><div class="lista">' + lista + '</div>' +
-      '<p class="com">' + (B.touch ? (CF ? 'Sinistra: muoviti (spingi in avanti fino in fondo per correre). Destra: trascina per guardare. Tasti: fuoco (anche a sinistra), mirino, salto, accovacciati (in corsa: scivolata; tieni premuto: a terra), ricarica, granata, cambia arma. In pausa trovi Comandi per sensibilità, fuoco automatico e posizione dei tasti.' : 'Sinistra: muoviti. Destra: trascina per guardare. Tasto rosso: spara (mira assistita). Tasto ▲: salta. Tasto ⇄: cambia arma.') : '<b>WASD</b> per muoverti, <b>clic</b> per catturare il mouse, poi muovi il mouse per guardare e tieni premuto per sparare. <b>Spazio</b> salta, <b>Maiusc</b> corre, <b>Q</b> o <b>rotella</b> cambia arma.' + (CF ? ' <b>Tasto destro</b> mirino, <b>R</b> ricarica, <b>G</b> granata, <b>C</b> accovacciati o scivola, <b>Z</b> a terra.' : '')) + '</p>' +
-      (B.solo ? '' : '<div class="pul"><button class="sec" id="rd-x2">Esci dalla Sala</button></div>'));
-    ui.pan.querySelectorAll('.inc').forEach(b => b.onclick = () => intro(+b.dataset.i));
+    const nonPronti = mem.filter(r => !r.d.pr).map(r => r.nick);
+    const azioni = capo
+      ? '<button id="rd-inizia"' + (nonPronti.length ? ' disabled' : '') + '>' + (nonPronti.length ? 'Aspetta: ' + esc(nonPronti.join(', ')) : 'Inizia') + '</button>' + (B.solo ? '' : '<button class="sec" id="rd-x2">Esci dalla Sala</button>')
+      : '<button id="rd-pronto">' + (SQ.pronto ? 'Non sono più pronto' : 'Sono pronto') + '</button><button class="sec" id="rd-lascia">Lascia la squadra</button>';
+    pannello('<div class="lobby"><div class="col"><div class="kick">Raid · squadra privata</div><h2>La Cripta del Re Senza Luce</h2>' +
+      '<p class="sotto">' + (capo ? (nAmici ? 'La tua squadra' : 'Sei capo squadra. Invita gli amici o parti con i Custodi bot.') : 'Sei nella squadra di <b>' + esc(cR ? cR.nick : '…') + '</b>.') + '</p>' +
+      '<div class="slots">' + posti.map(slot).join('') + '</div><div class="pul">' + azioni + '</div>' + scelte + '</div>' +
+      '<div class="col">' + htmlAmici() +
+      '<div class="livs armi" role="group" aria-label="Armi"><span>Le tue armi (2 su 3)</span>' + armi + '</div>' +
+      '<div class="livs" role="group" aria-label="Vibrazione"><span>Vibrazione</span><button class="lv vb' + (vibra ? ' on' : '') + '" data-v="1">Sì</button><button class="lv vb' + (vibra ? '' : ' on') + '" data-v="0">No</button></div>' +
+      testoComandi() + '</div></div>');
+    ui.pan.querySelectorAll('.inc').forEach(b => b.onclick = () => { SQ.pa = +b.dataset.i; menu(); });
+    ui.pan.querySelectorAll('.togli').forEach(b => b.onclick = () => { SQ.out[b.dataset.id] = 1; menu(); });
+    ui.pan.querySelectorAll('.invita').forEach(b => b.onclick = () => { SQ.inv[b.dataset.id] = performance.now(); b.textContent = 'Invitato'; b.disabled = true; });
+    ui.pan.querySelectorAll('.unisciti').forEach(b => b.onclick = () => { const r = [...amiciR.values()].find(x => String(x.d.id) === b.dataset.id); if (r) entraIn(r); });
     ui.pan.querySelectorAll('.ar').forEach(b => b.onclick = () => { const k = b.dataset.a; if (scelta.includes(k)) return; scelta = [scelta[1], k]; ia = 0; try { localStorage.setItem('theborg.raid.armi', JSON.stringify(scelta)); } catch (e) { } mostraArma(); menu(); });
     ui.pan.querySelectorAll('.vb').forEach(b => b.onclick = () => { vibra = b.dataset.v === '1'; try { localStorage.setItem('theborg.raid.vibra', vibra ? '1' : '0'); } catch (e) { } if (vibra) { tVibra = -9; vibrazione(false); } menu(); });
     ui.pan.querySelectorAll('.lv:not(.vb)').forEach(b => b.onclick = () => { liv = +b.dataset.l; D = LIVELLI[liv][1]; try { localStorage.setItem('theborg.raid.liv', liv); } catch (e) { } menu(); });
-    const x2 = ui.pan.querySelector('#rd-x2'); if (x2) x2.onclick = () => R.esci();
+    const on = (id, f) => { const b = ui.pan.querySelector(id); if (b) b.onclick = f; };
+    on('#rd-x2', () => R.esci());
+    on('#rd-inizia', () => iniziaSquadra());
+    on('#rd-pronto', () => { SQ.pronto = !SQ.pronto; menu(); });
+    on('#rd-lascia', () => { esciDaSquadra(); menu(); });
   }
   function intro(i) {
     audio(); prepara(i); stato = 'intro';
-    pannello('<div class="kick">Incontro ' + (i + 1) + ' di 3 · ' + enc.luogo + ' · ' + LIVELLI[liv][0] + '</div><h2>' + enc.nome + '</h2><ul>' + enc.guida.map(g => '<li>' + g + '</li>').join('') + '</ul><div class="pul"><button id="rd-via">Combatti</button><button class="sec" id="rd-menu">Incontri</button></div>');
+    pannello('<div class="kick">Incontro ' + (i + 1) + ' di ' + INCONTRI.length + ' · ' + enc.luogo + ' · ' + LIVELLI[liv][0] + '</div><h2>' + enc.nome + '</h2><ul>' + enc.guida.map(g => '<li>' + g + '</li>').join('') + '</ul><div class="pul"><button id="rd-via">Combatti</button><button class="sec" id="rd-menu">Stanza d\'attesa</button></div>');
     ui.pan.querySelector('#rd-via').onclick = () => { pannello(''); stato = 'gioco'; audio(); };
     ui.pan.querySelector('#rd-menu').onclick = () => menu();
   }
   function wipe(perche) {
     if (stato !== 'gioco') return; stato = 'wipe'; sparo = false; if (ON) ON.wm = perche; suono('caduta');
-    pannello('<div class="kick male">Squadra annientata</div><h2>' + enc.nome + '</h2><p class="sotto">' + perche + '</p><div class="pul"><button id="rd-ri">Riprova</button><button class="sec" id="rd-menu">Incontri</button></div>');
+    pannello('<div class="kick male">Squadra annientata</div><h2>' + enc.nome + '</h2><p class="sotto">' + perche + '</p><div class="pul"><button id="rd-ri">Riprova</button><button class="sec" id="rd-menu">Stanza d\'attesa</button></div>');
     ui.pan.querySelector('#rd-ri').onclick = () => enc.percorso ? avviaPercorso(encI) : intro(encI);
     ui.pan.querySelector('#rd-menu').onclick = () => menu();
   }
-  function avviaPercorso(k) { audio(); prepara(k, true); pannello(''); stato = 'gioco'; toast(enc.nome + ': raggiungi ' + NOMI_INC[k]); }
+  function avviaPercorso(k) { if (!PERCORSI[k]) return intro(k); audio(); prepara(k, true); pannello(''); stato = 'gioco'; toast(enc.nome + ': raggiungi ' + NOMI_INC[k]); }
   function completa() {
     if (stato !== 'gioco') return;
     if (enc.percorso) { intro(encI); return; }   // fine del percorso: si entra nel prossimo incontro
@@ -9829,8 +10169,8 @@ float rumoreC(vec3 x) { vec3 i = floor(x); vec3 f = fract(x); f = f * f * (3.0 -
     if (!ultimo) { toast('Incontro completato in ' + t + '. Avanti verso ' + NOMI_INC[encI + 1], 'bene'); tPassa = 3; return; }   // si prosegue a piedi
     stato = 'fatto'; sparo = false;
     pannello('<div class="kick bene">Incontro completato · ' + t + '</div><h2>' + enc.nome + '</h2>' +
-      (ultimo ? '<p class="sotto">Hai superato i primi tre incontri del raid. Le Gemelle del Velo e il Re Senza Luce in persona ti aspettano nella prossima versione.</p>' : '<p class="sotto">Prossimo: <b>' + NOMI_INC[encI + 1] + '</b></p>') +
-      '<div class="pul">' + (ultimo ? '<button id="rd-menu">Incontri</button>' : '<button id="rd-avanti">Avanti</button><button class="sec" id="rd-menu">Incontri</button>') + '</div>');
+      (ultimo ? '<p class="sotto">Hai superato i primi quattro passi del raid. Le Gemelle del Velo e il Re Senza Luce in persona ti aspettano nella prossima versione.</p>' : '<p class="sotto">Prossimo: <b>' + NOMI_INC[encI + 1] + '</b></p>') +
+      '<div class="pul">' + (ultimo ? '<button id="rd-menu">Stanza d\'attesa</button>' : '<button id="rd-avanti">Avanti</button><button class="sec" id="rd-menu">Stanza d\'attesa</button>') + '</div>');
     const av = ui.pan.querySelector('#rd-avanti'); if (av) av.onclick = () => intro(encI + 1);
     ui.pan.querySelector('#rd-menu').onclick = () => menu();
   }
@@ -9932,6 +10272,9 @@ body.raid-attivo #rd-hud{display:block}
 #rd-sq div{display:flex;align-items:center;justify-content:flex-end;gap:5px;text-shadow:0 1px 2px #000}#rd-sq i{width:8px;height:8px;border-radius:50%;order:2}
 #rd-sq em{font-style:normal;font-variant-numeric:tabular-nums;background:var(--oro);color:#1b1407;border-radius:6px;padding:0 4px;font-weight:800;font-size:11px}
 #rd-sq .giu{opacity:.4;text-decoration:line-through}
+#rd-radio{position:absolute;right:calc(12px + env(safe-area-inset-right,0px));top:calc(160px + env(safe-area-inset-top,0px));width:min(260px,30%);display:flex;flex-direction:column;gap:3px;align-items:flex-end}
+#rd-radio .rd-r{background:rgba(13,16,15,.6);padding:3px 8px;font-size:12px;line-height:1.3;text-align:right;border-right:2px solid rgba(122,216,255,.6);transition:opacity .5s}
+#rd-radio .rd-r.via{opacity:0}#rd-radio b{font-weight:800}
 #rd-esci{position:absolute;right:calc(12px + env(safe-area-inset-right,0px));top:calc(10px + env(safe-area-inset-top,0px));pointer-events:auto;padding:6px 12px;border-radius:4px;background:var(--vetro);border:1px solid rgba(233,225,201,.3);color:var(--osso);font:inherit;font-weight:700;font-size:13px;cursor:pointer}
 #rd-mir{position:absolute;left:50%;top:50%;width:22px;height:22px;margin:-11px 0 0 -11px;border:2px solid rgba(233,225,201,.75);border-radius:50%;transition:transform .06s}
 #rd-mir::after{content:"";position:absolute;left:50%;top:50%;width:3px;height:3px;margin:-1.5px 0 0 -1.5px;background:var(--osso);border-radius:50%}
@@ -9968,19 +10311,36 @@ body.raid-attivo #rd-hud{display:block}
 #rd-pan .lv{background:transparent;border:1px solid rgba(233,225,201,.3);color:var(--osso);font:inherit;font-size:13px;font-weight:700;padding:6px 14px;cursor:pointer}#rd-pan .lv.on{background:var(--oro);color:#1b1407;border-color:var(--oro)}#rd-pan .lv:focus-visible{outline:2px solid var(--oro);outline-offset:2px}
 #rd-pan .pul button{border:0;padding:11px 22px;font:inherit;font-weight:800;letter-spacing:.1em;text-transform:uppercase;font-size:13px;cursor:pointer;background:var(--oro);color:#1b1407}
 #rd-pan .pul button.sec{background:transparent;color:var(--osso);border:1px solid rgba(233,225,201,.35)}
-#rd-hud.fermo .tasto,#rd-hud.fermo .base,#rd-hud.fermo #rd-mir,#rd-hud.fermo #rd-vita,#rd-hud.fermo #rd-obi,#rd-hud.fermo #rd-sq,#rd-hud.fermo #rd-boss,#rd-hud.fermo #rd-toasts,#rd-hud.fermo #rd-tit,#rd-hud.fermo #rd-esci{display:none}
+#rd-pan{overflow-y:auto}#rd-pan.lob{justify-content:flex-start}
+#rd-pan>.lobby{max-width:980px;width:100%;display:grid;grid-template-columns:minmax(0,1.15fr) minmax(0,1fr);gap:10px 26px;align-items:start;margin:auto 0}
+#rd-pan .lobby .col{display:flex;flex-direction:column;gap:10px;min-width:0}
+@media (max-width:700px){#rd-pan>.lobby{grid-template-columns:1fr}}
+#rd-pan .slots{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px}
+#rd-pan .slot{background:rgba(233,225,201,.08);border:1px solid rgba(233,225,201,.22);padding:7px 9px;display:flex;flex-direction:column;gap:2px;min-width:0}
+#rd-pan .slot.bot{opacity:.7;border-style:dashed}
+#rd-pan .slot .nome{font-weight:800;font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#rd-pan .slot small{font-size:11px;opacity:.8}#rd-pan .slot .ok{font-style:normal;color:var(--giada);font-weight:800}
+#rd-pan .slot .togli{align-self:flex-start;margin-top:3px;background:transparent;border:1px solid rgba(224,87,74,.6);color:var(--osso);font:inherit;font-size:11px;padding:2px 8px;cursor:pointer}
+#rd-pan .inc.on{border-color:var(--oro);background:rgba(226,178,79,.18)}
+#rd-pan .amici{display:flex;flex-direction:column;gap:5px}
+#rd-pan .am{display:flex;align-items:center;gap:6px;background:rgba(233,225,201,.06);padding:6px 8px}
+#rd-pan .am span{flex:1;min-width:0;font-weight:700}#rd-pan .am small{display:block;font-weight:400;font-size:11px;opacity:.8}
+#rd-pan .am button{border:0;padding:7px 12px;font:inherit;font-weight:800;font-size:12px;cursor:pointer;background:var(--oro);color:#1b1407}
+#rd-pan .am button.sec{background:transparent;color:var(--osso);border:1px solid rgba(233,225,201,.35)}
+#rd-pan button:disabled{opacity:.5;cursor:default}
+#rd-hud.fermo .tasto,#rd-hud.fermo .base,#rd-hud.fermo #rd-mir,#rd-hud.fermo #rd-vita,#rd-hud.fermo #rd-obi,#rd-hud.fermo #rd-sq,#rd-hud.fermo #rd-radio,#rd-hud.fermo #rd-boss,#rd-hud.fermo #rd-toasts,#rd-hud.fermo #rd-tit,#rd-hud.fermo #rd-esci{display:none}
 body.pc #rd-hud .tasto,body.pc #rd-hud .base{display:none}
 @media (max-height:420px){#rd-obi .ln{font-size:12px;padding:3px 7px}#rd-pan ul{font-size:13px;gap:4px}#rd-pan{gap:7px}}`;
     document.head.appendChild(st);
     hud = document.createElement('div'); hud.id = 'rd-hud';
     hud.innerHTML = '<div id="rd-vig"></div><div id="rd-num"></div>' + (CF ? '' : '<div class="zona" id="rd-zl"></div><div class="zona" id="rd-zr"></div><div class="base" id="rd-lb"><i></i></div>') +
-      '<div id="rd-mir"></div><div id="rd-tit"></div><div id="rd-obi"></div><div id="rd-boss" hidden></div><div id="rd-sq"></div><div id="rd-toasts"></div><div id="rd-giu" hidden></div>' +
+      '<div id="rd-mir"></div><div id="rd-tit"></div><div id="rd-obi"></div><div id="rd-boss" hidden></div><div id="rd-sq"></div><div id="rd-radio" aria-live="polite"></div><div id="rd-toasts"></div><div id="rd-giu" hidden></div>' +
       '<div id="rd-vita"><div id="rd-chips"></div><div id="rd-armi"></div><b class="bar"><i id="rd-hp"></i></b></div>' +
       (CF ? '' : '<div class="tasto" id="rd-salto" aria-label="Salta">▲</div><div class="tasto" id="rd-cambia" aria-label="Cambia arma">⇄</div><div class="tasto" id="rd-fuoco" aria-label="Spara">FUOCO</div>') +
       '<button id="rd-esci">Pausa</button><div id="rd-pan" hidden></div>';
     (document.getElementById('hud') || document.getElementById('app') || document.body).appendChild(hud);
-    ['zl', 'zr', 'lb', 'mir', 'tit', 'obi', 'boss', 'sq', 'toasts', 'giu', 'chips', 'hp', 'salto', 'fuoco', 'esci', 'pan', 'vig', 'armi', 'cambia', 'num'].forEach(k => { ui[k] = hud.querySelector('#rd-' + k); });
-    const pausa = () => { stato = 'pausa'; sparo = false; pannello('<div class="kick">Pausa</div><h2>' + enc.nome + '</h2><div class="pul"><button id="rd-ri2">Riprendi</button>' + (C ? '<button class="sec" id="rd-cmd">Comandi</button>' : '') + '<button class="sec" id="rd-menu">Incontri</button>' + (B.solo ? '' : '<button class="sec" id="rd-x">Esci dalla Sala</button>') + '</div>'); ui.pan.querySelector('#rd-ri2').onclick = () => { pannello(''); stato = 'gioco'; }; ui.pan.querySelector('#rd-menu').onclick = () => menu(); const x = ui.pan.querySelector('#rd-x'); if (x) x.onclick = () => R.esci(); const cm = ui.pan.querySelector('#rd-cmd'); if (cm) cm.onclick = () => C.impostazioni(ui.pan, pausa); };
+    ['zl', 'zr', 'lb', 'mir', 'tit', 'obi', 'boss', 'sq', 'radio', 'toasts', 'giu', 'chips', 'hp', 'salto', 'fuoco', 'esci', 'pan', 'vig', 'armi', 'cambia', 'num'].forEach(k => { ui[k] = hud.querySelector('#rd-' + k); });
+    const pausa = () => { stato = 'pausa'; sparo = false; pannello('<div class="kick">Pausa</div><h2>' + enc.nome + '</h2><div class="pul"><button id="rd-ri2">Riprendi</button>' + (C ? '<button class="sec" id="rd-cmd">Comandi</button>' : '') + '<button class="sec" id="rd-menu">Stanza d\'attesa</button>' + (B.solo ? '' : '<button class="sec" id="rd-x">Esci dalla Sala</button>') + '</div>'); ui.pan.querySelector('#rd-ri2').onclick = () => { pannello(''); stato = 'gioco'; }; ui.pan.querySelector('#rd-menu').onclick = () => menu(); const x = ui.pan.querySelector('#rd-x'); if (x) x.onclick = () => R.esci(); const cm = ui.pan.querySelector('#rd-cmd'); if (cm) cm.onclick = () => C.impostazioni(ui.pan, pausa); };
     ui.esci.addEventListener('click', () => { if (stato === 'gioco') pausa(); else if (B.solo) menu(); else R.esci(); });
     if (CF) {
       // comandi condivisi con gli altri sparatutto: sotto i pannelli, sopra il resto dell'HUD
@@ -10031,7 +10391,11 @@ body.pc #rd-hud .tasto,body.pc #rd-hud .base{display:none}
      ===================================================================== */
   const mioId = Math.random().toString(36).slice(2, 8), amiciR = new Map();   // peer -> { nick, look, d, t, u, nH }
   io.k = mioId;
-  let SEGUI = null, ON = null, lasciatoG = 0, nidN = 0, gHit = [], nHit = 0, prepN = 0, tAmiciK = 0, amiciK = '';
+  let SEGUI = null, ON = null, nidN = 0, gHit = [], nHit = 0, prepN = 0, tAmiciK = 0, amiciK = '';
+  // la mia squadra: g = il suo codice; capo = la guido io; inv/out = amici invitati/tolti; pa = da dove partire
+  const nuovoG = () => 1 + Math.floor(Math.random() * 1e9);
+  const squadraMia = () => ({ g: nuovoG(), capo: true, inv: {}, out: {}, pronto: false, pa: 0, entrato: 0 });
+  let SQ = squadraMia();
   const TIPIK = Object.keys(TIPI);
   const nnum = (v, d) => typeof v === 'number' && isFinite(v) ? v : d;
   const f1 = v => Math.round(v * 10) / 10, f2 = v => Math.round(v * 100) / 100;
@@ -10101,11 +10465,8 @@ body.pc #rd-hud .tasto,body.pc #rd-hud .base{display:none}
   }
   function nuovoON() { ON = { g: 1 + Math.floor(Math.random() * 1e9), pj: [], pjN: 0, to: [], toN: 0, tp: {}, tpN: 0, wm: '' }; }
   function reteHost() {
-    if (!ON) {
-      if (stato !== 'menu' && enc && [...amiciR.values()].some(r => fresco(r) && r.d.st === 'menu')) nuovoON();
-      else { bots.forEach(b => { if (b.remoto) riconverti(b); }); return; }
-    }
-    const qui = [...amiciR.values()].filter(r => fresco(r) && r.d.ru === 'o' && r.d.g === ON.g);
+    if (!ON) { bots.forEach(b => { if (b.remoto) riconverti(b); }); return; }
+    const qui = [...amiciR.values()].filter(r => fresco(r) && r.d.ru === 'o' && r.d.g === ON.g && (ON.mem || []).includes(String(r.d.id)));
     bots.forEach(b => { if (b.remoto && !qui.includes(b.rr)) riconverti(b); });
     qui.forEach(r => {
       if (!(r.u && r.u.rr === r && bots.includes(r.u))) { r.u = null; const b = [4, 3, 2, 1].map(i => bots[i]).find(b => b && !b.remoto); if (b) converti(b, r); }
@@ -10125,24 +10486,21 @@ body.pc #rd-hud .tasto,body.pc #rd-hud .base{display:none}
     const ne = nemici.filter(e => e.vivo).sort((a, b) => (b.boss ? 1 : 0) - (a.boss ? 1 : 0)).slice(0, 26)
       .map(e => [e.id, TIPIK.indexOf(e.tipo), f2(e.pos.x), f2(e.pos.y), f2(e.pos.z), f2(e.yaw), Math.round(e.hp), e.max, e.imm ? 1 : 0, e.camm ? 1 : 0, e.anN || 0, e.anK || '']);
     const tp = {}; umani().forEach(u => { if (u.remoto && ON.tp[u.k]) tp[u.k] = ON.tp[u.k]; });
-    const o = { id: mioId, st: 'raid', g: ON.g, ru: 'h', sto: stato, ei: encI, pe: enc && enc.percorso ? 1 : 0, pn: prepN, lv: liv, wm: ON.wm, sq, ne, pj: ON.pj, to: ON.to, tp, es: enc && enc.foto ? enc.foto() : null };
-    if (JSON.stringify(o).length > 3500) { o.pj = ON.pj.slice(-3); o.to = ON.to.slice(-2); o.ne = ne.slice(0, 16); }
+    const o = { id: mioId, st: 'raid', g: ON.g, ru: 'h', mem: ON.mem || [], sto: stato, ei: encI, pe: enc && enc.percorso ? 1 : 0, pn: prepN, lv: liv, wm: ON.wm, sq, ne, pj: ON.pj, to: ON.to, tp, ra: radioRete, es: enc && enc.foto ? enc.foto() : null };
+    if (JSON.stringify(o).length > 3500) { o.pj = ON.pj.slice(-3); o.to = ON.to.slice(-2); o.ra = radioRete.slice(-2); o.ne = ne.slice(0, 16); }
     return o;
   }
 
   /* ---------- ospite ---------- */
-  function cercaCapo() {
-    let m = null;
-    amiciR.forEach(r => { if (fresco(r) && r.d.ru === 'h' && r.d.sto && r.d.sto !== 'menu' && typeof r.d.g === 'number' && r.d.g !== lasciatoG && (!m || String(r.d.id) < String(m.d.id))) m = r; });
-    return m;
-  }
   function liberaFantasmi() { if (!SEGUI) return; SEGUI.fant.forEach(f => { scena.remove(f.mesh); if (f.av && B.liberaAvatar) B.liberaAvatar(f.av); }); SEGUI.fant.clear(); }
   function unisciti(r) {
-    SEGUI = { r, g: r.d.g, pn: -1, rp: -1, fant: new Map(), d: null, pan: '', pjN: maxN(r.d.pj), toN: maxN(r.d.to), tpN: maxN(r.d.tp && r.d.tp[mioId]), lp: io.pos.clone(), v: 0 };
-    toast('Sei nella squadra di ' + r.nick, 'bene', true);
+    SEGUI = { r, g: r.d.g, pn: -1, rp: -1, fant: new Map(), d: null, pan: '', pjN: maxN(r.d.pj), toN: maxN(r.d.to), tpN: maxN(r.d.tp && r.d.tp[mioId]), raN: maxN(r.d.ra), lp: io.pos.clone(), v: 0 };
+    toast(r.nick + ' ha dato il via: si parte!', 'bene', true);
   }
+  // si torna nella stanza d'attesa (la squadra resta la stessa, se non la lasci)
   function lascia(perche) {
-    if (!perche) lasciatoG = SEGUI.g; liberaFantasmi(); SEGUI = null; stato = 'menu'; prepara(0); menu();
+    liberaFantasmi(); SEGUI = null; stato = 'menu'; io.porta = null; if (!SQ.capo) SQ.entrato = performance.now();   // il capo ci rimette in lista tra un attimo
+    prepara(0); menu();
     if (perche) toast(perche, '', true);
   }
   function fantasma(k, nome) {
@@ -10157,12 +10515,13 @@ body.pc #rd-hud .tasto,body.pc #rd-hud .base{display:none}
     if (sto === 'gioco') { if (stato !== 'pausa') { pannello(''); stato = 'gioco'; audio(); } return; }
     stato = sto === 'intro' ? 'intro' : sto === 'wipe' ? 'wipe' : sto === 'fatto' ? 'fatto' : 'pausa'; sparo = false;
     const n = esc(SEGUI.r.nick), d = SEGUI.r.d, esci = '<div class="pul"><button class="sec" id="rd-lascia">Lascia la squadra</button></div>';
+    const lasciaSq = () => { esciDaSquadra(); lascia(); };
     let h;
-    if (sto === 'intro') h = '<div class="kick">' + (enc.percorso ? 'Percorso' : 'Incontro ' + (encI + 1) + ' di 3') + ' · ' + enc.luogo + ' · ' + LIVELLI[liv][0] + ' · con ' + n + '</div><h2>' + enc.nome + '</h2>' + (enc.guida ? '<ul>' + enc.guida.map(g => '<li>' + g + '</li>').join('') + '</ul>' : '') + '<p class="sotto">Aspetta che ' + n + ' inizi lo scontro.</p>';
+    if (sto === 'intro') h = '<div class="kick">' + (enc.percorso ? 'Percorso' : 'Incontro ' + (encI + 1) + ' di ' + INCONTRI.length) + ' · ' + enc.luogo + ' · ' + LIVELLI[liv][0] + ' · con ' + n + '</div><h2>' + enc.nome + '</h2>' + (enc.guida ? '<ul>' + enc.guida.map(g => '<li>' + g + '</li>').join('') + '</ul>' : '') + '<p class="sotto">Aspetta che ' + n + ' inizi lo scontro.</p>';
     else if (sto === 'wipe') h = '<div class="kick male">Squadra annientata</div><h2>' + enc.nome + '</h2><p class="sotto">' + esc(d.wm || '') + ' Aspetta che ' + n + ' riprovi.</p>';
-    else if (sto === 'fatto') h = '<div class="kick bene">Incontro completato</div><h2>' + enc.nome + '</h2><p class="sotto">Avete superato i primi tre incontri del raid. Aspetta che ' + n + ' scelga cosa fare.</p>';
+    else if (sto === 'fatto') h = '<div class="kick bene">Incontro completato</div><h2>' + enc.nome + '</h2><p class="sotto">Avete superato i primi quattro passi del raid. Aspetta che ' + n + ' scelga cosa fare.</p>';
     else h = '<div class="kick">Pausa</div><h2>' + enc.nome + '</h2><p class="sotto">' + n + ' ha messo in pausa.</p>';
-    pannello(h + esci); ui.pan.querySelector('#rd-lascia').onclick = () => lascia();
+    pannello(h + esci); ui.pan.querySelector('#rd-lascia').onclick = lasciaSq;
   }
   function pjVis(q) {
     const col = nnum(q[8], 0xffc46b), r = clamp(nnum(q[7], 0.2), 0.05, 1);
@@ -10207,15 +10566,16 @@ body.pc #rd-hud .tasto,body.pc #rd-hud .base{display:none}
     (Array.isArray(d.pj) ? d.pj : []).forEach(q => { if (!Array.isArray(q) || nnum(q[0], 0) <= SEGUI.pjN) return; SEGUI.pjN = q[0]; if (stato === 'gioco' || stato === 'pausa') pjVis(q); });
     (Array.isArray(d.to) ? d.to : []).forEach(q => { if (!Array.isArray(q) || nnum(q[0], 0) <= SEGUI.toN) return; SEGUI.toN = q[0]; toast(String(q[1]).slice(0, 160), String(q[2] || ''), true); });
     const mie = d.tp && d.tp[mioId]; (Array.isArray(mie) ? mie : []).forEach(q => { if (!Array.isArray(q) || nnum(q[0], 0) <= SEGUI.tpN) return; SEGUI.tpN = q[0]; toast(String(q[1]).slice(0, 160), String(q[2] || ''), true); });
+    (Array.isArray(d.ra) ? d.ra : []).forEach(q => { if (!Array.isArray(q) || nnum(q[0], 0) <= SEGUI.raN) return; SEGUI.raN = q[0]; mostraRadio(String(q[1]).slice(0, 20), String(q[2]).slice(0, 140), typeof q[3] === 'string' && q[3].length < 10 ? q[3] : null); });
     if (d.es && typeof d.es === 'object' && enc && enc.specchio) try { enc.specchio(d.es); } catch (e) { }
   }
   function segui(dt) {
     const r = SEGUI.r, d = r.d;
-    if (!fresco(r) || d.ru !== 'h' || d.sto === 'menu') return lascia(fresco(r) ? r.nick + ' è tornato agli incontri' : r.nick + ' non è più nella Cripta');
+    if (!fresco(r) || d.ru !== 'h' || d.sto === 'menu') return lascia(fresco(r) ? r.nick + ' vi ha riportati nella stanza d\'attesa' : r.nick + ' non è più nella Cripta');
     if (d.g !== SEGUI.g) { SEGUI.g = d.g; SEGUI.pn = -1; }
     if (d.pn !== SEGUI.pn) {
       SEGUI.pn = d.pn; liv = clamp(d.lv | 0, 0, 2); D = LIVELLI[liv][1];
-      liberaFantasmi(); prepara(clamp(d.ei | 0, 0, 2), !!d.pe); SEGUI.rp = -1; SEGUI.d = null; SEGUI.pan = ''; stato = 'intro';
+      liberaFantasmi(); prepara(clamp(d.ei | 0, 0, INCONTRI.length - 1), !!d.pe); SEGUI.rp = -1; SEGUI.d = null; SEGUI.pan = ''; stato = 'intro';
     }
     if (SEGUI.d !== d) { SEGUI.d = d; seguiDati(d); }
     pannelloOspite(String(d.sto));
@@ -10240,28 +10600,84 @@ body.pc #rd-hud .tasto,body.pc #rd-hud .base{display:none}
   }
 
   /* ---------- collegamento con online.js ---------- */
+  // hb: un battito ogni 2 secondi, cosi' gli amici sanno che ci sei anche se stai fermo (la presenza parte solo quando cambia)
   R.rete = function () {
     if (!R.attivo) return null;
-    if (SEGUI) return { id: mioId, st: 'raid', g: SEGUI.g, ru: 'o', x: f2(io.pos.x), y: f2(io.pos.y), z: f2(io.pos.z), r: f2(io.yaw + PI), v: f1(Math.min(SEGUI.v, 12)), rp: SEGUI.rp, h: gHit };
-    if (ON) return reteHostDati();
-    return { id: mioId, st: stato === 'menu' ? 'menu' : 'solo' };
+    const hb = Math.floor(performance.now() / 2000);
+    if (SEGUI) return { id: mioId, st: 'raid', hb, g: SEGUI.g, ru: 'o', x: f2(io.pos.x), y: f2(io.pos.y), z: f2(io.pos.z), r: f2(io.yaw + PI), v: f1(Math.min(SEGUI.v, 12)), rp: SEGUI.rp, h: gHit };
+    if (ON) return Object.assign(reteHostDati(), { hb });
+    if (stato === 'menu') {
+      if (SQ.capo) { const ora2 = performance.now(); return { id: mioId, st: 'raid', hb, ru: 'L', g: SQ.g, mem: membri().map(r => String(r.d.id)), lv: liv, pa: SQ.pa, inv: Object.keys(SQ.inv).filter(k => ora2 - SQ.inv[k] < 60000), out: Object.keys(SQ.out) }; }
+      return { id: mioId, st: 'raid', hb, ru: 'M', g: SQ.g, pr: SQ.pronto ? 1 : 0 };
+    }
+    return { id: mioId, st: 'raid', hb, ru: 'G', g: SQ.g };   // in partita con i bot
   };
   R.amico = function (peer, nick, d, look) {
     const r = amiciR.get(peer);
     if (!d || typeof d !== 'object') { if (r) { r.t = 0; amiciR.delete(peer); } return; }
     if (r) { r.nick = String(nick || r.nick).slice(0, 20); r.look = look || r.look; r.d = d; r.t = performance.now(); }
     else amiciR.set(peer, { nick: String(nick || 'Amico').slice(0, 20), look: look || {}, d, t: performance.now(), u: null, nH: maxN(d.h) });
+    const q = amiciR.get(peer); q.mT = d.ru === 'M' ? (q.mT && q.mG === d.g ? q.mT : performance.now()) : 0; q.mG = d.g;   // da quando e' membro (ordine di arrivo)
   };
-  function rigaAmici() {
-    const l = [...amiciR.values()].filter(fresco); if (!l.length) return '';
-    return '<p class="sotto">Amici nella Cripta: <b>' + l.map(r => esc(r.nick) + (r.d.st === 'menu' ? '' : ' (in partita)')).join(', ') + '</b>. Scegli un incontro e giocate insieme: prendono il posto dei compagni. Se lo sceglie prima un amico, entri tu nella sua squadra.</p>';
+  /* ---------- squadra privata: chi c'e', inviti, ingresso ---------- */
+  const capoR = () => [...amiciR.values()].find(r => fresco(r) && r.d.g === SQ.g && (r.d.ru === 'L' || r.d.ru === 'h' || r.d.ru === 'G')) || null;
+  const membri = () => !SQ.capo ? [] : [...amiciR.values()].filter(r => fresco(r) && r.d.ru === 'M' && r.d.g === SQ.g && !SQ.out[r.d.id]).sort((a, b) => a.mT - b.mT).slice(0, 5);
+  function membriDi(c) {   // visti da un membro: gli altri membri della squadra del capo
+    if (!c || !Array.isArray(c.d.mem)) return SQ.capo ? [] : [{ id: mioId }];
+    const ids = c.d.mem.slice(0, 5); if (!SQ.capo && !ids.includes(mioId) && ids.length < 5) ids.push(mioId);   // appena entrato: il capo non mi ha ancora in lista
+    return ids.map(id => { if (id === mioId) return { id }; const r = [...amiciR.values()].find(x => String(x.d.id) === id); return { id, nick: r ? r.nick : 'Amico', pr: !!(r && r.d.pr) }; });
   }
-  // ogni frame: da ospite seguo, da solo o padrone di casa guardo chi c'e'
+  const nomeBot = i => conAvatar() ? window.CONFIG.utentiDemo[i].nick : NOMI_BOT[i][0];
+  function htmlAmici() {
+    const l = [...amiciR.values()].filter(r => fresco(r) && r.d.g !== SQ.g);
+    let h = '<div class="kick">Amici nella Cripta</div>';
+    if (!l.length) return h + '<p class="com">' + (capoR() || membri().length ? 'Nessun altro amico nella Cripta.' : 'Nessun amico nella Cripta.') + ' Qui compaiono gli amici collegati con il vostro codice amici, quando entrano nella Cripta. Niente sconosciuti: si gioca solo tra amici.</p>';
+    return h + '<div class="amici">' + l.map(r => {
+      const d = r.d, n = esc(r.nick), id = esc(d.id), invito = Array.isArray(d.inv) && d.inv.includes(mioId);
+      let st, bt = '';
+      if (d.ru === 'L') {
+        const k = Array.isArray(d.mem) ? d.mem.length : 0;
+        if (invito) { st = '<b>ti invita</b> nella sua squadra'; bt = '<button class="unisciti" data-id="' + id + '">Accetta</button>'; }
+        else {
+          st = k ? 'capo di una squadra da ' + (k + 1) : 'da solo';
+          if (SQ.capo && !k) bt += '<button class="invita sec" data-id="' + id + '"' + (SQ.inv[d.id] ? ' disabled>Invitato' : '>Invita') + '</button>';
+          if (k < 5) bt += '<button class="unisciti sec" data-id="' + id + '">Unisciti</button>';
+        }
+      } else st = d.ru === 'M' ? 'in un\'altra squadra' : 'in partita';
+      return '<div class="am"><span>' + n + ' <small>' + st + '</small></span>' + bt + '</div>';
+    }).join('') + '</div>';
+  }
+  function entraIn(r) {
+    SQ = { g: r.d.g, capo: false, inv: {}, out: {}, pronto: false, pa: 0, entrato: performance.now() };
+    toast('Sei nella squadra di ' + r.nick + ': premi "Sono pronto"', 'bene', true); menu();
+  }
+  function esciDaSquadra() { SQ = squadraMia(); }
+  function iniziaSquadra() {
+    const m = membri(); if (m.some(r => !r.d.pr)) return;
+    if (m.length) { nuovoON(); ON.g = SQ.g; ON.mem = m.map(r => String(r.d.id)); }
+    intro(SQ.pa);
+  }
+  // da membro: il capo c'e' ancora? mi tiene? e' partito?
+  function controllaCapo(dt) {
+    const c = capoR(), t = performance.now() - SQ.entrato;
+    if (!c) { if (t > 4000) { esciDaSquadra(); menu(); toast('La squadra si è sciolta', '', true); } return false; }
+    if (Array.isArray(c.d.out) && c.d.out.includes(mioId)) { esciDaSquadra(); menu(); toast(c.nick + ' ti ha tolto dalla squadra', '', true); return false; }
+    const dentro = Array.isArray(c.d.mem) && c.d.mem.includes(mioId);
+    if (c.d.ru === 'L' && t > 4000 && !dentro) { esciDaSquadra(); menu(); toast('La squadra di ' + c.nick + ' è piena', '', true); return false; }
+    if (c.d.ru === 'h' && dentro && fresco(c)) { unisciti(c); segui(dt); return true; }
+    return false;
+  }
+  // ogni frame: da ospite seguo il capo; da membro aspetto il via; da capo tengo la squadra
   function reteFrame(dt) {
     if (SEGUI) { segui(dt); return; }
-    if (stato === 'menu') { const h = cercaCapo(); if (h) { unisciti(h); segui(dt); return; } }
+    if (!SQ.capo && stato === 'menu' && controllaCapo(dt)) return;
     reteHost();
-    tAmiciK -= dt; if (tAmiciK <= 0) { tAmiciK = 1; const k = [...amiciR.values()].filter(fresco).map(r => r.nick + r.d.st).join(','); if (k !== amiciK) { amiciK = k; if (stato === 'menu' && ui.pan && ui.pan.querySelector('.lista')) menu(); } }
+    tAmiciK -= dt;
+    if (tAmiciK <= 0) {
+      tAmiciK = 0.8;
+      const k = JSON.stringify([SQ, [...amiciR.values()].filter(fresco).map(r => [r.nick, r.d.ru, r.d.g, r.d.mem, r.d.pr, r.d.inv, r.d.out, r.d.lv, r.d.pa])]);
+      if (k !== amiciK) { amiciK = k; if (stato === 'menu' && ui.pan && ui.pan.querySelector('.lobby')) menu(); }
+    }
   }
   R._colpo = (id, dn) => { const e = nemici.find(x => x.id === id); return e ? colpoMio(e, dn) : 'no'; };   // per le prove
   R._colpoB = (i, dn) => bersagli[i] ? colpoMio(bersagli[i], dn) : 'no';
@@ -10276,7 +10692,7 @@ body.pc #rd-hud .tasto,body.pc #rd-hud .base{display:none}
     if (B.orienta) B.orienta(true); R._riposo(); menu();
   };
   R.esci = function () {
-    if (SEGUI) { liberaFantasmi(); SEGUI = null; } ON = null;
+    if (SEGUI) { liberaFantasmi(); SEGUI = null; } ON = null; esciDaSquadra();   // uscendo dalla Cripta la squadra si scioglie
     R.attivo = false; document.body.classList.remove('raid-attivo'); stato = 'menu'; sparo = false; mv.x = mv.y = 0; mv.id = sg.id = fu.id = null; pannello('');
     try { if (document.pointerLockElement) document.exitPointerLock(); } catch (e) { }
     try { screen.orientation.unlock(); } catch (e) { } if (B.orienta) B.orienta(false);
@@ -15945,7 +16361,7 @@ body.orizz #pagina-zaino .zn-carte{grid-template-columns:repeat(auto-fill,minmax
     c.appendChild(el('h3', '', '🏅 Ricordi'));
     const g = el('div', 'zn-griglia'); let n = 0;
     if (P && P.trofeo) { g.appendChild(tile('🏆', 'Trofeo di pesca', 'è un mobile: lo metti in casa', 0)); n++; }
-    const raid = leggi('theborg.raid') || {}, fatti = Object.keys(raid).filter(k => raid[k]).length;
+    const raid = leggi('theborg.raid.v2') || leggi('theborg.raid') || {}, fatti = Object.keys(raid).filter(k => raid[k]).length;
     if (fatti) { g.appendChild(tile('🗝️', 'La Cripta', fatti + ' incursion' + (fatti === 1 ? 'e completata' : 'i completate'), 0)); n++; }
     const bv = leggi('borg_belinverse_v1');
     if (bv && (bv.vinte || bv.perse)) { g.appendChild(tile('🃏', 'Belinverse 2', bv.vinte + ' vint' + (bv.vinte === 1 ? 'a' : 'e') + ' · ' + bv.perse + ' pers' + (bv.perse === 1 ? 'a' : 'e'), 0)); n++; }

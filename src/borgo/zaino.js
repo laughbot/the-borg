@@ -163,7 +163,7 @@ body.orizz #pagina-zaino .zn-carte{grid-template-columns:repeat(auto-fill,minmax
     c.appendChild(el('h3', '', '🏅 Ricordi'));
     const g = el('div', 'zn-griglia'); let n = 0;
     if (P && P.trofeo) { g.appendChild(tile('🏆', 'Trofeo di pesca', 'è un mobile: lo metti in casa', 0)); n++; }
-    const raid = leggi('theborg.raid') || {}, fatti = Object.keys(raid).filter(k => raid[k]).length;
+    const raid = leggi('theborg.raid.v2') || leggi('theborg.raid') || {}, fatti = Object.keys(raid).filter(k => raid[k]).length;
     if (fatti) { g.appendChild(tile('🗝️', 'La Cripta', fatti + ' incursion' + (fatti === 1 ? 'e completata' : 'i completate'), 0)); n++; }
     const bv = leggi('borg_belinverse_v1');
     if (bv && (bv.vinte || bv.perse)) { g.appendChild(tile('🃏', 'Belinverse 2', bv.vinte + ' vint' + (bv.vinte === 1 ? 'a' : 'e') + ' · ' + bv.perse + ' pers' + (bv.perse === 1 ? 'a' : 'e'), 0)); n++; }
