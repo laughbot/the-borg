@@ -787,6 +787,7 @@
   function creaArmi() {
     scenaArma = new T.Scene(); camArma = new T.PerspectiveCamera(60, 16 / 9, 0.01, 10);
     scenaArma.add(new T.HemisphereLight(0xd6e3cf, 0x3a342a, 0.55)); const dl = new T.DirectionalLight(0xfff4dc, 0.45); dl.position.set(1, 2, 1.5); scenaArma.add(dl);
+    const dl2 = new T.DirectionalLight(0xdfe8ff, 0.55); dl2.position.set(-1.2, 1.6, -0.6); scenaArma.add(dl2);   // luce radente: i riflessi sul metallo
     arma = new T.Group(); scenaArma.add(arma);
     Object.keys(ARMI).forEach(k => {
       const a = ARMI[k], g = new T.Group(); let anim = null;
@@ -823,6 +824,7 @@
   let tTerra = 0;
   function aggIo(dt) {
     if (io.morto) {
+      if (gVis) mostraMiraGranata(null);
       io.tRin = Math.max(0, io.tRin - dt); if (io.tRin <= 0) rientra(io);
       cam.position.set(io.pos.x, io.pos.y + 0.45, io.pos.z); cam.rotation.set(io.pitch * 0.3 - 0.1, io.yaw, 0.25); arma.visible = false; return;
     }
@@ -873,7 +875,8 @@
     if (c && c.prendi('ricarica') && st && st.ricarica()) { suono('cambio'); c.lasciaMira(); }
     if (c && c.prendi('cambia')) cambiaArma();
     if (c && c.eventi.armaN) { const n = c.eventi.armaN - 1; c.eventi.armaN = 0; if (n < 2) cambiaArma(n); }
-    if (c && c.prendi('granata') && !io.porta) lanciaGranata();
+    if (c && c.prendi('granata')) { lanciaGranata(c.gDir); c.gDir = null; }
+    mostraMiraGranata(c && c.gMira && granate > 0 && !io.porta ? c.gMira : null);   // tieni premuto il tasto: scia e cerchio
     const grilletto = (sparo || (c && c.sparo)) && !(c && c.corsa && !R._corsa) && tCambio <= 0 && !io.porta;
     let colpo = null;
     if (st) { colpo = cdFuoco <= 0 ? st.tick(dt, grilletto, { mira, moto: L, giu: c && c.giu, terra: c && c.terra, aria: !io.aTerra }) : (st.tick(dt, false, null), null); if (st.inRicarica() && c && c.mira) c.lasciaMira(); }
@@ -892,7 +895,7 @@
       if (r.s) { const dn = a.dmg * molt(io, r.s), esito = colpoMio(r.s, dn); mirino(esito); if (esito === 'ok') suono('colpo'); scoppio(fine, esito === 'immune' ? 0x9aa0b0 : 0xffd27a, a === ARMI.martello ? 7 : 3, 2.2); numeroDanno(r.s, fine, dn * (esito === 'debole' ? 0.35 : 1), esito); } else scoppio(fine, 0xb8a890, a === ARMI.martello ? 5 : 2, 1.5);
       suono(a === ARMI.martello ? 'botto' : 'sparo');
     }
-    if (m.anim) m.anim(ora, dt, 0);
+    if (m.anim) m.anim(ora, dt, { ric: st && st.inRicarica() ? Math.max(0.001, st.progresso()) : 0, colpo: !!colpo });   // caricatore che esce, otturatore, tamburo
     // arma in mano: abbassata durante cambio e ricarica, al centro col mirino, inclinata in scivolata
     const ricK = st && st.inRicarica() ? Math.sin(st.progresso() * Math.PI) : 0;
     const giu = (tCambio > 0 ? tCambio / 0.32 * 0.32 : 0) + ricK * 0.16;
@@ -909,19 +912,52 @@
   }
   /* ---------- granate: si lanciano ad arco, esplodono a terra o dopo 1,6 s ---------- */
   const granateVolo = [];
-  function lanciaGranata() {
-    if (granate <= 0 || io.morto) return; granate--; if (granate === GRANATE - 1) tGranata = 0;
-    cam.updateMatrixWorld(); cam.getWorldDirection(_d);
-    const m = new T.Mesh(GSF, ml(0x4a5a3a)); m.scale.setScalar(0.13); m.position.copy(cam.position).addScaledVector(_d, 0.6); scena.add(m);
-    granateVolo.push({ m, v: _d.clone().multiplyScalar(15).add(new T.Vector3(0, 4.2, 0)), t: 0 }); suono('cambio');
+  /* ---------- granate: tieni premuto il tasto e trascina il dito verso dove vuoi lanciarla ----------
+     In alto = piu' lontano (da 3 a 25 metri), ai lati = di lato (fino a circa 40 gradi). Mentre miri si vedono
+     la scia della traiettoria e il cerchio dell'esplosione (rosso se sotto c'e' il vuoto). La granata segue
+     esattamente la scia e scoppia dove tocca terra. Un tocco senza trascinare la lancia dritto a 12 metri. */
+  const G_GRAV = 18, G_RAGGIO = 4.5, G_PUNTI = 22;
+  let gVis = null;
+  function puntoGranata(m) {
+    const dist = clamp(12 - m.dy * 0.12, 3, 25), ang = clamp(-m.dx * 0.006, -0.7, 0.7), yaw = io.yaw + ang;
+    const p = { x: io.pos.x - Math.sin(yaw) * dist, y: 0, z: io.pos.z - Math.cos(yaw) * dist }; collidi(p, 0.3);
+    const y = piani.length ? suolo(p.x, p.z, io.pos.y + 4) : 0, vuoto = y <= BARATRO;
+    const p0 = new T.Vector3(io.pos.x - Math.sin(yaw) * 0.5, io.pos.y + 1.45, io.pos.z - Math.cos(yaw) * 0.5);
+    const meta = new T.Vector3(p.x, vuoto ? io.pos.y - 6 : y + 0.12, p.z), d = Math.hypot(meta.x - p0.x, meta.z - p0.z);
+    const tf = clamp(0.45 + d * 0.045, 0.55, 1.6);
+    const v = new T.Vector3((meta.x - p0.x) / tf, (meta.y - p0.y) / tf + 0.5 * G_GRAV * tf, (meta.z - p0.z) / tf);
+    return { p0, v, tf, meta, vuoto, y };
+  }
+  function mostraMiraGranata(m) {
+    if (!gVis || gVis.scena !== scena) {
+      const punti = []; for (let i = 0; i < G_PUNTI; i++) { const q = new T.Mesh(GPRO, mb(0xffd28a, { transparent: true, opacity: 0.9, depthWrite: false })); q.scale.setScalar(0.07); q.renderOrder = 5; scena.add(q); punti.push(q); }
+      const cerchio = new T.Mesh(new T.RingGeometry(G_RAGGIO - 0.14, G_RAGGIO, 48), mb(0xffb35c, { transparent: true, opacity: 0.85, side: T.DoubleSide, depthWrite: false })); cerchio.rotation.x = -PI / 2; scena.add(cerchio);
+      const disco = new T.Mesh(new T.CircleGeometry(G_RAGGIO, 48), mb(0xffb35c, { transparent: true, opacity: 0.16, side: T.DoubleSide, depthWrite: false })); disco.rotation.x = -PI / 2; scena.add(disco);
+      const centro = new T.Mesh(new T.RingGeometry(0.18, 0.32, 20), mb(0xfff1c4, { transparent: true, opacity: 0.95, side: T.DoubleSide, depthWrite: false })); centro.rotation.x = -PI / 2; scena.add(centro);
+      gVis = { scena, punti, cerchio, disco, centro };
+    }
+    const vis = !!m;
+    gVis.punti.forEach(q => { q.visible = vis; }); gVis.cerchio.visible = gVis.disco.visible = gVis.centro.visible = vis;
+    if (!vis) return;
+    const g = puntoGranata(m), col = g.vuoto ? 0xe0574a : 0xffb35c;
+    gVis.punti.forEach((q, i) => { const t = g.tf * (i + 1) / (G_PUNTI + 1); q.position.set(g.p0.x + g.v.x * t, g.p0.y + g.v.y * t - 0.5 * G_GRAV * t * t, g.p0.z + g.v.z * t); q.scale.setScalar(0.07 * (1 + 0.15 * Math.sin(ora * 8 - i * 0.6))); });
+    const yc = (g.vuoto ? io.pos.y : g.y) + 0.06;
+    [gVis.cerchio, gVis.disco, gVis.centro].forEach(q => { q.position.set(g.meta.x, yc, g.meta.z); q.material.color.setHex(col); });
+    gVis.centro.material.color.setHex(g.vuoto ? 0xffc9c2 : 0xfff1c4);
+  }
+  function lanciaGranata(dir) {
+    if (granate <= 0 || io.morto || io.porta) return; granate--; if (granate === GRANATE - 1) tGranata = 0;
+    const g = puntoGranata(dir || { dx: 0, dy: 0 });
+    const m = new T.Mesh(GSF, ml(0x4a5a3a)); m.scale.setScalar(0.13); m.position.copy(g.p0); scena.add(m);
+    granateVolo.push({ m, v: g.v.clone(), t: 0, mirata: true, max: g.tf + 0.35 }); suono('cambio');
   }
   function granateAgg(dt) {
     if (granate < GRANATE) { tGranata += dt; if (tGranata >= RIC_GRANATA) { granate++; tGranata = 0; } }
     for (let i = granateVolo.length - 1; i >= 0; i--) {
       const g = granateVolo[i]; g.t += dt; g.v.y -= 18 * dt; g.m.position.addScaledVector(g.v, dt); g.m.rotation.x += dt * 9;
       const p = g.m.position, terra = suolo(p.x, p.z, p.y + 0.3);
-      if (p.y <= terra + 0.12 && g.v.y < 0) { if (g.t < 0.9 && Math.abs(g.v.y) > 3) { p.y = terra + 0.12; g.v.y *= -0.35; g.v.x *= 0.5; g.v.z *= 0.5; } else g.t = 9; }
-      if (g.t >= 1.6 || p.y < -8) {
+      if (p.y <= terra + 0.12 && g.v.y < 0) { if (!g.mirata && g.t < 0.9 && Math.abs(g.v.y) > 3) { p.y = terra + 0.12; g.v.y *= -0.35; g.v.x *= 0.5; g.v.z *= 0.5; } else g.t = 9; }   // mirata: scoppia dove tocca terra
+      if (g.t >= (g.max || 1.6) || p.y < -8) {
         scena.remove(g.m); granateVolo.splice(i, 1); if (p.y < -8) continue;
         scoppio(p, 0xffb35c, 16, 7); scoppio(p, 0x6b6257, 10, 4); anello(p.x, p.z, 0xffb35c, 4.5); suono('botto');
         const dc = p.distanceTo(io.pos); if (dc < 9) scuoti = Math.max(scuoti, 0.35 * (1 - dc / 9));
@@ -1768,6 +1804,7 @@
     const chips = [];
     if (io.marchio >= 0.5) chips.push('<span class="' + (io.marchio >= 7 ? 'male' : 'oro') + '">Cenere ×' + Math.floor(io.marchio) + '</span>');
     if (enc.chips) chips.push(...enc.chips());
+    if (C && C.gMira) chips.push(C.gMira.annulla ? '<span class="male">Lascia qui per annullare</span>' : granate > 0 ? '<span class="oro">Trascina per mirare · lascia per lanciare · torna sul tasto per annullare</span>' : '<span class="male">Nessuna granata: si ricarica</span>');
     ui.chips.innerHTML = chips.join('');
     ui.giu.hidden = !io.morto; if (io.morto) ui.giu.textContent = 'Sei a terra · rientri tra ' + Math.ceil(io.tRin) + ' s';
   }
@@ -1787,6 +1824,7 @@
       if (tPassa > 0 && stato === 'gioco') { tPassa -= dt; if (tPassa <= 0) avviaPercorso(encI + 1); }
     } else {
       // menu e pannelli: la camera gira piano nella sala
+      if (gVis) mostraMiraGranata(null);
       arma.visible = false; const a = ora * 0.08; cam.position.set(io.pos.x + Math.sin(a) * 2, io.pos.y + 3.2, Math.min(lim.z1 - 1, io.pos.z + 3 + Math.cos(a) * 1.5)); cam.rotation.set(-0.08, io.yaw + Math.sin(ora * 0.15) * 0.4, 0);
       nemici.forEach(e => { e.c.set(e.pos.x, e.pos.y + e.hy, e.pos.z); e.mesh.position.copy(e.pos); e.mesh.rotation.y = e.yaw; });
       bots.forEach(b => { if (enc && !b.morto) b.mesh.position.set(b.pos.x, b.pos.y, b.pos.z); });
@@ -1917,7 +1955,7 @@ body.pc #rd-hud .tasto,body.pc #rd-hud .base{display:none}
     ui.esci.addEventListener('click', () => { if (stato === 'gioco') pausa(); else if (B.solo) menu(); else R.esci(); });
     if (CF) {
       // comandi condivisi con gli altri sparatutto: sotto i pannelli, sopra il resto dell'HUD
-      C = CF.crea({ dove: hud, tasti: ['fuoco', 'mira', 'salto', 'giu', 'ricarica', 'granata', 'cambia'], audio, guarda: (dx, dy) => { io.yaw -= dx; io.pitch = clamp(io.pitch - dy, -1.35, 1.35); } });
+      C = CF.crea({ dove: hud, tasti: ['fuoco', 'mira', 'salto', 'giu', 'ricarica', 'granata', 'cambia'], granataMirata: true, audio, guarda: (dx, dy) => { io.yaw -= dx; io.pitch = clamp(io.pitch - dy, -1.35, 1.35); } });
       hud.insertBefore(C.el, ui.pan); corpo = CF.corpo(); R._riposo = () => C.riposo();
       ui.armi.addEventListener('pointerdown', e => { const s = e.target.closest('span'); if (s) cambiaArma([...ui.armi.children].indexOf(s)); });
       return;

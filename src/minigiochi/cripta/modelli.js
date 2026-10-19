@@ -208,35 +208,137 @@
     return { root, anim, alt: 8.5, nome: 'Il Re Senza Luce' };
   }
 
-  /* ---------- ARMI (in mano al giocatore, viste in prima persona) ---------- */
-  function baseArma() { L = 0.007; const root = new T.Group(), g = perno(root, 0, 0, 0); return [root, g]; }
-  // Rondine: fucile automatico, leggero e veloce. 9 colpi al secondo, danno basso.
+  /* ---------- ARMI (in mano al giocatore, viste in prima persona) ----------
+     Piu' realistiche: il profilo laterale di ogni pezzo (corpo, calcio, impugnatura, caricatore) e' disegnato
+     e poi estruso con i bordi smussati; metallo lucido e plastica opaca (materiali con riflessi, senza contorno).
+     Il davanti e' verso -z, la bocca della canna a z = -0.6 (li' compare il lampo dello sparo).
+     anim(t, dt, info): info = { ric: avanzamento della ricarica 0..1 (0 = non ricarica), colpo: true quando spara }. */
+  const cacheP = {};
+  function mp(c, lucido, em) {   // materiale con riflessi: lucido 0..1
+    const k = c + '/' + lucido + '/' + (em || 0); if (cacheP[k]) return cacheP[k];
+    return (cacheP[k] = new T.MeshPhongMaterial({ color: c, specular: new T.Color(0x222222).lerp(new T.Color(0xbfc6d4), lucido), shininess: 8 + lucido * 90, emissive: em || 0 }));
+  }
+  const MET = () => mp(0x2a2d34, 0.75), MET2 = () => mp(0x43474f, 0.85), POL = () => mp(0x1b1d22, 0.15), POL2 = () => mp(0x26282e, 0.2);
+  // profilo [[z, y], ...] estruso per "spessore" (asse x), con smusso
+  function profilo(g, punti, spessore, mat, x, smusso) {
+    const sh = new T.Shape(); punti.forEach((p, i) => (i ? sh.lineTo(p[0], p[1]) : sh.moveTo(p[0], p[1]))); sh.closePath();
+    const b = smusso === undefined ? 0.006 : smusso;
+    const geo = new T.ExtrudeGeometry(sh, { depth: spessore, bevelEnabled: b > 0, bevelThickness: b, bevelSize: b, bevelSegments: 2, curveSegments: 6 });
+    geo.translate(0, 0, -spessore / 2); geo.rotateY(-PI / 2); geo.computeVertexNormals();
+    const m = new T.Mesh(geo, mat); m.position.x = x || 0; g.add(m); return m;
+  }
+  function pz2(g, geo, mat, x, y, z) { const m = new T.Mesh(geo, mat); m.position.set(x, y, z); g.add(m); return m; }
+  const tubo = (g, r, len, mat, x, y, z, seg) => { const m = pz2(g, new T.CylinderGeometry(r, r, len, seg || 14), mat, x, y, z); m.rotation.x = PI / 2; return m; };
+  const blocco = (g, w, h, d, mat, x, y, z) => pz2(g, new T.BoxGeometry(w, h, d), mat, x, y, z);
+  function slitta(g, z0, z1, y) {   // slitta picatinny: base e denti
+    blocco(g, 0.034, 0.01, z1 - z0, MET(), 0, y, (z0 + z1) / 2);
+    for (let z = z0 + 0.012; z < z1; z += 0.026) blocco(g, 0.042, 0.009, 0.012, MET2(), 0, y + 0.009, z);
+  }
+  function ponticello(g, z, y) {   // ponticello e grilletto
+    const t = pz2(g, new T.TorusGeometry(0.034, 0.006, 6, 16, PI), MET(), 0, y, z); t.rotation.set(0, PI / 2, PI);
+    const gr = blocco(g, 0.012, 0.035, 0.01, MET2(), 0, y + 0.004, z - 0.004); gr.rotation.x = 0.35;
+  }
+  const viti = (g, lista, mat) => lista.forEach(p => { const v = pz2(g, new T.CylinderGeometry(0.006, 0.006, 0.006, 8), mat || MET2(), p[0], p[1], p[2]); v.rotation.z = PI / 2; });
+  const scatto = (s, dt, colpo, dur) => { if (colpo) s.k = dur; s.k = Math.max(0, (s.k || 0) - dt); return s.k / dur; };
+  const fuori = r => (r <= 0 ? 0 : r < 0.32 ? r / 0.32 : r < 0.62 ? 1 : Math.max(0, (1 - r) / 0.38));   // caricatore: esce, resta fuori, rientra
+  function baseArma() { const root = new T.Group(), g = perno(root, 0, 0, 0); return [root, g]; }
+
+  // Rondine: fucile automatico, leggero e veloce. Fusto in metallo brunito, astina color osso, accenti azzurri.
   function rondine() {
-    const [root, g] = baseArma();
-    box(g, 0.1, 0.13, 0.6, '#2c2f38', 0, 0, 0); box(g, 0.11, 0.04, 0.42, C.osso, 0, 0.085, 0.02); cil(g, 0.028, 0.028, 0.32, C.ferro, 0, 0.02, -0.44, 8).rotation.x = PI / 2;
-    box(g, 0.07, 0.17, 0.09, '#1f2128', 0, -0.13, 0.12).rotation.x = 0.25; box(g, 0.06, 0.2, 0.1, '#1f2128', 0, -0.14, -0.1); box(g, 0.08, 0.1, 0.22, '#2c2f38', 0, -0.02, 0.38);
-    box(g, 0.05, 0.05, 0.12, '#1f2128', 0, 0.13, 0.06); brilla(g, 0.022, 0x7ad8ff, 0, 0.13, 0.0, 1, 1, 0.6);
-    [-1, 1].forEach(s => box(g, 0.012, 0.06, 0.28, '#7ad8ff', s * 0.056, 0.0, -0.05));
-    L = 0.022; return { root, anim: t => { g.rotation.z = Math.sin(t * 1.5) * 0.03; }, alt: 0.4, nome: 'Rondine' };
+    const [root, g] = baseArma(), az = mp(0x7ad8ff, 0.4, 0x2a6f88), osso = mp(0xd8cfb6, 0.35);
+    profilo(g, [[-0.2, 0.07], [0.27, 0.07], [0.3, 0.05], [0.3, -0.035], [0.12, -0.055], [0.03, -0.075], [-0.09, -0.075], [-0.2, -0.045]], 0.072, MET());
+    profilo(g, [[0.29, 0.05], [0.47, 0.032], [0.52, 0.032], [0.53, -0.105], [0.5, -0.115], [0.43, -0.05], [0.3, -0.03]], 0.058, POL());
+    blocco(g, 0.062, 0.14, 0.018, POL2(), 0, -0.04, 0.522);   // calciolo in gomma
+    profilo(g, [[0.06, -0.06], [0.125, -0.06], [0.175, -0.215], [0.158, -0.232], [0.1, -0.232], [0.05, -0.085]], 0.064, POL());
+    for (let i = 0; i < 4; i++) blocco(g, 0.068, 0.006, 0.03, POL2(), 0, -0.1 - i * 0.03, 0.105 + i * 0.012);   // zigrinatura dell'impugnatura
+    ponticello(g, 0.035, -0.083);
+    const car = perno(g, 0, 0, 0); profilo(car, [[-0.065, -0.07], [0.0, -0.07], [0.03, -0.2], [0.005, -0.275], [-0.075, -0.262], [-0.088, -0.12]], 0.048, MET2());
+    blocco(car, 0.052, 0.014, 0.085, MET(), 0, -0.266, -0.034).rotation.x = -0.25;
+    profilo(g, [[-0.49, 0.055], [-0.19, 0.055], [-0.19, -0.042], [-0.47, -0.042], [-0.49, -0.025]], 0.068, osso);   // astina
+    for (let i = 0; i < 5; i++) [-1, 1].forEach(s => blocco(g, 0.006, 0.05, 0.022, POL(), s * 0.038, 0.006, -0.25 - i * 0.045));   // prese d'aria
+    [-1, 1].forEach(s => blocco(g, 0.004, 0.012, 0.22, az, s * 0.04, -0.03, -0.33));   // filetti azzurri luminosi
+    tubo(g, 0.016, 0.2, MET2(), 0, 0.012, -0.54); tubo(g, 0.024, 0.06, MET(), 0, 0.012, -0.6, 8);   // canna e freno di bocca
+    [-1, 1].forEach(s => blocco(g, 0.006, 0.026, 0.01, POL(), s * 0.024, 0.012, -0.6));
+    slitta(g, -0.46, 0.25, 0.078);
+    // mirino olografico: due fianchi, cappuccio e vetro con il punto azzurro
+    const ott = perno(g, 0, 0.094, -0.02);
+    [-1, 1].forEach(s => blocco(ott, 0.008, 0.06, 0.1, MET(), s * 0.028, 0.03, 0));
+    blocco(ott, 0.064, 0.008, 0.1, MET(), 0, 0.062, 0); blocco(ott, 0.064, 0.014, 0.1, MET(), 0, 0.004, 0);
+    pz2(ott, new T.PlaneGeometry(0.05, 0.048), new T.MeshPhongMaterial({ color: 0x9fd8ff, transparent: true, opacity: 0.25, shininess: 120, specular: 0xffffff }), 0, 0.034, -0.03);
+    brilla(ott, 0.0045, 0x7ad8ff, 0, 0.034, -0.032);
+    const leva = blocco(g, 0.05, 0.018, 0.03, MET2(), 0, 0.055, 0.245);   // leva di armamento: scatta indietro a ogni colpo
+    viti(g, [[0.037, 0.02, 0.12], [0.037, 0.02, -0.1], [-0.037, 0.02, 0.12], [-0.037, 0.02, -0.1]]);
+    const s = {};
+    const anim = (t, dt, info) => {
+      info = info || {}; const k = scatto(s, dt || 0, info.colpo, 0.07), r = fuori(info.ric || 0);
+      leva.position.z = 0.245 + k * 0.035; car.position.y = -r * 0.26; car.position.z = r * 0.05; car.rotation.x = r * 0.4;
+      g.rotation.z = Math.sin(t * 1.5) * 0.03;
+    };
+    return { root, anim, alt: 0.4, nome: 'Rondine' };
   }
-  // Tridente: fucile a impulsi, raffiche da 3 colpi, danno medio, preciso.
+  // Tridente: fucile a impulsi bullpup, tre canne con anello d'oro, raffiche da 3. Viola scuro e oro.
   function tridente() {
-    const [root, g] = baseArma();
-    box(g, 0.13, 0.15, 0.55, '#3a3242', 0, 0, 0); box(g, 0.14, 0.05, 0.3, C.oro, 0, 0.1, 0.05);
-    [[-0.035, 0.025], [0.035, 0.025], [0, -0.035]].forEach(o => cil(g, 0.022, 0.022, 0.36, C.ferro, o[0], o[1], -0.42, 8).rotation.x = PI / 2);
-    const anello = new T.Mesh(new T.TorusGeometry(0.075, 0.015, 6, 16), luce(0xffd27a)); anello.position.set(0, 0, -0.5); g.add(anello);
-    box(g, 0.07, 0.18, 0.09, '#241f2a', 0, -0.14, 0.12).rotation.x = 0.25; box(g, 0.09, 0.11, 0.24, '#3a3242', 0, -0.02, 0.36);
-    box(g, 0.04, 0.07, 0.2, '#241f2a', 0, 0.15, 0.02); brilla(g, 0.02, 0xffd27a, 0, 0.18, -0.07);
-    L = 0.022; return { root, anim: t => { anello.rotation.z = t * 2; g.rotation.z = Math.sin(t * 1.5) * 0.03; }, alt: 0.4, nome: 'Tridente' };
+    const [root, g] = baseArma(), corpo = mp(0x3a3242, 0.55), oro = mp(0xd9a441, 0.9, 0x3a2a08), oroL = mp(0xffd27a, 0.4, 0x8a6418);
+    profilo(g, [[-0.26, 0.08], [0.31, 0.08], [0.35, 0.05], [0.37, -0.08], [0.2, -0.1], [-0.04, -0.09], [-0.26, -0.06]], 0.088, corpo);
+    profilo(g, [[0.31, 0.06], [0.5, 0.045], [0.535, 0.03], [0.54, -0.12], [0.5, -0.13], [0.37, -0.1]], 0.08, POL());
+    blocco(g, 0.074, 0.15, 0.016, POL2(), 0, -0.045, 0.548);
+    profilo(g, [[-0.07, -0.085], [-0.005, -0.085], [0.04, -0.235], [0.022, -0.252], [-0.035, -0.252], [-0.08, -0.1]], 0.066, POL());   // impugnatura avanti (bullpup)
+    for (let i = 0; i < 4; i++) blocco(g, 0.07, 0.006, 0.03, POL2(), 0, -0.12 - i * 0.03, -0.028 + i * 0.012);
+    ponticello(g, -0.085, -0.105);
+    const car = perno(g, 0, 0, 0); profilo(car, [[0.2, -0.095], [0.29, -0.095], [0.3, -0.2], [0.21, -0.2]], 0.05, MET2());   // caricatore dietro l'impugnatura
+    blocco(g, 0.092, 0.012, 0.5, oro, 0, 0.082, 0.04);   // filetto d'oro sul dorso
+    [-1, 1].forEach(s => blocco(g, 0.004, 0.022, 0.3, oro, s * 0.046, 0.0, 0.08));
+    // tre canne a triangolo sotto una copertura a mezzo cilindro
+    [[-0.026, 0.02], [0.026, 0.02], [0, -0.025]].forEach(o => tubo(g, 0.016, 0.38, MET2(), o[0], o[1], -0.44));
+    const cop = pz2(g, new T.CylinderGeometry(0.058, 0.058, 0.3, 18, 1, true, -PI / 2, PI), new T.MeshPhongMaterial({ color: 0x3a3242, specular: 0x8a8a96, shininess: 50, side: T.DoubleSide }), 0, 0.005, -0.4); cop.rotation.x = PI / 2;
+    const anello = pz2(g, new T.TorusGeometry(0.06, 0.012, 8, 24), oroL, 0, 0.005, -0.6);
+    [0, 1, 2].forEach(i => blocco(g, 0.006, 0.02, 0.07, oroL, 0, 0.0, -0.6).rotation.z = i * PI * 2 / 3);
+    // cannocchiale con anelli e lente
+    const sc = perno(g, 0, 0.13, -0.02);
+    tubo(sc, 0.022, 0.2, MET(), 0, 0, 0); tubo(sc, 0.03, 0.05, MET(), 0, 0, -0.11); tubo(sc, 0.028, 0.04, MET(), 0, 0, 0.11);
+    [-0.05, 0.05].forEach(z => blocco(sc, 0.03, 0.04, 0.02, MET2(), 0, -0.035, z));
+    pz2(sc, new T.CircleGeometry(0.025, 18), new T.MeshPhongMaterial({ color: 0x223a5a, shininess: 140, specular: 0xffffff, emissive: 0x06121e }), 0, 0, -0.136).rotation.y = PI;
+    const otturatore = blocco(g, 0.02, 0.02, 0.05, oro, 0.046, 0.04, 0.2);
+    viti(g, [[0.046, 0.03, -0.15], [0.046, -0.04, 0.25], [-0.046, 0.03, -0.15], [-0.046, -0.04, 0.25]], oro);
+    const s = {};
+    const anim = (t, dt, info) => {
+      info = info || {}; const k = scatto(s, dt || 0, info.colpo, 0.06), r = fuori(info.ric || 0);
+      anello.rotation.z = t * 2 + k * 2; otturatore.position.z = 0.2 + k * 0.03;
+      car.position.y = -r * 0.24; car.position.z = r * 0.06; car.rotation.x = -r * 0.3;
+      g.rotation.z = Math.sin(t * 1.5) * 0.03;
+    };
+    return { root, anim, alt: 0.4, nome: 'Tridente' };
   }
-  // Martello: cannone a mano a tamburo, colpo singolo potente, lento.
+  // Martello: cannone a mano a tamburo. Acciaio, guancette di legno, bagliore arancio alla bocca.
   function martello() {
-    const [root, g] = baseArma();
-    box(g, 0.11, 0.14, 0.32, '#2a2a2e', 0, 0.02, 0.02); cil(g, 0.085, 0.085, 0.16, C.ossoS, 0, 0.02, -0.12, 6).rotation.x = PI / 2;
-    cil(g, 0.042, 0.05, 0.36, C.ferro, 0, 0.04, -0.36, 10).rotation.x = PI / 2; box(g, 0.05, 0.03, 0.34, C.osso, 0, 0.1, -0.3);
-    box(g, 0.08, 0.22, 0.11, '#3d2a1e', 0, -0.15, 0.12).rotation.x = 0.35; const cane = box(g, 0.03, 0.08, 0.05, C.ferro, 0, 0.1, 0.17);
-    brilla(g, 0.02, 0xff8a5a, 0, 0.04, -0.55);
-    L = 0.022; return { root, anim: t => { cane.rotation.x = Math.max(0, Math.sin(t * 2)) * 0.6; g.rotation.z = Math.sin(t * 1.5) * 0.03; }, alt: 0.4, nome: 'Martello' };
+    const [root, g] = baseArma(), legno = mp(0x5a3a24, 0.3), legnoS = mp(0x3f2818, 0.2), acc = mp(0x9aa0aa, 0.95);
+    profilo(g, [[-0.12, 0.065], [0.15, 0.065], [0.2, 0.035], [0.2, -0.04], [0.12, -0.052], [0.05, -0.04], [-0.12, -0.035]], 0.058, acc);
+    // canna lunga con bindella e mirino
+    const canna = pz2(g, new T.CylinderGeometry(0.034, 0.036, 0.46, 8), acc, 0, 0.032, -0.35); canna.rotation.x = PI / 2;
+    tubo(g, 0.016, 0.02, POL(), 0, 0.032, -0.585, 12);   // la bocca, scura
+    blocco(g, 0.026, 0.026, 0.44, acc, 0, 0.068, -0.34); blocco(g, 0.012, 0.03, 0.03, MET(), 0, 0.09, -0.55);
+    blocco(g, 0.05, 0.022, 0.32, MET(), 0, -0.003, -0.31);   // alloggio dell'estrattore sotto la canna
+    // tamburo da 6 colpi con scanalature: gira a ogni colpo e si apre in ricarica
+    const perTamb = perno(g, 0, -0.01, -0.05), tamb = perno(perTamb, 0, 0.045, 0);
+    tubo(tamb, 0.07, 0.13, MET(), 0, 0, 0, 18);
+    for (let i = 0; i < 6; i++) { const a = i / 6 * PI * 2; blocco(tamb, 0.014, 0.016, 0.12, POL(), Math.sin(a) * 0.068, Math.cos(a) * 0.068, 0).rotation.z = -a; }
+    for (let i = 0; i < 6; i++) { const a = (i + 0.5) / 6 * PI * 2; tubo(tamb, 0.012, 0.004, mp(0xc9a24a, 0.9), Math.sin(a) * 0.042, Math.cos(a) * 0.042, -0.066, 10); }
+    // impugnatura di legno con medaglione
+    profilo(g, [[0.12, -0.04], [0.2, -0.04], [0.275, -0.215], [0.245, -0.26], [0.16, -0.262], [0.1, -0.085]], 0.074, legno, 0, 0.008);
+    for (let i = 0; i < 5; i++) blocco(g, 0.078, 0.004, 0.04, legnoS, 0, -0.1 - i * 0.03, 0.15 + i * 0.016);
+    [-1, 1].forEach(s => { const md = pz2(g, new T.CylinderGeometry(0.014, 0.014, 0.004, 14), mp(0xd9a441, 0.9), s * 0.04, -0.15, 0.185); md.rotation.z = PI / 2; });
+    ponticello(g, 0.075, -0.07);
+    const cane = perno(g, 0, 0.055, 0.17); blocco(cane, 0.018, 0.06, 0.025, MET(), 0, 0.03, 0).rotation.x = -0.4;
+    brilla(g, 0.018, 0xff8a5a, 0, 0.032, -0.6);
+    viti(g, [[0.031, 0.02, 0.1], [-0.031, 0.02, 0.1], [0.031, -0.02, -0.15], [-0.031, -0.02, -0.15]]);
+    const s = { giro: 0, ang: 0 };
+    const anim = (t, dt, info) => {
+      info = info || {}; if (info.colpo) s.giro += PI / 3; s.ang += (s.giro - s.ang) * Math.min(1, (dt || 0) * 18);
+      const k = scatto(s, dt || 0, info.colpo, 0.12), r = fuori(info.ric || 0);
+      tamb.rotation.z = s.ang + (info.ric > 0 ? t * 9 * r : 0); perTamb.position.x = r * 0.07; perTamb.rotation.z = r * 0.9;
+      cane.rotation.x = k > 0 ? -0.6 * k : -0.05; g.rotation.z = Math.sin(t * 1.5) * 0.03;
+    };
+    return { root, anim, alt: 0.4, nome: 'Martello' };
   }
 
   B.ModelliRaid = { strisciante, novizio, guardacripta, cantrice, officiante, bruthak, reSenzaLuce, rondine, tridente, martello, COLORI: C };
