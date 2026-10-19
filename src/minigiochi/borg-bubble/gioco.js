@@ -24,6 +24,12 @@
   const LETTERE = ['B', 'O', 'R', 'G', 'O'], TUTTE = 31;
   const CIBO = [['🍒', 100], ['🍌', 200], ['🍉', 300], ['🍦', 500], ['🥐', 700], ['🍕', 1000], ['🍩', 2000], ['🃏', 4000], ['⭐', 8000]];
   const COL_GIOC = ['#7fd66a', '#5ab4ff'];
+  /* potenziamenti: le caramelle e la scarpetta durano finche' non perdi una vita
+     0 caramella rosa = bolle a raffica, 1 caramella blu = bolle piu' lontane, 2 caramella gialla = bolle piu' veloci,
+     3 scarpetta = corri piu' veloce, 4 orologio = nemici fermi per qualche secondo, 5 ombrello = salti 3 round */
+  const POTERI = [
+    { nome: 'RAFFICA!', peso: 3, col: '#ff7ac0' }, { nome: 'PIÙ LONTANO!', peso: 3, col: '#5ab4ff' }, { nome: 'PIÙ VELOCI!', peso: 2, col: '#ffd84a' },
+    { nome: 'SCARPETTA!', peso: 3, ico: '👟' }, { nome: 'TEMPO FERMO!', peso: 1.4, ico: '⏰' }, { nome: 'SALTI 3 ROUND!', peso: 0.6, ico: '☂️' }];
 
   /* ---------- salvataggio: record e statistiche ---------- */
   const CHIAVE = 'borg_bubble_v1';
@@ -64,20 +70,20 @@
      ==================================================================== */
   let S = null;            // partita che gira su questo telefono (da soli o da tavolo)
   function nuovoGiocatore(i, info) {
-    return { i, look: info.look, nick: info.nick, x: 0, y: 0, vx: 0, vy: 0, w: 12, h: 18, dir: i ? -1 : 1, aTerra: false, vite: 3, punti: 0, lettere: 0,
+    return { i, look: info.look, nick: info.nick, x: 0, y: 0, vx: 0, vy: 0, w: 12, h: 18, dir: i ? -1 : 1, aTerra: false, vite: 3, punti: 0, lettere: 0, pot: 0,
       morto: false, tm: 0, inv: 0, fuori: false, cd: 0, soffia: 0, passo: 0, salto: false, spari: 0, salti: 0, ultimoSalto: false };
   }
   function nuovaSim(giocatori, livello) {
     S = { n: livello || 0, liv: null, g: giocatori.map((x, i) => nuovoGiocatore(i, x)), nemici: [], bolle: [], cibo: [], testi: [], spettro: null,
-      t: 0, fase: 'round', ft: 1.8, svelto: false, fine: 0, idN: 1, q: 0, sn: { pop: 0, presa: 0, morte: 0, cibo: 0, lettera: 0, vita: 0, svelto: 0, round: 0, salto: 0, bolla: 0 },
-      tLettera: 8, livelliFatti: 0, finita: false };
+      t: 0, fase: 'round', ft: 1.8, svelto: false, fine: 0, idN: 1, q: 0, sn: { pop: 0, presa: 0, morte: 0, cibo: 0, lettera: 0, vita: 0, svelto: 0, round: 0, salto: 0, bolla: 0, potere: 0 },
+      tLettera: 8, livelliFatti: 0, finita: false, poteri: [], tPot: 8, gelo: 0, ombrello: 0 };
     iniziaLivello(S.n);
     return S;
   }
   function suona(nome) { if (!S) return; S.sn[nome] = (S.sn[nome] || 0) + 1; sfx(nome); }
   function iniziaLivello(n) {
     S.n = n; S.liv = costruisciLivello(n); S.t = 0; S.svelto = false; S.spettro = null; S.fine = 0; S.tLettera = 8 + Math.random() * 6;
-    S.bolle = []; S.cibo = []; S.testi = [];
+    S.bolle = []; S.cibo = []; S.testi = []; S.poteri = []; S.tPot = 7 + Math.random() * 6; S.gelo = 0; S.ombrello = 0;
     const vel = 1 + Math.min(0.8, n * 0.04 + S.liv.giro * 0.25);
     S.nemici = S.liv.nemici.map(e => ({ id: S.idN++, tipo: e.tipo, x: e.x, y: e.y, vx: 0, vy: 0, w: 14, h: 14, dir: e.dir, aTerra: false, furia: false, fuggito: false, preso: null, volo: false, vel, t: Math.random() * 2, giu: e.tipo === 3 ? 1 : 0 }));
     S.nemici.forEach(e => { if (e.tipo === 3) { e.vx = e.dir; e.vy = Math.random() < 0.5 ? 1 : -1; } });
@@ -156,6 +162,11 @@
     if (!S.fine && !S.svelto && S.t > TEMPO_SVELTO) { S.svelto = true; suona('svelto'); testo(FW / 2, FH / 2, 'SVELTO!', 2, 1); }
     if (!S.fine && S.svelto && !S.spettro && S.t > TEMPO_SVELTO + TEMPO_SPETTRO) S.spettro = { x: FW / 2, y: -10 };
     // lettere B-O-R-G-O
+    // potenziamenti: compaiono, durano un po', l'orologio e l'ombrello
+    if (S.gelo > 0) S.gelo -= dt;
+    S.poteri.forEach(u => { u.vita -= dt; if (u.vita <= 0) { u.via = true; S.tPot = 15 + Math.random() * 10; } }); S.poteri = S.poteri.filter(u => !u.via);
+    if (!S.fine && !S.ombrello && !S.poteri.length) { S.tPot -= dt; if (S.tPot <= 0) { S.tPot = 999; nuovoPotere(); } }
+    if (S.ombrello) { S.ombrello -= dt; if (S.ombrello <= 0) { S.livelliFatti += 3; iniziaLivello(S.n + 3); return; } }
     S.tLettera -= dt;
     if (S.tLettera <= 0 && !S.fine) { S.tLettera = 12 + Math.random() * 8; if (S.bolle.filter(b => b.lettera >= 0).length < 2) {
       // entra dal buco del pavimento (se c'e'), altrimenti compare sotto il soffitto
@@ -174,13 +185,13 @@
     if (p.fuori) return;
     if (p.morto) { p.tm -= dt; if (p.tm <= 0) { p.vite--; if (p.vite <= 0) { p.fuori = true; p.morto = false; } else posiziona(p); } return; }
     if (p.inv > 0) p.inv -= dt; if (p.cd > 0) p.cd -= dt; if (p.soffia > 0) p.soffia -= dt;
-    const dx = inp.dx || 0; p.vx = dx * VEL; if (dx) p.dir = dx; p.passo += dt * (dx ? 1 : 0);
+    const dx = inp.dx || 0; p.vx = dx * VEL * (p.pot & 8 ? 1.45 : 1); if (dx) p.dir = dx; p.passo += dt * (dx ? 1 : 0);
     p.salto = !!inp.salto;
     if (inp.saltaOra && p.aTerra) { p.vy = -SALTO; p.aTerra = false; suona('salto'); }
     if (inp.sparaOra && p.cd <= 0) {
-      p.cd = 0.28; p.soffia = 0.18;
+      p.cd = p.pot & 1 ? 0.12 : 0.28; p.soffia = 0.18;
       const bx = cl(p.x + p.dir * 9, 2 * TS + BOLLA_R, FW - 2 * TS - BOLLA_R);
-      nuovaBolla(bx, p.y - 9, p.dir * BOLLA_V, p.i, -1); suona('bolla');
+      nuovaBolla(bx, p.y - 9, p.dir * BOLLA_V * (p.pot & 2 ? 1.4 : 1) * (p.pot & 4 ? 1.25 : 1), p.i, -1); suona('bolla');
     }
     const prima = p.y;
     fisica(p, dt, true);
@@ -196,9 +207,28 @@
     // cibo
     for (const c of S.cibo) if (!c.via && c.t > 0.3 && Math.abs(c.x - p.x) < 11 && Math.abs(c.y - p.y) < 14) { c.via = true; p.punti += CIBO[c.idx][1]; testo(c.x, c.y - 10, String(CIBO[c.idx][1]), 0.9, p.i); suona('cibo'); }
     S.cibo = S.cibo.filter(c => !c.via);
+    for (const u of S.poteri) if (!u.via && Math.abs(u.x - p.x) < 11 && Math.abs(u.y - p.y) < 14) prendiPotere(p, u);
+    S.poteri = S.poteri.filter(u => !u.via);
+  }
+  function prendiPotere(p, u) {
+    u.via = true; S.tPot = 18 + Math.random() * 10; suona('potere'); p.punti += 100;
+    testo(u.x, u.y - 14, POTERI[u.tipo].nome, 1.6, p.i);
+    if (u.tipo <= 3) p.pot |= 1 << u.tipo;
+    else if (u.tipo === 4) S.gelo = 7;
+    else if (u.tipo === 5 && !S.fine) { S.ombrello = 1.2; S.spettro = null; }
+  }
+  // un potenziamento compare sopra una piattaforma a caso
+  function nuovoPotere() {
+    const tot = POTERI.reduce((a, x) => a + x.peso, 0); let r = Math.random() * tot, tipo = 0;
+    for (let i = 0; i < POTERI.length; i++) { r -= POTERI[i].peso; if (r <= 0) { tipo = i; break; } }
+    const posti = [];
+    for (let rr = 4; rr < ROWS; rr++) for (let c = 3; c < COLS - 3; c++) if (tile(S.liv, c, rr) && !tile(S.liv, c, rr - 1) && !tile(S.liv, c, rr - 2) && !tile(S.liv, c, rr - 3)) posti.push([c, rr]);
+    if (!posti.length) return;
+    const [c, rr] = posti[Math.floor(Math.random() * posti.length)];
+    S.poteri.push({ x: c * TS + TS / 2, y: rr * TS, tipo, vita: 12 });
   }
   function muori(p) {
-    p.morto = true; p.tm = 1.6; p.vx = p.vy = 0; suona('morte');
+    p.morto = true; p.tm = 1.6; p.vx = p.vy = 0; p.pot = 0; suona('morte');
     // come nell'arcade: chi muore manda via lo Spettro e la fretta ricomincia
     S.spettro = null; S.svelto = false; S.t = 0;
     S.nemici.forEach(e => { if (!e.fuggito) e.furia = false; });
@@ -212,6 +242,7 @@
   }
   function passoNemico(e, dt) {
     if (e.preso) return;
+    if (S.gelo > 0 && !e.volo) return;
     e.t += dt;
     if (e.volo) {                                   // scoppiato: vola via e diventa cibo dove atterra
       e.vy = Math.min(e.vy + GRAV * 0.8 * dt, 220); e.x += e.vx * dt;
@@ -346,16 +377,17 @@
     const fr = p => (!p.aTerra ? 5 : p.vx ? 1 + (Math.floor(p.passo * 9) % 4) : 0);
     return {
       q: ++S.q, n: S.n, f: S.fase === 'round' ? 'r' : S.fase === 'fine' ? 'o' : S.fine ? 'c' : 'g', ft: Math.round((S.fase === 'round' ? S.ft : 0) * 10), h: S.svelto ? 1 : 0,
-      p: S.g.map(p => [R(p.x), R(p.y), p.dir, p.fuori ? 2 : p.morto ? 1 : 0, fr(p), p.vite, p.punti, p.lettere, p.inv > 0 ? 1 : 0, p.soffia > 0 ? 1 : 0, Math.round(p.tm * 10)]),
+      p: S.g.map(p => [R(p.x), R(p.y), p.dir, p.fuori ? 2 : p.morto ? 1 : 0, fr(p), p.vite, p.punti, p.lettere, p.inv > 0 ? 1 : 0, p.soffia > 0 ? 1 : 0, Math.round(p.tm * 10), p.pot]),
+      u: S.poteri.map(u => [R(u.x), R(u.y), u.tipo, u.vita < 2.5 ? 1 : 0]), z: S.gelo > 0 ? 1 : 0,
       e: S.nemici.filter(e => !e.preso).map(e => [e.id, e.tipo, R(e.x), R(e.y), e.dir, e.furia || S.svelto ? 1 : 0, e.volo ? 1 : 0]),
       b: S.bolle.map(b => [b.id, R(b.x), R(b.y), b.owner, b.preda ? 10 + b.preda.tipo : b.lettera >= 0 ? 20 + b.lettera : 0, b.vita < 2 ? 1 : 0]),
       c: S.cibo.map(c => [R(c.x), R(c.y), c.idx, c.vita < 2 ? 1 : 0]),
       s: S.spettro ? [R(S.spettro.x), R(S.spettro.y)] : 0,
       tx: S.testi.map(t => [t.id, R(t.x), R(t.y), t.s, t.chi, Math.round(t.t * 10)]),
-      sn: [S.sn.pop, S.sn.presa, S.sn.morte, S.sn.cibo, S.sn.lettera, S.sn.vita, S.sn.svelto, S.sn.round, S.sn.salto, S.sn.bolla]
+      sn: [S.sn.pop, S.sn.presa, S.sn.morte, S.sn.cibo, S.sn.lettera, S.sn.vita, S.sn.svelto, S.sn.round, S.sn.salto, S.sn.bolla, S.sn.potere]
     };
   }
-  const SUONI = ['pop', 'presa', 'morte', 'cibo', 'lettera', 'vita', 'svelto', 'round', 'salto', 'bolla'];
+  const SUONI = ['pop', 'presa', 'morte', 'cibo', 'lettera', 'vita', 'svelto', 'round', 'salto', 'bolla', 'potere'];
 
   /* ====================================================================
      SUONI (sintetizzati: niente file audio)
@@ -376,6 +408,7 @@
     else if (tipo === 'pop') { nota(900, 180, 0.09, 'triangle', 0.16); nota(1400, 400, 0.05, 'square', 0.03); }
     else if (tipo === 'presa') { nota(520, 1040, 0.12, 'sine', 0.13); nota(780, 1560, 0.1, 'sine', 0.08, 0.06); }
     else if (tipo === 'morte') [660, 520, 400, 300, 220].forEach((f, i) => nota(f, f * 0.94, 0.14, 'square', 0.06, i * 0.11));
+    else if (tipo === 'potere') [660, 880, 1100, 1320, 1760].forEach((f, i) => nota(f, f * 1.05, 0.07, 'square', 0.06, i * 0.05));
     else if (tipo === 'cibo') { nota(1320, 1320, 0.07, 'square', 0.05); nota(1760, 1760, 0.09, 'square', 0.05, 0.07); }
     else if (tipo === 'lettera') [880, 1100, 1320].forEach((f, i) => nota(f, f, 0.08, 'triangle', 0.1, i * 0.06));
     else if (tipo === 'vita') [523, 659, 784, 1047, 784, 1047].forEach((f, i) => nota(f, f, 0.12, 'square', 0.06, i * 0.1));
@@ -459,6 +492,20 @@
     if (furia) { g.strokeStyle = '#1a1424'; g.lineWidth = 1; g.beginPath(); g.moveTo(-1, -4.6); g.lineTo(3, -3.4); g.moveTo(3.8, -3.4); g.lineTo(6.4, -4.4); g.stroke(); }
     g.restore();
   }
+  function disegnaPotere(g, tipo, x, y, sc) {
+    const P = POTERI[tipo]; if (!P) return;
+    g.save(); g.translate(x, y); g.scale(sc, sc);
+    if (P.ico) { g.font = '11px "Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji",sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText(P.ico, 0, 0.5); }
+    else {                                                     // caramella incartata
+      g.fillStyle = P.col;
+      g.beginPath(); g.moveTo(-4, 0); g.lineTo(-8, -3.5); g.lineTo(-8, 3.5); g.closePath(); g.fill();
+      g.beginPath(); g.moveTo(4, 0); g.lineTo(8, -3.5); g.lineTo(8, 3.5); g.closePath(); g.fill();
+      g.beginPath(); g.ellipse(0, 0, 5, 4, 0, 0, 2 * PI); g.fill();
+      g.strokeStyle = 'rgba(255,255,255,.8)'; g.lineWidth = 1; g.beginPath(); g.moveTo(-2.5, -2.5); g.lineTo(0.5, 2.8); g.moveTo(0.5, -3); g.lineTo(3, 2); g.stroke();
+      g.fillStyle = 'rgba(255,255,255,.75)'; g.beginPath(); g.ellipse(-1.8, -1.8, 1.4, 0.8, -0.5, 0, 2 * PI); g.fill();
+    }
+    g.restore();
+  }
   function disegnaSpettro(g, x, y, t) {
     g.save(); g.translate(x, y + Math.sin(t * 4) * 1.2); g.globalAlpha = 0.86;
     g.fillStyle = '#f2eefa'; g.beginPath(); g.arc(0, -2, 8, PI, 0); g.lineTo(8, 7);
@@ -508,7 +555,7 @@
 
   function scritta(g, s, x, y, size, col, allineo) {
     g.font = '900 ' + size + 'px system-ui,"Arial Black",sans-serif'; g.textAlign = allineo || 'center'; g.textBaseline = 'middle';
-    g.lineWidth = Math.max(2, size / 4); g.strokeStyle = '#120a1e'; g.strokeText(s, x, y); g.fillStyle = col; g.fillText(s, x, y);
+    g.lineJoin = 'round'; g.lineWidth = Math.max(2, size / 4); g.strokeStyle = '#120a1e'; g.strokeText(s, x, y); g.fillStyle = col; g.fillText(s, x, y);
   }
 
   // disegna una istantanea (giocatori: info = [{look, nick}, ...])
@@ -524,6 +571,7 @@
     scritta(g, 'RECORD', W / 2, 4.5, 7, '#ff5a4a'); scritta(g, String(Math.max(SAV.record, ...pp.map(p => p[6]))), W / 2, 11.5, 7.5, '#fff');
     if (due) { scritta(g, nome(1), W - 34, 4.5, 7, COL_GIOC[1]); scritta(g, String(pp[1][6]), W - 34, 11.5, 7.5, '#fff'); }
     else scritta(g, 'ROUND ' + (sn.n + 1), W - 34, 8, 7, '#ffe14a');
+    pp.forEach((p, i) => { let k = 0; for (let b = 0; b < 4; b++) if (p[11] & (1 << b)) { disegnaPotere(g, b, i ? W - 70 - k * 9 : 70 + k * 9, 8, 0.62); k++; } });
     g.save(); g.translate(0, HUD);
     g.beginPath(); g.rect(0, 0, FW, FH); g.clip();
     if (telaN !== sn.n || telaK !== K) preparaTela(sn.n);
@@ -537,8 +585,10 @@
     // cibo
     g.textAlign = 'center'; g.textBaseline = 'alphabetic';
     sn.c.forEach(c => { if (c[3] && Math.floor(t * 8) % 2) return; g.font = '11px "Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji",sans-serif'; g.fillText(CIBO[c[2]] ? CIBO[c[2]][0] : '🍒', c[0], c[1]); });
-    // nemici
-    sn.e.forEach(e => disegnaNemico(g, e[1], e[2], e[3], e[4], e[5], t + e[0], e[6]));
+    (sn.u || []).forEach(u => { if (u[3] && Math.floor(t * 8) % 2) return; disegnaPotere(g, u[2], u[0], u[1] - 6 + Math.sin(t * 4) * 1, 1); });
+    // nemici (con l'orologio sono fermi e azzurrini)
+    sn.e.forEach(e => disegnaNemico(g, e[1], e[2], e[3], e[4], e[5], sn.z && !e[6] ? 0 : t + e[0], e[6]));
+    if (sn.z) { g.fillStyle = 'rgba(140,210,255,.35)'; sn.e.forEach(e => { if (!e[6]) { g.beginPath(); g.arc(e[2], e[3] - 7, 9, 0, 2 * PI); g.fill(); } }); }
     // giocatori
     pp.forEach((p, i) => disegnaGiocatore(g, p, info[i] || {}, t));
     // bolle
@@ -666,7 +716,8 @@
     const L = LIVELLI().length || 1;
     return {
       q: num(s.q, 0), n: cl(Math.floor(num(s.n, 0)), 0, 999), f: ['r', 'g', 'c', 'o'].includes(s.f) ? s.f : 'g', ft: num(s.ft, 0), h: num(s.h, 0),
-      p: arr(s.p, 2).map(p => nums(p, 11)), e: arr(s.e, 24).map(e => nums(e, 7)).filter(e => e[1] >= 1 && e[1] <= 3), b: arr(s.b, MAX_BOLLE).map(b => nums(b, 6)),
+      p: arr(s.p, 2).map(p => nums(p, 12)), e: arr(s.e, 24).map(e => nums(e, 7)).filter(e => e[1] >= 1 && e[1] <= 3), b: arr(s.b, MAX_BOLLE).map(b => nums(b, 6)),
+      u: arr(s.u, 3).map(u => nums(u, 4)).filter(u => u[2] >= 0 && u[2] < POTERI.length), z: num(s.z, 0),
       c: arr(s.c, 30).map(c => nums(c, 4)), s: Array.isArray(s.s) ? nums(s.s, 2) : 0,
       tx: arr(s.tx, 10).map(x => [num(x[0], 0), num(x[1], 0), num(x[2], 0), String(x[3] == null ? '' : x[3]).slice(0, 24), num(x[4], -1), num(x[5], 0)]),
       sn: nums(s.sn, SUONI.length), L
@@ -929,6 +980,7 @@ body.bb-attivo #controlli,body.bb-attivo #joy,body.bb-attivo #btn-contesto,body.
     '<li>Si passa sotto le piattaforme saltando. Dal buco in basso si rientra dall\'alto.</li>' +
     '<li>Se ci metti troppo arriva <b>Svelto!</b> e poi lo <b>Spettro</b>, che non si può prendere.</li>' +
     '<li>Raccogli le lettere <b>B O R G O</b> nelle bolle colorate: una vita in più.</li>' +
+    '<li><b>Potenziamenti</b> (compaiono sulle piattaforme, li perdi se perdi una vita): caramella rosa = bolle a raffica, caramella blu = bolle più lontane, caramella gialla = bolle più veloci, scarpetta 👟 = corri più veloce, orologio ⏰ = nemici fermi per qualche secondo, ombrello ☂️ = salti 3 round.</li>' +
     '</ul><small>Tastiera: frecce o A/D per muoverti, Spazio o ↑ per saltare, X o Invio per la bolla, Esc per la pausa.</small>';
   function menu() {
     if (!root) return;
