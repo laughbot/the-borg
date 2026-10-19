@@ -14,7 +14,7 @@ src/
   borgo/               il mondo: piazza, casa, avatar, interfaccia, coins, missioni, suoni...
   chat/                filtro della chat (parolacce, dati personali, modalità lenta)
   negozi/              Laugh Tale Collectibles e negozio TCG
-  minigiochi/          go-kart, paintball, cripta, belinverse, comandi FPS condivisi
+  minigiochi/          go-kart, paintball, cripta, belinverse, borg-bubble, comandi FPS condivisi
   online/              gioco online con gli amici
   librerie/            three.js e PeerJS (codice di terzi, non si tocca)
   dati/                immagini incollate come testo (loghi, carte di Belinverse)

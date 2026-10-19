@@ -6,7 +6,7 @@
    - teletrasporto: ne servono due, entri in uno ed esci dall'altro
    - jukebox: due dischi per la stanza (B.Audio.jukebox)
    - frigorifero: ti da' una bibita in mano
-   - TV: tre canali; cabinato arcade: fa partire un minigioco
+   - TV: tre canali; cabinato arcade: fa partire Borg Bubble
    - trampolino: ci cammini sopra e rimbalzi (altezza in arredi.js, "salta")
    - cartello: il padrone di casa ci scrive, chi visita lo legge
    Lo stato (luce spenta, disco, canale, scritta, faccia del dado) resta salvato
@@ -180,10 +180,8 @@
   }
   function chiudi() { if (ov) ov.classList.remove('on'); }
   MI.chiudi = chiudi;
-  function cabinato() {
-    const bx = finestra('<div style="font-size:30px">🕹️</div><b>A cosa giochi?</b><button data-g="kart">🏎️ Go-Kart</button><button data-g="paintball">🎯 Paintball</button><button data-g="raid">⚔️ La Cripta (raid)</button><button class="sec" data-g="">Annulla</button>');
-    bx.querySelectorAll('button').forEach(b => b.addEventListener('click', () => { chiudi(); if (b.dataset.g) app.usaPorta({ gioco: b.dataset.g }); }));
-  }
+  // il cabinato arcade fa partire Borg Bubble
+  function cabinato() { if (B.Bubble) B.Bubble.apri(); else toast('Il cabinato è spento'); }
   function scriviCartello(attuale, fatto) {
     const bx = finestra('<div style="font-size:30px">📋</div><b>Cosa scrivi sul cartello?</b><input maxlength="40" enterkeyhint="done"><small>Lo leggono gli amici che vengono a trovarti</small><button>Scrivi</button><button class="sec">Annulla</button>');
     const inp = bx.querySelector('input'), [ok, no] = bx.querySelectorAll('button');
@@ -259,7 +257,7 @@
       applica(st, m, v) { if (v) m.s.tv = v; else delete m.s.tv; sfx('pop', 0.4); },
       stato: true, valida: v => intero(v, 0, 3)
     },
-    arcade: { testo: () => 'Gioca al cabinato', fai() { cabinato(); } },
+    arcade: { testo: () => 'Gioca a Borg Bubble', fai() { cabinato(); } },
     salto: { testo: () => 'Salta!', fai() { toast('Salici sopra e rimbalzi! 🤸'); } },
     cartello: {
       testo: (m, st) => (st.id === 'casa' ? 'Scrivi sul cartello' : 'Leggi il cartello'),

@@ -61,6 +61,8 @@ export const BLOCCHI = [
   ['window.BELIN_IMG=', 'src/dati/belinverse-immagini.js'],
   ['BELINVERSE 2 (Set 001)', 'src/minigiochi/belinverse/carte.js'],
   ['BELINVERSE 2: il gioco di carte', 'src/minigiochi/belinverse/gioco.js'],
+  ['BORG BUBBLE: i livelli', 'src/minigiochi/borg-bubble/livelli.js'],
+  ['BORG BUBBLE: il gioco del cabinato', 'src/minigiochi/borg-bubble/gioco.js'],
   ['BORGO LUME 3D - PROGRAMMA PRINCIPALE', 'src/borgo/programma-principale.js'],
   ['UI - interfaccia: schermata iniziale', 'src/borgo/interfaccia.js'],
   ['TUTORIAL DEL PRIMO AC', 'src/borgo/tutorial.js'],

@@ -7,8 +7,8 @@
    Fuori da claude.ai si gioca con un codice nel link (?amici=CODICE):
    i telefoni si collegano tra loro (PeerJS, lib/peerjs.min.js); il primo
    arrivato fa da padrone di casa e gira a tutti la presenza degli altri.
-   Nei minigiochi (kart, paintball, raid, carte) la presenza porta anche lo stato di
-   gioco (k = B.Kart/Paintball/Raid/Belinverse.rete()): chi gioca nello stesso momento
+   Nei minigiochi (kart, paintball, raid, carte, bubble) la presenza porta anche lo stato di
+   gioco (k = B.Kart/Paintball/Raid/Belinverse/Bubble.rete()): chi gioca nello stesso momento
    gioca con gli altri.
    Con un server di gioco (?server= o B3.SERVER) la stanza del codice vive sul
    server Nakama (B3.stanzaNakama, cartella server/ del repo) al posto di PeerJS.
@@ -28,7 +28,7 @@
   const LOOK = ['pelle', 'stile', 'capelli', 'occhi', 'giacca', 'dettagli', 'abito', 'pantaloni', 'stivali', 'accessorio'];
   const lookDa = l => { const o = {}; LOOK.forEach(k => { o[k] = Math.max(0, Math.min(40, Math.round(num(l && l[k], 0)))); }); return o; };
   // minigiochi online: ognuno da' il suo stato (rete) e riceve quello degli amici (amico)
-  const GIOCHI = { kart: () => B.Kart, paintball: () => B.Paintball, raid: () => B.Raid, carte: () => B.Belinverse };
+  const GIOCHI = { kart: () => B.Kart, paintball: () => B.Paintball, raid: () => B.Raid, carte: () => B.Belinverse, bubble: () => B.Bubble };
   const aiGiochi = (peer, nick, pr) => Object.keys(GIOCHI).forEach(n => { const m = GIOCHI[n](); if (m && m.amico) m.amico(peer, nick, pr && pr.s === n ? pr.k : null, pr ? lookDa(pr.look) : null); });
   let room = null, nMsg = 0, nEm = 0, ultimo = '', tInvio = 0, nInvio = 0, prec = null;
 
@@ -46,7 +46,7 @@
   function mia() {
     const io = app.io, st = app.stanza(), gioco = G.stato.giocatore;
     if (!gioco || !io.av) return null;
-    const dove = (B.Raid && B.Raid.attivo) ? 'raid' : (B.Paintball && B.Paintball.attivo) ? 'paintball' : (B.Kart && B.Kart.attivo) ? 'kart' : (B.Belinverse && B.Belinverse.attivo) ? 'carte' : luogo();
+    const dove = (B.Raid && B.Raid.attivo) ? 'raid' : (B.Paintball && B.Paintball.attivo) ? 'paintball' : (B.Kart && B.Kart.attivo) ? 'kart' : (B.Belinverse && B.Belinverse.attivo) ? 'carte' : (B.Bubble && B.Bubble.attivo) ? 'bubble' : luogo();
     return { v: 1, nick: testo(gioco.nick, 20), look: lookDa(gioco.look), s: dove, x: +io.x.toFixed(2), z: +io.z.toFixed(2), y: +io.y.toFixed(2), r: +io.yaw.toFixed(2),
       vel: +Math.hypot(io.vx, io.vz).toFixed(2), sed: io.seduto ? (io.seduto.dorme ? 2 : 1) : 0, bk: io.bici ? 1 : 0, k: GIOCHI[dove] && GIOCHI[dove]().rete ? GIOCHI[dove]().rete() : null,
       mc: B.Mercato && B.Mercato.annunciRete ? B.Mercato.annunciRete() : null, mo: mieiMo.length ? { l: mieiMo } : undefined, re: mieiRe.length ? { l: mieiRe } : undefined,
@@ -215,7 +215,7 @@
       G.emetti('dm', { id });
     });
   }
-  const NOMI = { piazza: 'In piazza', raid: 'Nel raid', paintball: 'A paintball', kart: 'Sui kart', carte: 'A Belinverse', casa: 'A casa sua' };
+  const NOMI = { piazza: 'In piazza', raid: 'Nel raid', paintball: 'A paintball', kart: 'Sui kart', carte: 'A Belinverse', bubble: 'A Borg Bubble', casa: 'A casa sua' };
   const utenteOrig = G.utente, inviaOrig = G.inviaDM, sussurroOrig = G.inviaSussurro;
   // sussurro a un amico: deve essere nel tuo stesso luogo; parte con la chat (msg.a), lo legge solo lui
   G.inviaSussurro = function (id, t) {
@@ -386,6 +386,7 @@
     const a = amicoDa(id);
     if (!a) { G.emetti('toast', (G.utente(id) || {}).nick + ' non è online'); return; }
     const s = String(a.pr.s || '');
+    if (s === 'bubble') { G.emetti('toast', a.nick + ' sta giocando a Borg Bubble: apri un cabinato arcade per giocare con lui'); return; }
     if (GIOCO_NOME[s]) { G.emetti('toast', a.nick + ' sta giocando ' + GIOCO_NOME[s] + ': lo trovi nella Sala Giochi'); return; }
     if (stessoLuogo(s, luogo())) { G.emetti('toast', a.nick + ' è qui con te'); return; }
     if (s.indexOf('casa:') === 0) {
