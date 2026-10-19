@@ -24,6 +24,7 @@ const RADICE = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 // L'ordine conta solo se due testi possono comparire nello stesso blocco: vince il primo.
 export const BLOCCHI = [
   ['App dalla schermata Home: ricorda il codice', 'src/avvio/schermata-home.js'],
+  ['THE BORG - AGGIORNAMENTI', 'src/avvio/aggiorna.js'],
   ["BORGO LUME - STILE DELL'INTERFACCIA", 'src/stile.css'],
   ['se qualcosa si rompe sul telefono', 'src/avvio/errori-telefono.js'],
   ['Scripts "build/three.js" and "build/three.min.js" are deprecated', 'src/librerie/three.js'],
@@ -128,6 +129,8 @@ export function scomponi(html) {
     modello = modello.slice(0, inizioTag) + tag.replace(ms[1], `@@include(${dest})@@`) + modello.slice(fineTag + 1);
   }
 
+  // la versione scritta da costruisci.mjs torna segnaposto
+  modello = modello.replace(/(<meta name="versione" content=")[^"]*(")/, '$1@@versione@@$2');
   file.set('src/pagina.html', modello);
   return { file, avvisi };
 }

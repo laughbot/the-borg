@@ -6,9 +6,10 @@
 //
 // Il modello e' src/pagina.html: ogni @@include(percorso)@@ viene sostituito con
 // il contenuto del file indicato (percorso dalla cartella principale del progetto),
-// togliendo l'ultimo "a capo" del file. Niente librerie esterne: basta Node.
+// togliendo l'ultimo "a capo" del file. @@versione@@ diventa l'impronta del gioco. Niente librerie esterne: basta Node.
 
 import { readFileSync, writeFileSync, existsSync } from 'node:fs';
+import { createHash } from 'node:crypto';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -26,7 +27,9 @@ export function costruisci(radice = RADICE) {
     const testo = readFileSync(file, 'utf8');
     return testo.endsWith('\n') ? testo.slice(0, -1) : testo;
   });
-  return { html, usati };
+  // versione = impronta del gioco: cambia solo quando cambia qualcosa (la legge src/avvio/aggiorna.js)
+  const versione = createHash('sha1').update(html).digest('hex').slice(0, 12);
+  return { html: html.replace('@@versione@@', versione), usati };
 }
 
 if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
