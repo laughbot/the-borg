@@ -56,10 +56,34 @@
      sussurro: solo tu e chi lo riceve lo vedete; lontano: detto lontano da te (piu' tenue). */
   function aggiungiVoce(voce) {
     voce.stanza = voce.stanza || stato.chiaveChat || stato.stanzaId;
+    voce.reazioni = voce.reazioni || {};
+    if (!voce.io && stato.giocatore && citaNick(voce.testo, stato.giocatore.nick)) voce.menzione = true;
     stato.chat.push(voce); if (stato.chat.length > 150) stato.chat.shift();
     emetti('chat', voce);
+    if (voce.menzione) emetti('menzione', voce);
     return voce;
   }
+  // "@Nick" nel testo (maiuscole e minuscole non contano)
+  function citaNick(testo, nick) {
+    if (!nick) return false;
+    const re = new RegExp('@' + nick.replace(/[^A-Za-z0-9_]/g, '') + '(?![A-Za-z0-9_])', 'i');
+    return re.test(testo || '');
+  }
+
+  /* ---------- reazioni ai messaggi (❤️ 😂 👍 😮): un tocco mette o toglie la tua ----------
+     voce.reazioni = { emoji: [nick, ...] }. Con gli amici veri viaggiano con la chiave del messaggio (online/amici.js). */
+  const REAZIONI = ['❤️', '😂', '👍', '😮'];
+  const RISPOSTE_CITATO = ['Eccomi!', 'Dimmi tutto!', 'Ciao! 👋', 'Sì?', 'Ci sono!', 'Ahah, ciao!'];
+  function reagisci(voce, emoji, daNick, on) {
+    if (!voce || REAZIONI.indexOf(emoji) < 0) return;
+    const chi = daNick || (stato.giocatore && stato.giocatore.nick) || 'io', l = voce.reazioni[emoji] || (voce.reazioni[emoji] = []);
+    const i = l.findIndex(n => n.toLowerCase() === chi.toLowerCase()), metti = on === undefined ? i < 0 : on;
+    if (metti && i < 0) l.push(chi); else if (!metti && i >= 0) l.splice(i, 1);
+    else return;
+    if (!l.length) delete voce.reazioni[emoji];
+    emetti('reazione', { voce, emoji, on: metti, mia: !daNick });
+  }
+  function voceDaChiave(k) { for (let i = stato.chat.length - 1; i >= 0; i--) if (stato.chat[i].chiave === k) return stato.chat[i]; return null; }
   function aggiungiChat(id, nick, testo, io, extra) { return aggiungiVoce(Object.assign({ id, nick, testo, ora: ora(), io: !!io }, extra || {})); }
   function chatQui() { const k = stato.chiaveChat || stato.stanzaId; return stato.chat.filter(m => m.stanza === k); }
 
@@ -78,7 +102,13 @@
   function inviaChat(testo) {
     testo = controllaMessaggio(testo, 'chat', 120);
     if (!testo) return false;
-    aggiungiChat('io', stato.giocatore.nick, testo, true);
+    const mia = aggiungiChat('io', stato.giocatore.nick, testo, true);
+    // abitanti dimostrativi: chi viene citato con @ risponde quasi sempre; ogni tanto qualcuno mette una reazione
+    if (stato.stanzaId === 'piazza') {
+      const citato = inPiazza().find(u => citaNick(testo, u.nick));
+      if (citato) { setTimeout(() => { if (!stato.bloccati.has(citato.id)) aggiungiChat(citato.id, citato.nick, '@' + stato.giocatore.nick + ' ' + pick(RISPOSTE_CITATO)); }, rnd(1400, 2600)); return true; }
+      if (Math.random() < 0.3) setTimeout(() => { const u = pick(inPiazza()); if (u) reagisci(mia, pick(REAZIONI), u.nick, true); }, rnd(1500, 3500));
+    }
     if (stato.stanzaId === 'piazza' && Math.random() < 0.55) {
       const cand = inPiazza();
       if (cand.length) setTimeout(() => { const u = pick(inPiazza().length ? inPiazza() : cand); aggiungiChat(u.id, u.nick, pick(CFG.rispostePiazza).replace('{nick}', stato.giocatore.nick)); }, rnd(1500, 3200));
@@ -164,5 +194,5 @@
   function cambiaLook(look) { stato.giocatore.look = Object.assign({}, look); salva(); emetti('look', stato.giocatore.look); }
 
   window.Gioco = { stato, su, emetti, avvia, tick, inviaChat, inviaDM, eliminaConversazione, eliminaMessaggio, conversazione, totNonLetti, segnaLetti, blocca, sblocca, segnala,
-    segnalazioni, MOTIVI, elencoBloccati, controllaMessaggio, aggiungiVoce, chatQui, inviaSussurro, carica, salva, utente, nickValido, nickPermesso, impostaAtmosfera, impostaGrafica, cambiaLook, inPiazza, botPiazza };
+    segnalazioni, MOTIVI, elencoBloccati, controllaMessaggio, aggiungiVoce, chatQui, inviaSussurro, citaNick, REAZIONI, reagisci, voceDaChiave, carica, salva, utente, nickValido, nickPermesso, impostaAtmosfera, impostaGrafica, cambiaLook, inPiazza, botPiazza };
 })();

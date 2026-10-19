@@ -230,6 +230,32 @@ button { cursor: pointer; border: 0; background: none; touch-action: manipulatio
 #chat-sussurro span { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 #chat-sussurro button { flex: none; width: 28px; height: 28px; border-radius: 50%; background: rgba(255,255,255,.16); font-size: 13px; }
 #chat.sussurra #chat-form input { border-color: #a58ef0; }
+/* frasi rapide, emoji, menzioni, reazioni, chat grande */
+#chat-form .btn-rapidi { width: 40px; height: 40px; border-radius: 50%; background: rgba(255,255,255,.1); color: inherit; font-size: 20px; }
+#chat-form .btn-rapidi[aria-expanded="true"] { background: rgba(242,199,110,.3); }
+#chat-vassoio { display: flex; flex-direction: column; gap: 6px; padding: 6px 8px 0; }
+#chat-vassoio[hidden], #chat.compatta #chat-vassoio, #chat-suggerimenti[hidden], #chat.compatta #chat-suggerimenti { display: none; }
+.vassoio-riga { display: flex; gap: 6px; overflow-x: auto; scrollbar-width: none; -webkit-overflow-scrolling: touch; }
+.vassoio-riga::-webkit-scrollbar { display: none; }
+.vassoio-riga button { flex: none; padding: 7px 12px; border-radius: 99px; background: rgba(255,255,255,.1); border: 1px solid rgba(255,255,255,.12); font-size: 14px; white-space: nowrap; }
+#chat-emoji button { padding: 4px 8px; font-size: 21px; background: none; border-color: transparent; }
+#chat-suggerimenti { display: flex; gap: 6px; padding: 6px 8px 0; overflow-x: auto; }
+#chat-suggerimenti button { flex: none; padding: 6px 12px; border-radius: 99px; background: rgba(74,141,240,.3); border: 1px solid rgba(74,141,240,.6); font-size: 14px; font-weight: 700; }
+.riga .cita { color: #8fc1ff; font-weight: 700; }
+.riga .cita.me { color: #1d1430; background: var(--ambra); border-radius: 6px; padding: 0 4px; }
+.riga.menzione { background: rgba(242,199,110,.13); border-radius: 10px; margin: 0 -6px; padding: 3px 6px; }
+.riga .corpo { cursor: pointer; }
+.riga .reaz-riga { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 3px; }
+.riga .reaz { padding: 1px 7px; border-radius: 99px; background: rgba(255,255,255,.12); font-size: 12px; text-shadow: none; }
+.riga .reaz.mia { background: rgba(242,199,110,.3); }
+.reaz-scegli { display: flex; gap: 4px; margin: 2px 0 4px 30px; }
+.reaz-scegli button { width: 38px; height: 34px; border-radius: 12px; background: rgba(255,255,255,.12); font-size: 19px; }
+#chat-grande { margin-left: auto; }
+#chat-grande + #chat-chiudi { margin-left: 6px; }
+#chat-grande[aria-pressed="true"] { background: rgba(242,199,110,.3); }
+#chat.grande #chat-lista { max-height: 290px; }
+#chat.compatta #chat-grande { display: none; }
+body.orizz #chat.grande #chat-lista { max-height: 150px; }
 .riga.sistema .link { color: var(--ambra); text-decoration: underline; font-style: normal; font-weight: 700; padding: 0 0 0 4px; font-size: inherit; }
 .sicurezza-box { padding: 12px 14px; display: flex; flex-direction: column; gap: 10px; }
 .sicurezza-box p { margin: 0; }

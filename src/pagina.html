@@ -69,13 +69,22 @@
         <strong id="chat-titolo">Chat</strong>
         <span class="tag-demo">DEMO</span>
         <span id="chat-ultimo"></span>
+        <button id="chat-grande" class="btn-mini" type="button" aria-label="Ingrandisci la chat" aria-pressed="false">
+          <svg viewBox="0 0 24 24" class="ico"><path d="M8 4H4v4M16 4h4v4M8 20H4v-4M16 20h4v-4"/></svg>
+        </button>
         <button id="chat-chiudi" class="btn-mini" aria-label="Riduci o apri la chat">
           <svg viewBox="0 0 24 24" class="ico"><path d="m6 9 6 6 6-6"/></svg>
         </button>
       </div>
       <div id="chat-lista"></div>
       <div id="chat-sussurro" hidden><span>🤫 Sussurri a <b id="chat-sussurro-nick"></b>: lo leggete solo voi due</span><button id="chat-sussurro-via" type="button" aria-label="Smetti di sussurrare">✕</button></div>
+      <div id="chat-suggerimenti" hidden role="listbox" aria-label="Persone da citare"></div>
+      <div id="chat-vassoio" hidden>
+        <div class="vassoio-riga" id="chat-frasi" aria-label="Frasi rapide"></div>
+        <div class="vassoio-riga" id="chat-emoji" aria-label="Emoji"></div>
+      </div>
       <form id="chat-form" autocomplete="off">
+        <button id="chat-rapidi" class="btn-rapidi" type="button" aria-label="Frasi rapide ed emoji" aria-expanded="false">😊</button>
         <input id="chat-input" maxlength="120" placeholder="Scrivi un messaggio…" enterkeyhint="send" autocomplete="off" autocapitalize="sentences">
         <button type="submit" aria-label="Invia"><svg viewBox="0 0 24 24" class="ico"><path d="M21 3 10 14"/><path d="m21 3-7 18-4-7-7-4Z"/></svg></button>
       </form>
