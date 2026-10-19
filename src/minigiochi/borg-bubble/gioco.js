@@ -559,7 +559,7 @@
   /* ====================================================================
      COMANDI: tastiera e tasti sullo schermo
      ==================================================================== */
-  const tasti = {}, dita = new Map();     // pointerId -> tasto sotto il dito
+  const tasti = {}, dita = new Map(), joy = { id: null, dx: 0, x0: 0, y0: 0 };     // pointerId -> tasto sotto il dito
   let premutoSalto = 0, premutoSparo = 0;  // pressioni contate (cosi' non se ne perde nessuna)
   const TASTI_SX = ['arrowleft', 'a'], TASTI_DX = ['arrowright', 'd'], TASTI_SALTO = [' ', 'arrowup', 'w', 'z'], TASTI_SPARO = ['x', 'j', 'k', 'enter', 'shift'];
   function giu(k) {
@@ -585,7 +585,7 @@
   }
   function ingressoLocale() {
     const d = [...dita.values()];
-    const sx = TASTI_SX.some(k => tasti[k]) || d.includes('sx'), dx = TASTI_DX.some(k => tasti[k]) || d.includes('dx');
+    const sx = TASTI_SX.some(k => tasti[k]) || joy.dx < 0, dx = TASTI_DX.some(k => tasti[k]) || joy.dx > 0;
     return { dx: sx && !dx ? -1 : dx && !sx ? 1 : 0, salto: !!tasti.__salto || d.includes('salto') };
   }
 
@@ -805,7 +805,10 @@
 #bb .bb-lato{width:clamp(96px,17vw,170px);display:none;flex-direction:column;justify-content:flex-end;gap:12px;padding:12px max(10px,env(safe-area-inset-left,0px)) 18px;box-sizing:border-box}
 #bb .bb-lato.dx{padding-left:10px;padding-right:max(10px,env(safe-area-inset-right,0px));align-items:flex-end}
 body:not(.pc) #bb .bb-lato{display:flex}
-#bb .bb-croce{display:flex;gap:10px}
+#bb .bb-lato.sx{width:clamp(130px,21vw,210px);padding:0;position:relative;touch-action:none}
+#bb .bb-joy{position:absolute;left:50%;bottom:calc(18px + env(safe-area-inset-bottom,0px));width:clamp(96px,15vw,128px);height:clamp(96px,15vw,128px);margin-left:calc(clamp(96px,15vw,128px) / -2);border-radius:50%;background:rgba(255,255,255,.07);border:2px solid rgba(255,255,255,.18);box-sizing:border-box;pointer-events:none}
+#bb .bb-joy.attivo{bottom:auto;margin:0;transform:translate(-50%,-50%);background:rgba(255,255,255,.1)}
+#bb .bb-manopola{position:absolute;left:50%;top:50%;width:46%;height:46%;border-radius:50%;transform:translate(-50%,-50%);background:rgba(242,199,110,.55);border:2px solid #f2c76e;box-shadow:0 2px 10px rgba(0,0,0,.4)}
 #bb [data-bb]{width:clamp(48px,8vw,66px);height:clamp(48px,8vw,66px);border-radius:50%;border:2px solid rgba(255,255,255,.18);background:rgba(255,255,255,.08);color:#fbf3dc;font:900 22px system-ui,sans-serif;display:flex;align-items:center;justify-content:center;touch-action:none}
 #bb [data-bb].giu{background:rgba(242,199,110,.45);border-color:#f2c76e}
 #bb [data-bb=bolla]{width:clamp(58px,10vw,80px);height:clamp(58px,10vw,80px);background:rgba(90,180,255,.18);border-color:rgba(90,180,255,.6)}
@@ -838,7 +841,7 @@ body.bb-attivo #controlli,body.bb-attivo #joy,body.bb-attivo #btn-contesto,body.
     const st = document.createElement('style'); st.textContent = CSS; document.head.appendChild(st);
     root = document.createElement('div'); root.id = 'bb';
     root.innerHTML =
-      '<div class="bb-lato sx"><div class="bb-croce"><div data-bb="sx" aria-label="Sinistra">◀</div><div data-bb="dx" aria-label="Destra">▶</div></div></div>' +
+      '<div class="bb-lato sx" aria-label="Joystick"><div class="bb-joy"><div class="bb-manopola"></div></div></div>' +
       '<div class="bb-campo"><canvas></canvas></div>' +
       '<div class="bb-lato dx"><div data-bb="bolla" aria-label="Bolla">🫧</div><div data-bb="salto" aria-label="Salta">⤒</div></div>' +
       '<div class="bb-alto"><button data-x="pausa" hidden>Pausa</button><button data-x="esci">✕ Esci</button></div>' +
@@ -848,6 +851,26 @@ body.bb-attivo #controlli,body.bb-attivo #joy,body.bb-attivo #btn-contesto,body.
     root.querySelector('[data-x=esci]').addEventListener('click', () => BB.chiudi());
     root.querySelector('[data-x=pausa]').addEventListener('click', () => { if (gioca && gioca.modo === 'solo' && !gioca.fine) pausa(!gioca.pausa); });
     // tasti sullo schermo: seguo ogni dito, anche quando scivola da un tasto all'altro
+    // joystick: dove appoggi il pollice nella parte sinistra compare la base, la manopola segue il dito
+    const zona = root.querySelector('.bb-lato.sx'), base = zona.querySelector('.bb-joy'), man = base.querySelector('.bb-manopola');
+    const muoviJoy = e => {
+      const [x, y] = B.ptE ? B.ptE(e) : [e.clientX, e.clientY], r = base.offsetWidth / 2 || 50;
+      let dx = x - joy.x0, dy = y - joy.y0; const d = Math.hypot(dx, dy); if (d > r) { dx *= r / d; dy *= r / d; }
+      man.style.transform = 'translate(calc(-50% + ' + dx + 'px), calc(-50% + ' + dy + 'px))';
+      joy.dx = dx > r * 0.28 ? 1 : dx < -r * 0.28 ? -1 : 0;
+    };
+    const lasciaJoy = () => { joy.id = null; joy.dx = 0; base.classList.remove('attivo'); base.style.left = base.style.top = ''; man.style.transform = ''; };
+    zona.addEventListener('pointerdown', e => {
+      if (joy.id !== null) return; e.preventDefault(); e.stopPropagation();
+      const [x, y] = B.ptE ? B.ptE(e) : [e.clientX, e.clientY];
+      joy.id = e.pointerId; joy.x0 = x; joy.y0 = y;
+      base.classList.add('attivo'); base.style.left = (x - zona.offsetLeft - root.offsetLeft) + 'px'; base.style.top = (y - zona.offsetTop - root.offsetTop) + 'px';
+      try { zona.setPointerCapture(e.pointerId); } catch (er) { /* ok */ }
+      muoviJoy(e);
+    });
+    zona.addEventListener('pointermove', e => { if (e.pointerId === joy.id) muoviJoy(e); });
+    ['pointerup', 'pointercancel', 'lostpointercapture'].forEach(t => zona.addEventListener(t, e => { if (e.pointerId === joy.id) lasciaJoy(); }));
+    BB._lasciaJoy = lasciaJoy;
     root.addEventListener('pointerdown', e => { if (!e.target.closest('[data-bb]')) return; e.preventDefault(); try { e.target.releasePointerCapture(e.pointerId); } catch (er) { /* ok */ } aggiornaDito(e); });
     root.addEventListener('pointermove', e => { if (dita.has(e.pointerId)) aggiornaDito(e); });
     ['pointerup', 'pointercancel'].forEach(t => root.addEventListener(t, e => { if (dita.has(e.pointerId)) aggiornaDito(e, true); }));
@@ -931,7 +954,7 @@ body.bb-attivo #controlli,body.bb-attivo #joy,body.bb-attivo #btn-contesto,body.
       menu();
     },
     chiudi() {
-      BB.attivo = false; cancelAnimationFrame(rafId); gioca = null; S = null; ON = null; invito = null; accetto = 0; dita.clear();
+      BB.attivo = false; cancelAnimationFrame(rafId); gioca = null; S = null; ON = null; invito = null; accetto = 0; dita.clear(); if (BB._lasciaJoy) BB._lasciaJoy();
       if (root) { root.classList.remove('on'); chiudiPannelli(); }
       document.body.classList.remove('bb-attivo');
       try { screen.orientation.unlock(); } catch (e) { /* ok */ }
