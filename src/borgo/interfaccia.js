@@ -684,7 +684,7 @@
       const adatta = () => { if (!rafVV) rafVV = requestAnimationFrame(() => { rafVV = 0; adattaOra(); }); };
       const adattaOra = () => {
         if (window.scrollY || window.scrollX) window.scrollTo(0, 0);
-        if (window.B3_ORIZZ || document.body.classList.contains('kart-attivo') || document.body.classList.contains('pb-attivo') || document.body.classList.contains('raid-attivo')) { window.scrollTo(0, 0); return; }
+        if (window.B3_ORIZZ || document.body.classList.contains('kart-attivo') || document.body.classList.contains('pb-attivo') || document.body.classList.contains('raid-attivo') || document.body.classList.contains('bb-attivo')) { window.scrollTo(0, 0); return; }
         if (inInizio()) { if (app.style.height) { app.style.height = ''; UI.aggiornaArea(); } return; }
         // senza tastiera l'app occupa tutto lo schermo; prima seguiva sempre l'area visibile e, girando il telefono,
         // barre del browser e altezza si rincorrevano facendo oscillare la schermata
