@@ -9980,14 +9980,16 @@ float rumoreC(vec3 x) { vec3 i = floor(x); vec3 f = fract(x); f = f * f * (3.0 -
 
   /* ---------- PERCORSI tra un incontro e l'altro: baratri da saltare e qualche nemico ---------- */
   // piani: [x0, x1, z0, z1, y]; ondate: quando superi z partono i nemici [tipo, x, z]; tappe: punti di controllo
+  // Le ondate partono mentre sei ancora sulla piattaforma PRIMA del salto: i nemici compaiono su quella dopo
+  // (non possono saltare) e li elimini da li', poi salti senza trovarteli addosso.
   // PERCORSI[k] porta all'incontro k (null: si entra subito)
   const PERCORSI = [null, {
     nome: 'La Scala del Baratro', x0: -6, x1: 6, z0: -92, z1: 6, fine: -90,
     piani: [[-6, 6, -12, 6, 0], [-6, 6, -28, -15, 0], [-6, 6, -32, -28, 0.9], [-6, 6, -36, -32, 1.8], [-6, 6, -54, -39, 1.8],
       [-2.5, 2.5, -60.5, -54.5, 1.8, { ax: 'z', amp: 13, per: 11, fase: PI / 2, verso: -1, nave: 1 }], [-6, 6, -90, -75, 1.8]],
     ondate: [{ z: -9, n: [['schiavo', -3, -23], ['schiavo', 3, -24], ['accolito', 0, -27]] },
-      { z: -37, n: [['accolito', -4, -50], ['accolito', 4, -51], ['schiavo', 0, -46], ['cavaliere', 0, -52]] },
-      { z: -73, n: [['maledetto', -3, -82], ['schiavo', 3, -83], ['accolito', -4, -88], ['accolito', 4, -88], ['cavaliere', 0, -86]] }],
+      { z: -31, n: [['accolito', -4, -50], ['accolito', 4, -51], ['schiavo', 0, -46], ['cavaliere', 0, -52]] },
+      { z: -48, n: [['maledetto', -3, -82], ['schiavo', 3, -83], ['accolito', -4, -88], ['accolito', 4, -88], ['cavaliere', 0, -86]] }],
     tappe: [{ z: -40, x: 0, y: 1.8, zc: -42 }, { z: -76, x: 0, y: 1.8, zc: -77.5 }],
     colonne: [[-4.6, -20], [4.6, -20], [-4.6, -46], [4.6, -46], [-4.4, -83], [4.4, -83]],
     suggerimenti: [[-48, -56, 'Aspetta la <b>nave-tomba</b> sul bordo, saltaci sopra e fatti portare dall\'altra parte']]
@@ -9996,9 +9998,9 @@ float rumoreC(vec3 x) { vec3 i = floor(x); vec3 f = fract(x); f = f * f * (3.0 -
     piani: [[-6, 6, -10, 6, 0], [-1.5, 1.5, -18, -10, 0], [-1.5, 1.5, -30, -21, 0], [-6, 6, -44, -30, 0], [-6, -1, -49, -44, 1.0], [-2, 6, -53, -49, 2.0],
       [-6, 6, -57, -53, 2.0], [-6, 6, -76, -60, 2.0], [-8.5, -3.5, -82, -78, 2.0, { ax: 'x', amp: 4, per: 4.5 }], [3.5, 8.5, -88, -84, 2.0, { ax: 'x', amp: 4, per: 4.5, verso: -1 }],
       [-8.5, -3.5, -94, -90, 2.0, { ax: 'x', amp: 4, per: 4.5 }], [-6, 6, -110, -96, 2.0]],
-    ondate: [{ z: -19, n: [['accolito', -4, -40], ['accolito', 4, -41], ['maledetto', -2, -36], ['schiavo', 2, -36]] },
-      { z: -55, n: [['cavaliere', 0, -70], ['accolito', -4, -73], ['accolito', 4, -73], ['schiavo', 0, -66]] },
-      { z: -88, n: [['schiavo', -3, -100], ['schiavo', 3, -100], ['accolito', -4, -106], ['accolito', 4, -106], ['cavaliere', -2, -104], ['cavaliere', 2, -104]] }],
+    ondate: [{ z: -12, n: [['accolito', -4, -40], ['accolito', 4, -41], ['maledetto', -2, -36], ['schiavo', 2, -36]] },
+      { z: -51, n: [['cavaliere', 0, -70], ['accolito', -4, -73], ['accolito', 4, -73], ['schiavo', 0, -66]] },
+      { z: -72, n: [['schiavo', -3, -100], ['schiavo', 3, -100], ['accolito', -4, -106], ['accolito', 4, -106], ['cavaliere', -2, -104], ['cavaliere', 2, -104]] }],
     tappe: [{ z: -31, x: 0, y: 0, zc: -32.5 }, { z: -61, x: 0, y: 2, zc: -62.5 }, { z: -97, x: 0, y: 2, zc: -98.5 }],
     colonne: [[-4.6, -37], [4.6, -37], [-4.4, -68], [4.4, -68], [-4.4, -101], [4.4, -101]],
     suggerimenti: [[-70, -78, 'I <b>pistoni</b> escono e rientrano nei muri: salta quando sono fuori']]
@@ -10057,7 +10059,7 @@ float rumoreC(vec3 x) { vec3 i = floor(x); vec3 f = fract(x); f = f * f * (3.0 -
       if (E.finito) return;
       // online: conta chi e' piu' avanti (tu o un amico)
       const capo = umani().reduce((a, u) => (!u.morto && u.pos.z < a.pos.z ? u : a), io);
-      while (ondata < P.ondate.length && capo.pos.z < P.ondate[ondata].z) { lancia_ondata(P.ondate[ondata]); ondata++; if (ondata === 1) toast('Nemici più avanti!', 'male'); }
+      while (ondata < P.ondate.length && capo.pos.z < P.ondate[ondata].z) { lancia_ondata(P.ondate[ondata]); ondata++; toast('Nemici sulla piattaforma davanti: eliminali prima di saltare', 'male'); }
       while (tappa < P.tappe.length && capo.pos.z < P.tappe[tappa].z && (capo !== io || io.aTerra)) { const t = P.tappe[tappa]; E.rinascita = { x: t.x, z: t.zc, y: t.y, yaw: 0 }; tappa++; toast('Punto di controllo', 'bene'); suono('ok'); }
       // i compagni ti seguono un passo dietro; chi resta troppo indietro ti raggiunge
       bots.forEach((b, i) => {
