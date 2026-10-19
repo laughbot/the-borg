@@ -86,6 +86,9 @@ body.pc .cf .cf-t,body.pc .cf .cf-base{display:none}
 .cf-imp input[type=checkbox]{width:20px;height:20px;accent-color:var(--cf-oro)}
 .cf-imp .pul{display:flex;gap:8px;flex-wrap:wrap;margin-top:4px}
 .cf-imp button:focus-visible,.cf-barra button:focus-visible{outline:2px solid var(--cf-oro);outline-offset:2px}
+.cf-t.mirando{box-shadow:0 0 0 3px rgba(255,190,100,.85),0 0 18px rgba(255,170,80,.6)}
+.cf-t.mirando.annulla{box-shadow:0 0 0 3px rgba(224,87,74,.95)}
+.cf-t.mirando.annulla::after{content:'✕';position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:26px;color:#ffd3cd;background:rgba(120,20,20,.55);border-radius:50%}
 `;
     document.head.appendChild(st);
   }
@@ -188,9 +191,36 @@ body.pc .cf .cf-t,body.pc .cf .cf-base{display:none}
     function aggGiu() { if (T.giu) T.giu.classList.toggle('attivo', c.giu || c.terra); }
     c.alzati = () => { c.giu = false; c.terra = false; aggGiu(); };
     ['salto', 'ricarica', 'granata', 'cambia', 'abilita'].forEach(k => {
-      if (!T[k]) return;
+      if (!T[k] || (k === 'granata' && opz.granataMirata)) return;
       T[k].addEventListener('pointerdown', e => { if (!c.attivo) return; c.eventi[k] = true; T[k].classList.add('on'); setTimeout(() => T[k].classList.remove('on'), 120); e.preventDefault(); });
     });
+
+    // granata mirata (opz.granataMirata): tieni premuto il tasto e trascina il dito verso dove vuoi lanciarla
+    // (in alto = piu' lontano, ai lati = di lato); lascia per lanciare; riporta il dito sul tasto per annullare.
+    // Mentre miri il gioco legge c.gMira = { dx, dy, annulla }; al lancio c.prendi('granata') e c.gDir = { dx, dy }.
+    // Un tocco veloce senza trascinare lancia dritto davanti, come prima.
+    if (T.granata && opz.granataMirata) {
+      const g = { id: null, ox: 0, oy: 0, r: 30, fuori: false };
+      c.gMira = null; c.gDir = null;
+      const fine = e => {
+        if (e.pointerId !== g.id) return; g.id = null; T.granata.classList.remove('mirando', 'annulla');
+        const m = c.gMira; c.gMira = null; if (!m || !c.attivo) return;
+        if (m.annulla) { c.eventi.granataNo = true; return; }
+        c.gDir = { dx: g.fuori ? m.dx : 0, dy: g.fuori ? m.dy : 0 }; c.eventi.granata = true;
+      };
+      T.granata.addEventListener('pointerdown', e => {
+        if (!c.attivo || g.id !== null) return; g.id = e.pointerId; try { T.granata.setPointerCapture(e.pointerId); } catch (x) { }
+        [g.ox, g.oy] = loc(e); g.r = T.granata.offsetWidth / 2 + 4; g.fuori = false;
+        c.gMira = { dx: 0, dy: 0, annulla: false }; T.granata.classList.add('mirando'); c.vibra(8); e.preventDefault(); e.stopPropagation();
+      });
+      T.granata.addEventListener('pointermove', e => {
+        if (e.pointerId !== g.id || !c.gMira) return; const [x, y] = loc(e), dx = x - g.ox, dy = y - g.oy, d = Math.hypot(dx, dy);
+        if (d > g.r + 12) g.fuori = true;
+        c.gMira.dx = dx; c.gMira.dy = dy; c.gMira.annulla = g.fuori && d < g.r;
+        T.granata.classList.toggle('annulla', c.gMira.annulla);
+      });
+      T.granata.addEventListener('pointerup', fine); T.granata.addEventListener('pointercancel', e => { if (c.gMira) c.gMira.annulla = true; fine(e); });
+    }
 
     // tastiera e mouse (computer): WASD, Shift scatto, spazio salto, C accovacciati, Z a terra, R ricarica, G granata, Q cambia, F abilità, tasto destro mirino
     const mappa = { ' ': 'salto', r: 'ricarica', g: 'granata', q: 'cambia', f: 'abilita' };
@@ -230,7 +260,7 @@ body.pc .cf .cf-t,body.pc .cf .cf-base{display:none}
       c.sparo = premuto || !!auto;
       return c;
     };
-    c.mostra = function (si) { c.attivo = si; el.classList.toggle('fermo', !si); if (!si) { c.mira = false; c.sparo = false; c.mv.x = c.mv.y = 0; fu.giu = fs.giu = false; fuocoTocco = false; mv.id = sg.id = fu.id = fs.id = null; corsaBlocco = false; for (const k in c.eventi) c.eventi[k] = false; if (T.mira) T.mira.classList.remove('attivo'); knob.style.transform = ''; base.classList.remove('on'); } };
+    c.mostra = function (si) { c.attivo = si; el.classList.toggle('fermo', !si); if (!si) { c.gMira = null; if (T.granata) T.granata.classList.remove('mirando', 'annulla'); c.mira = false; c.sparo = false; c.mv.x = c.mv.y = 0; fu.giu = fs.giu = false; fuocoTocco = false; mv.id = sg.id = fu.id = fs.id = null; corsaBlocco = false; for (const k in c.eventi) c.eventi[k] = false; if (T.mira) T.mira.classList.remove('attivo'); knob.style.transform = ''; base.classList.remove('on'); } };
     c.lasciaMira = () => { c.mira = false; if (T.mira) T.mira.classList.remove('attivo'); };
     /* informazioni a schermo: munizioni, ricarica, attese di granata/abilita' */
     // aggiorna il DOM solo quando un valore cambia: scrivere testo e stili a ogni frame rallenta molto Safari su iPhone
