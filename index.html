@@ -15099,9 +15099,11 @@ body.bv-attivo #barra-alto,body.bv-attivo #controlli,body.bv-attivo #btn-contest
   }
 
   /* ---------- pulsante contestuale (entra / esci) ---------- */
+  // "(presto)" solo per i posti che non fanno ancora niente: panchine, giochi e attivita' gia' sbloccati mostrano solo il nome
+  const funziona = p => !!(p.fn || p.sedile || p.alzati || p.arredi || p.biblioteca || p.sito || p.gioco || p.verso);
   G.su('porta', p => {
     const b = $('#btn-contesto');
-    if (p && inGioco && !UI.paginaPiena() && !(p.alzati && p.nome === 'Alzati')) { b.textContent = p.testo ? p.testo : p.verso === 'casa' ? 'Entra in casa' : p.verso === 'negozio' ? 'Entra nel negozio' : p.verso === 'collectibles' ? 'Entra da Laugh Tale' : p.verso === 'biblioteca' ? 'Entra in biblioteca' : p.id === 'varco-piazza' ? 'Vai in piazza' : p.verso === 'piazza' ? 'Esci in piazza' : p.nome + ' (presto)'; b.hidden = false; }
+    if (p && inGioco && !UI.paginaPiena() && !(p.alzati && p.nome === 'Alzati')) { b.textContent = p.testo ? p.testo : p.verso === 'casa' ? 'Entra in casa' : p.verso === 'negozio' ? 'Entra nel negozio' : p.verso === 'collectibles' ? 'Entra da Laugh Tale' : p.verso === 'biblioteca' ? 'Entra in biblioteca' : p.id === 'varco-piazza' ? 'Vai in piazza' : p.verso === 'piazza' ? 'Esci in piazza' : funziona(p) ? p.nome : p.nome + ' (presto)'; b.hidden = false; }
     else b.hidden = true;
   });
 
