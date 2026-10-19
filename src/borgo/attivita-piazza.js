@@ -949,8 +949,8 @@ body.orizz #pesca-pan{left:auto;right:136px;bottom:16px}
 
   /* =====================================================================
      IL CRATERE DELLA COMETA: da qui viene la moneta del borgo (B.ECONOMIA.moneta).
-     Una roccia scura mezza sepolta, piena di cristalli che brillano come la luce del giorno; attorno il bordo
-     del cratere, sassi e qualche cristallo sparso. Il cartello racconta la storia (si legge toccandolo o dal pulsante).
+     Una roccia scura mezza sepolta, piena di Starlight (bastoncini che brillano come la luce del giorno);
+     attorno il bordo del cratere, sassi e qualche Starlight sparso. Il cartello racconta la storia (si legge toccandolo o dal pulsante).
      ===================================================================== */
   // la storia usa il nome della moneta (B.ECONOMIA.moneta), cosi' resta giusta se il nome cambia
   const STORIA = {
@@ -994,15 +994,13 @@ body.orizz #pesca-pan{left:auto;right:136px;bottom:16px}
     const corpo = mesh(new T.IcosahedronGeometry(1.15, 1), M('#3b3640'), { l: 0.03 }); corpo.scale.set(1.25, 0.85, 1); roccia.add(corpo);
     roccia.add(mesh(new T.IcosahedronGeometry(0.6, 0), M('#2e2a33'), { x: 0.9, y: 0.25, z: 0.3, l: 0.025 }));
     roccia.add(mesh(new T.IcosahedronGeometry(0.5, 0), M('#4a4450'), { x: -0.95, y: 0.1, z: -0.35, l: 0.025 }));
-    // i cristalli della cometa: prismi a sei facce con la punta, luce del giorno (bianco caldo e oro)
+    // gli Starlight: bastoncini luminosi color luce del giorno (bianco caldo e oro), nucleo piu' chiaro e alone
     const guscio = new T.MeshBasicMaterial({ color: new T.Color('#ffe7a0'), transparent: true, opacity: 0.85 });
-    const nucleo = B.Mluce('#fffbea', 1);
-    const GC = new T.CylinderGeometry(0.09, 0.09, 0.34, 6), GP = new T.ConeGeometry(0.09, 0.2, 6), GN = new T.CylinderGeometry(0.045, 0.045, 0.3, 6);
-    GP.translate(0, 0.27, 0);
+    const nucleo = B.Mluce('#fffbea', 1), GC = new T.CapsuleGeometry(0.075, 0.42, 4, 10), GN = new T.CapsuleGeometry(0.04, 0.3, 3, 8);
     const aloni = [];
     function stick(gr, x, y, z, rx, rz, s, alone) {
       const st = new T.Group(); st.position.set(x, y, z); st.rotation.set(rx, 0, rz); st.scale.setScalar(s || 1); gr.add(st);
-      st.add(new T.Mesh(GC, guscio)); st.add(new T.Mesh(GP, guscio)); st.add(new T.Mesh(GN, nucleo));
+      st.add(new T.Mesh(GC, guscio)); st.add(new T.Mesh(GN, nucleo));
       if (alone) { const al = new T.Sprite(new T.SpriteMaterial({ map: B.texAlone(), color: new T.Color('#ffd76a'), transparent: true, blending: T.AdditiveBlending, depthWrite: false, opacity: 0.55 })); al.scale.set(1.3, 1.3, 1); st.add(al); aloni.push({ al, k: Math.random() * 6 }); }
       return st;
     }
@@ -1048,7 +1046,7 @@ body.orizz #pesca-pan{left:auto;right:136px;bottom:16px}
     const cx = C.x + Math.sin(A) * (RP + 0.2), cz = C.z + Math.cos(A) * (RP + 0.2);
     ctx.ostacoli.push({ t: 'c', x: cx, z: cz, r: 0.35 });
     ctx.toccabili.push({ obj: pr, testo: 'Il Cratere della Cometa', fn: apriStoria });
-    ctx.toccabili.push({ obj: corpo, testo: 'La roccia della Cometa: è piena di cristalli luminosi, ma non si staccano con le mani. Si guadagnano giocando!' });
+    ctx.toccabili.push({ obj: corpo, testo: 'La roccia della Cometa: è piena di Starlight, ma non si staccano con le mani. Gli Starlight si guadagnano giocando!' });
     ctx.porte.push({ id: 'cratere', nome: 'Cratere della Cometa', testo: '📜 Leggi la storia', x: C.x + Math.sin(A) * (RP + 1.4), z: C.z + Math.cos(A) * (RP + 1.4), r: 1.6, fn: apriStoria });
     ctx.edifici.push({ g: null, x: C.x, z: C.z, w: RP * 2, d: RP * 2, nome: 'Cratere della Cometa' });
   }

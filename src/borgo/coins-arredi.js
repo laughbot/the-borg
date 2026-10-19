@@ -49,7 +49,7 @@
      leggono da qui i loro premi e i loro tetti. Aggiungendo un minigioco o un negozio si sposta solo una quota.
      Ogni guadagno viene registrato per fonte e per giorno (Eco.statistiche), cosi' si vede se una fonte rende troppo. */
   const ECO = B.ECONOMIA = {
-    moneta: { nome: 'Lumi', articolo: 'i' },   // il nome della moneta: si cambia solo qui (l'icona e' la classe CSS .sl-ico in stile.css)
+    moneta: { nome: 'Starlight', articolo: 'gli' },   // il nome della moneta: si cambia solo qui (l'icona e' la classe CSS .sl-ico in stile.css)
     giorno: 500,                                     // guadagno medio in un giorno di gioco (circa 45 minuti)
     quote: { minigiochi: 0.40, missioni: 0.20, accesso: 0.15, piazza: 0.25 },
     partite: 6,                                      // partite premiate a pieno al giorno, su tutti i minigiochi insieme
@@ -67,7 +67,7 @@
     oggi: f => (S.st && S.st.g === oggiG() ? S.st.f[f] || 0 : 0),
     fmt: n => n + ' ' + ECO.moneta.nome,
     get nome() { return ECO.moneta.nome; },
-    get gli() { return ECO.moneta.articolo + ' ' + ECO.moneta.nome; },   // "i Lumi"
+    get gli() { return ECO.moneta.articolo + ' ' + ECO.moneta.nome; },   // "gli Starlight"
     ico: '<i class="sl-ico" aria-hidden="true"></i>',
     /* premio di fine partita: molt = quanto e' andata (0.6 partecipazione ... 1.6 vittoria) */
     premioGioco(gioco, molt) {

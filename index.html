@@ -471,12 +471,12 @@ body.orizz #inizio-anteprima { width: 120px; height: 140px; }
 #btn-bici.attivo { background: #d8453b; border-color: #fff; }
 #btn-cam.attivo { background: #3b7fd6; border-color: #fff; }
 
-/* ---------- LA MONETA DEL BORGO: un cristallo della cometa che brilla come la luce del giorno ---------- */
-.sl-ico{display:inline-block;position:relative;width:.62em;height:1em;vertical-align:-.14em;margin:0 .2em 0 .1em;
-  clip-path:polygon(50% 0,100% 28%,100% 72%,50% 100%,0 72%,0 28%);
-  background:linear-gradient(115deg,#fffdf2 0 30%,#ffe9a6 31% 55%,#ffcf5c 56% 80%,#f2b440 81%);
-  filter:drop-shadow(0 0 .18em rgba(255,214,110,.95)) drop-shadow(0 0 .4em rgba(255,236,170,.6))}
-.sl-ico::after{content:'';position:absolute;left:44%;top:12%;width:12%;height:76%;background:rgba(255,255,255,.85);border-radius:.05em}
+/* ---------- STARLIGHT, la moneta del borgo: bastoncino che brilla come la luce del giorno ---------- */
+.sl-ico{display:inline-block;position:relative;width:.42em;height:1.08em;border-radius:.22em;vertical-align:-.16em;margin:0 .22em 0 .12em;transform:rotate(32deg);
+  background:linear-gradient(90deg,rgba(255,214,110,.9),#fffdf2 42%,#ffeeb8 58%,rgba(242,180,64,.95));
+  box-shadow:0 0 .32em rgba(255,214,110,.95),0 0 .7em rgba(255,236,170,.6),inset 0 0 .08em rgba(255,255,255,.9)}
+.sl-ico::before,.sl-ico::after{content:'';position:absolute;left:.05em;right:.05em;height:.1em;border-radius:.05em;background:rgba(255,250,230,.8)}
+.sl-ico::before{top:.16em}.sl-ico::after{bottom:.16em}
 
 </style>
 </head>
@@ -11497,7 +11497,7 @@ body.pc #rd-hud .tasto,body.pc #rd-hud .base{display:none}
      leggono da qui i loro premi e i loro tetti. Aggiungendo un minigioco o un negozio si sposta solo una quota.
      Ogni guadagno viene registrato per fonte e per giorno (Eco.statistiche), cosi' si vede se una fonte rende troppo. */
   const ECO = B.ECONOMIA = {
-    moneta: { nome: 'Lumi', articolo: 'i' },   // il nome della moneta: si cambia solo qui (l'icona e' la classe CSS .sl-ico in stile.css)
+    moneta: { nome: 'Starlight', articolo: 'gli' },   // il nome della moneta: si cambia solo qui (l'icona e' la classe CSS .sl-ico in stile.css)
     giorno: 500,                                     // guadagno medio in un giorno di gioco (circa 45 minuti)
     quote: { minigiochi: 0.40, missioni: 0.20, accesso: 0.15, piazza: 0.25 },
     partite: 6,                                      // partite premiate a pieno al giorno, su tutti i minigiochi insieme
@@ -11515,7 +11515,7 @@ body.pc #rd-hud .tasto,body.pc #rd-hud .base{display:none}
     oggi: f => (S.st && S.st.g === oggiG() ? S.st.f[f] || 0 : 0),
     fmt: n => n + ' ' + ECO.moneta.nome,
     get nome() { return ECO.moneta.nome; },
-    get gli() { return ECO.moneta.articolo + ' ' + ECO.moneta.nome; },   // "i Lumi"
+    get gli() { return ECO.moneta.articolo + ' ' + ECO.moneta.nome; },   // "gli Starlight"
     ico: '<i class="sl-ico" aria-hidden="true"></i>',
     /* premio di fine partita: molt = quanto e' andata (0.6 partecipazione ... 1.6 vittoria) */
     premioGioco(gioco, molt) {
@@ -13534,8 +13534,8 @@ body.orizz #pesca-pan{left:auto;right:136px;bottom:16px}
 
   /* =====================================================================
      IL CRATERE DELLA COMETA: da qui viene la moneta del borgo (B.ECONOMIA.moneta).
-     Una roccia scura mezza sepolta, piena di cristalli che brillano come la luce del giorno; attorno il bordo
-     del cratere, sassi e qualche cristallo sparso. Il cartello racconta la storia (si legge toccandolo o dal pulsante).
+     Una roccia scura mezza sepolta, piena di Starlight (bastoncini che brillano come la luce del giorno);
+     attorno il bordo del cratere, sassi e qualche Starlight sparso. Il cartello racconta la storia (si legge toccandolo o dal pulsante).
      ===================================================================== */
   // la storia usa il nome della moneta (B.ECONOMIA.moneta), cosi' resta giusta se il nome cambia
   const STORIA = {
@@ -13579,15 +13579,13 @@ body.orizz #pesca-pan{left:auto;right:136px;bottom:16px}
     const corpo = mesh(new T.IcosahedronGeometry(1.15, 1), M('#3b3640'), { l: 0.03 }); corpo.scale.set(1.25, 0.85, 1); roccia.add(corpo);
     roccia.add(mesh(new T.IcosahedronGeometry(0.6, 0), M('#2e2a33'), { x: 0.9, y: 0.25, z: 0.3, l: 0.025 }));
     roccia.add(mesh(new T.IcosahedronGeometry(0.5, 0), M('#4a4450'), { x: -0.95, y: 0.1, z: -0.35, l: 0.025 }));
-    // i cristalli della cometa: prismi a sei facce con la punta, luce del giorno (bianco caldo e oro)
+    // gli Starlight: bastoncini luminosi color luce del giorno (bianco caldo e oro), nucleo piu' chiaro e alone
     const guscio = new T.MeshBasicMaterial({ color: new T.Color('#ffe7a0'), transparent: true, opacity: 0.85 });
-    const nucleo = B.Mluce('#fffbea', 1);
-    const GC = new T.CylinderGeometry(0.09, 0.09, 0.34, 6), GP = new T.ConeGeometry(0.09, 0.2, 6), GN = new T.CylinderGeometry(0.045, 0.045, 0.3, 6);
-    GP.translate(0, 0.27, 0);
+    const nucleo = B.Mluce('#fffbea', 1), GC = new T.CapsuleGeometry(0.075, 0.42, 4, 10), GN = new T.CapsuleGeometry(0.04, 0.3, 3, 8);
     const aloni = [];
     function stick(gr, x, y, z, rx, rz, s, alone) {
       const st = new T.Group(); st.position.set(x, y, z); st.rotation.set(rx, 0, rz); st.scale.setScalar(s || 1); gr.add(st);
-      st.add(new T.Mesh(GC, guscio)); st.add(new T.Mesh(GP, guscio)); st.add(new T.Mesh(GN, nucleo));
+      st.add(new T.Mesh(GC, guscio)); st.add(new T.Mesh(GN, nucleo));
       if (alone) { const al = new T.Sprite(new T.SpriteMaterial({ map: B.texAlone(), color: new T.Color('#ffd76a'), transparent: true, blending: T.AdditiveBlending, depthWrite: false, opacity: 0.55 })); al.scale.set(1.3, 1.3, 1); st.add(al); aloni.push({ al, k: Math.random() * 6 }); }
       return st;
     }
@@ -13633,7 +13631,7 @@ body.orizz #pesca-pan{left:auto;right:136px;bottom:16px}
     const cx = C.x + Math.sin(A) * (RP + 0.2), cz = C.z + Math.cos(A) * (RP + 0.2);
     ctx.ostacoli.push({ t: 'c', x: cx, z: cz, r: 0.35 });
     ctx.toccabili.push({ obj: pr, testo: 'Il Cratere della Cometa', fn: apriStoria });
-    ctx.toccabili.push({ obj: corpo, testo: 'La roccia della Cometa: è piena di cristalli luminosi, ma non si staccano con le mani. Si guadagnano giocando!' });
+    ctx.toccabili.push({ obj: corpo, testo: 'La roccia della Cometa: è piena di Starlight, ma non si staccano con le mani. Gli Starlight si guadagnano giocando!' });
     ctx.porte.push({ id: 'cratere', nome: 'Cratere della Cometa', testo: '📜 Leggi la storia', x: C.x + Math.sin(A) * (RP + 1.4), z: C.z + Math.cos(A) * (RP + 1.4), r: 1.6, fn: apriStoria });
     ctx.edifici.push({ g: null, x: C.x, z: C.z, w: RP * 2, d: RP * 2, nome: 'Cratere della Cometa' });
   }
