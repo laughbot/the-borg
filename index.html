@@ -2,7 +2,7 @@
 <html lang="it">
 <head>
   <meta charset="utf-8">
-  <meta name="versione" content="2c2987e08ce9">
+  <meta name="versione" content="d9ff4f00839d">
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="mobile-web-app-capable" content="yes">
@@ -4090,20 +4090,34 @@ window.B3_LOGO = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAyAAAAC3CAIAAABl
   A.effettiMuti = () => mutaEffetti;
   ['pointerdown', 'touchend', 'keydown'].forEach(e => window.addEventListener(e, init, { passive: true }));
 
-  /* ---------- musica del borgo: valzerino allegro in Fa, marimba + basso + chitarrina ---------- */
+  /* ---------- musica del borgo: "Sole sul Borgo", tema tranquillo in Re (20/10/2026) ----------
+     Melodia originale, calma, nello spirito delle musiche delle cittadine dei giochi di ruolo giapponesi:
+     flauto morbido con un filo di vibrato, arpa leggera, accordi soffici e basso dolce. 84 battiti al minuto,
+     16 battute (circa 45 secondi); al secondo giro la melodia passa a un carillon, cosi' non stanca.
+     Niente shaker e niente suoni acuti e secchi (la vecchia marimba era fastidiosa). */
   const NOTE = n => 440 * Math.pow(2, (n - 69) / 12);
-  const OTTAVO = 60 / 104 / 2;                       // 104 battiti al minuto, a ottavi
-  // 8 battute; ogni battuta: basso, accordo, melodia (8 ottavi, 0 = pausa)
+  const OTTAVO = 60 / 84 / 2;
+  // ogni battuta: basso, accordo, melodia in 8 ottavi (0 = pausa, -1 = la nota prima continua)
+  const RE = [57, 62, 66], SIm = [54, 59, 62], SOL = [55, 59, 62], LA = [57, 61, 64], FAdm = [54, 57, 61], MIm = [55, 59, 64];
   const BRANO = [
-    { b: 41, a: [57, 60, 65], m: [72, 0, 69, 72, 74, 0, 72, 0] },
-    { b: 38, a: [57, 62, 65], m: [69, 0, 65, 67, 69, 0, 0, 0] },
-    { b: 46, a: [58, 62, 65], m: [70, 0, 74, 72, 70, 0, 69, 0] },
-    { b: 48, a: [55, 60, 64], m: [67, 0, 69, 70, 72, 0, 0, 0] },
-    { b: 41, a: [57, 60, 65], m: [77, 0, 76, 74, 72, 0, 69, 0] },
-    { b: 45, a: [57, 60, 64], m: [72, 0, 69, 0, 76, 0, 72, 0] },
-    { b: 46, a: [58, 62, 65], m: [74, 72, 70, 0, 69, 0, 67, 0] },
-    { b: 48, a: [55, 60, 64], m: [65, 0, 67, 0, 64, 0, 0, 0] }
+    { b: 50, a: RE, m: [66, -1, 69, -1, 74, -1, -1, -1] },
+    { b: 47, a: SIm, m: [73, -1, 71, -1, 69, -1, 66, -1] },
+    { b: 43, a: SOL, m: [67, -1, 71, -1, 74, -1, 76, -1] },
+    { b: 45, a: LA, m: [73, -1, -1, -1, 69, -1, -1, -1] },
+    { b: 50, a: RE, m: [66, -1, 69, -1, 74, -1, 76, -1] },
+    { b: 42, a: FAdm, m: [78, -1, -1, 76, 73, -1, 69, -1] },
+    { b: 43, a: SOL, m: [71, -1, 69, -1, 67, -1, 71, -1] },
+    { b: 45, a: LA, m: [69, -1, -1, -1, -1, -1, 0, 0] },
+    { b: 43, a: SOL, m: [74, -1, 71, -1, 67, -1, 71, -1] },
+    { b: 45, a: LA, m: [73, -1, 76, -1, 69, -1, -1, -1] },
+    { b: 42, a: FAdm, m: [76, -1, 73, -1, 78, -1, -1, -1] },
+    { b: 47, a: SIm, m: [74, -1, 73, -1, 71, -1, -1, -1] },
+    { b: 40, a: MIm, m: [67, -1, 71, -1, 76, -1, 74, -1] },
+    { b: 45, a: LA, m: [73, -1, 71, -1, 69, -1, 67, -1] },
+    { b: 50, a: RE, m: [66, -1, -1, 69, 74, -1, -1, -1] },
+    { b: 50, a: RE, m: [0, 0, 0, 0, 0, 0, 0, 0] }
   ];
+  const ARPA = [0, 1, 2, 1, 0, 1, 2, 1];             // ordine delle note dell'accordo nell'arpa
   // jukebox di casa: due dischi nello stesso formato, con il loro tempo (A.jukebox(n), 0 = spento)
   const DISCHI = [null,
     { otto: 60 / 122 / 2, cassa: true, brano: [            // "Borgo Disco" in La minore
@@ -4123,6 +4137,19 @@ window.B3_LOGO = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAyAAAAC3CAIAAABl
   function inviluppo(g, t, vol, att, dur) { g.gain.setValueAtTime(0.0001, t); g.gain.linearRampToValueAtTime(vol, t + att); g.gain.exponentialRampToValueAtTime(0.0001, t + dur); }
   function osc(tipo, f, t, dur, vol, att) { const o = ctx.createOscillator(), g = ctx.createGain(); o.type = tipo; o.frequency.value = f; inviluppo(g, t, vol, att, dur); o.connect(g); g.connect(musG); o.start(t); o.stop(t + dur + 0.05); }
   function marimba(n, t, vol) { const f = NOTE(n); osc('sine', f, t, 0.9, vol, 0.004); osc('sine', f * 4, t, 0.12, vol * 0.22, 0.002); osc('triangle', f * 2, t, 0.25, vol * 0.12, 0.003); }
+  function flauto(n, t, dur, vol) {                  // flauto morbido: attacco dolce, vibrato che arriva piano
+    const f = NOTE(n), o = ctx.createOscillator(), o2 = ctx.createOscillator(), lfo = ctx.createOscillator(), lg = ctx.createGain(), lp = ctx.createBiquadFilter(), g = ctx.createGain();
+    o.type = 'sine'; o.frequency.value = f; o2.type = 'triangle'; o2.frequency.value = f; const g2 = ctx.createGain(); g2.gain.value = 0.25;
+    lfo.frequency.value = 5; lg.gain.setValueAtTime(0, t); lg.gain.linearRampToValueAtTime(f * 0.006, t + Math.min(0.4, dur)); lfo.connect(lg); lg.connect(o.frequency); lg.connect(o2.frequency);
+    lp.type = 'lowpass'; lp.frequency.value = 2000;
+    g.gain.setValueAtTime(0.0001, t); g.gain.linearRampToValueAtTime(vol, t + 0.07); g.gain.linearRampToValueAtTime(vol * 0.75, t + Math.max(0.1, dur * 0.8)); g.gain.exponentialRampToValueAtTime(0.0001, t + dur + 0.3);
+    o.connect(lp); o2.connect(g2); g2.connect(lp); lp.connect(g); g.connect(musG);
+    [o, o2, lfo].forEach(x => { x.start(t); x.stop(t + dur + 0.35); });
+  }
+  function carillon(n, t, vol) { const f = NOTE(n); osc('sine', f, t, 1.6, vol, 0.004); osc('sine', f * 2, t, 0.5, vol * 0.12, 0.004); }
+  function arpa(n, t, vol) { const f = NOTE(n); osc('sine', f, t, 1.0, vol, 0.006); osc('triangle', f, t, 0.35, vol * 0.3, 0.006); }
+  function accordi(acc, t, dur) { acc.forEach(n => { osc('sine', NOTE(n), t, dur, 0.022, 0.5); osc('sine', NOTE(n) * 1.003, t, dur, 0.012, 0.6); }); }
+  function bassoDolce(n, t) { osc('sine', NOTE(n), t, 1.1, 0.16, 0.02); osc('triangle', NOTE(n), t, 0.4, 0.04, 0.02); }
   function basso(n, t) { osc('triangle', NOTE(n), t, 0.55, 0.2, 0.01); osc('sine', NOTE(n), t, 0.8, 0.12, 0.01); }
   function chitarrina(acc, t, vol) { acc.forEach((n, i) => osc('triangle', NOTE(n), t + i * 0.012, 0.3, vol, 0.005)); }
   function shaker(t, vol) {
@@ -4134,19 +4161,32 @@ window.B3_LOGO = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAyAAAAC3CAIAAABl
   function pianifica() {
     if (!ctx) return;
     const dj = juke && scenaCorr === 'altro' ? juke : 0, D = DISCHI[dj];
-    const target = mutaMusica ? 0 : dj ? 0.5 : scenaCorr === 'piazza' ? 0.55 : scenaCorr === 'altro' ? 0.25 : 0;
+    const target = mutaMusica ? 0 : dj ? 0.5 : scenaCorr === 'piazza' ? 0.42 : scenaCorr === 'altro' ? 0.22 : 0;
     musG.gain.setTargetAtTime(target, ctx.currentTime, 0.5);
     if (target === 0) { prossimo = 0; return; }
     if (dj !== discoCorr) { discoCorr = dj; passo = 0; prossimo = 0; }
     if (!prossimo || prossimo < ctx.currentTime) prossimo = ctx.currentTime + 0.1;
-    const brano = D ? D.brano : BRANO, otto = D ? D.otto : OTTAVO;
+    if (!D) {                                          // tema del borgo
+      while (prossimo < ctx.currentTime + 0.5) {
+        const t = prossimo, giro = Math.floor(passo / (8 * BRANO.length)), bt = BRANO[Math.floor(passo / 8) % BRANO.length], k = passo % 8;
+        const n = bt.m[k];
+        if (n > 0) {
+          let lung = 1; while (k + lung < 8 && bt.m[k + lung] === -1) lung++;
+          if (giro % 2 === 0) flauto(n, t, lung * OTTAVO, 0.1); else carillon(n + 12, t, 0.055);
+        }
+        if (k === 0) { bassoDolce(bt.b, t); accordi(bt.a, t, OTTAVO * 8.5); }
+        if (k === 4) bassoDolce(bt.b + 7, t);
+        arpa(bt.a[ARPA[k]], t, k % 2 ? 0.022 : 0.032);
+        prossimo += OTTAVO; passo++;
+      }
+      return;
+    }
+    const brano = D.brano, otto = D.otto;
     while (prossimo < ctx.currentTime + 0.5) {
-      const t = prossimo, giro = Math.floor(passo / 64), bt = brano[Math.floor(passo / 8) % 8], k = passo % 8;
-      // la melodia suona un giro si' e uno no; nel giro "di respiro" c'e' un arpeggio leggero
-      if (giro % 2 === 0 || D) { const n = bt.m[k]; if (n) marimba(n, t, 0.13); }
-      else if (k % 2 === 0) marimba(bt.a[(k / 2) % 3] + 12, t, 0.06);
+      const t = prossimo, bt = brano[Math.floor(passo / 8) % 8], k = passo % 8;
+      const n = bt.m[k]; if (n) marimba(n, t, 0.13);
       if (k === 0) basso(bt.b, t); if (k === 4) basso(bt.b + 7, t);
-      if (D && D.cassa && k % 2 === 0) { cassa(t); if (k % 4 === 2) basso(bt.b + 12, t); }
+      if (D.cassa && k % 2 === 0) { cassa(t); if (k % 4 === 2) basso(bt.b + 12, t); }
       if (k === 2 || k === 6) chitarrina(bt.a, t, 0.035);
       shaker(t, k % 2 ? 0.012 : 0.022);
       prossimo += otto * (k % 2 ? 0.9 : 1.1); passo++;          // un filo di swing
@@ -8891,6 +8931,164 @@ float rumoreC(vec3 x) { vec3 i = floor(x); vec3 f = fract(x); f = f * f * (3.0 -
 </script>
 <script>
 /* =====================================================================
+   La Cripta del Re senza Luce: LE VOCI DELLE GEMELLE (20/10/2026)
+   Velna (ruba la luce) e Sorna (la nasconde), le figlie del Re, parlano ai
+   Portatori: entrando in ogni sala una delle due pronuncia il titolo della sala
+   in modo malvagio e l'altra aggiunge una frase. Parlano anche quando la squadra
+   cade e quando si riprova la stessa sala.
+   Solo audio, niente scritte (lo schermo resta pulito). La voce e' quella del
+   telefono (sintesi vocale), resa piu' bassa e lenta, con sotto un rintocco,
+   un ronzio cupo e un sussurro generati dal codice. Si spengono con il tasto
+   degli effetti o con "Voci" in Pausa (B3.CriptaVoci).
+   ===================================================================== */
+(function () {
+  'use strict';
+  const B = (typeof window !== 'undefined' && window.B3) || (globalThis.B3 = globalThis.B3 || {});
+
+  /* ---------- le due sorelle: 0 = Velna (voce piu' alta, cantilenante), 1 = Sorna (voce profonda) ---------- */
+  const SORELLE = [
+    { nome: 'Velna', pitch: 0.72, rate: 0.86 },
+    { nome: 'Sorna', pitch: 0.32, rate: 0.78 }
+  ];
+
+  /* ---------- le frasi, sala per sala ----------
+     t: il titolo detto in modo malvagio (chi: quale sorella lo dice); r: frasi possibili dell'altra sorella.
+     Dalla sala 12 le Gemelle sono gia' cadute: parlano come echi dal buio. */
+  const SALE = [
+    { chi: 0, t: 'La Soglia... delle Lanterne.', r: ['Che lucine graziose. Peccato che quaggiù si spengano tutte.', 'Benvenuti nel buio, piccoli Portatori. Nostro padre ha tanta fame di luce.'] },
+    { chi: 1, t: 'La Scala... del Baratro.', r: ['Scendete, scendete. Il fondo non ha fretta.', 'Un passo falso... e nessuno sentirà il vostro grido.'] },
+    { chi: 0, t: 'Le Miniere... della Cometa.', r: ['Sentite? Stanno scavando la vostra cometa. Pezzo dopo pezzo.', 'Ogni Starlight brilla meglio quaggiù. Nelle nostre mani.'] },
+    { chi: 1, t: 'Il Portale... Sigillato.', r: ['La Cantrice piange per voi. Presto avrà un motivo vero.', 'Questa porta non si apre. Si spezza. Come voi.'] },
+    { chi: 0, t: 'Il Mercato... delle Ombre.', r: ['Comprate pure. Qui si paga con la vita.', 'Sorridete ai mercanti. I loro coltelli sorridono già.'] },
+    { chi: 1, t: 'Il Gran... Officiante.', r: ['Il suo rito ha spento mille lanterne. La vostra è la prossima.', 'Inginocchiatevi. Lui adora le preghiere dei vinti.'] },
+    { chi: 0, t: 'Bruthak... l\'Insaziabile.', r: ['Ha divorato l\'ultimo Portatore. E aveva ancora fame.', 'Fate piano... anzi no. Fate rumore. A lui piace di più.'] },
+    { chi: 1, t: 'Il Lago... Nero.', r: ['L\'acqua è calma. Lei no.', 'Remate, piccoli. Qualcosa nuota proprio sotto di voi.'] },
+    { chi: 0, t: 'La Biblioteca... Muta.', r: ['Sssh. Qui chi fa rumore non legge più.', 'Ogni libro qui racconta di qualcuno che non è mai tornato.'] },
+    { chi: 1, t: 'Il Giardino... Pietrificato.', r: ['Non fermatevi. Le nostre statue più belle si fermavano sempre.', 'Correte, correte. Prima o poi vi stancherete.'] },
+    { gemelle: 1 },                                  // la loro sala: parlano tutte e due (vedi sotto)
+    { chi: 0, t: 'La Sala... degli Specchi.', r: ['Ci avete fatte cadere... ma gli specchi ricordano tutto.', 'Guardatevi bene. Le vostre ombre combattono meglio di voi.'] },
+    { chi: 1, t: 'Il Forno... delle Stelle.', r: ['Sentite il calore? È la vostra cometa che brucia.', 'Qui nostro padre consuma la luce. E voi siete il prossimo pasto.'] },
+    { trono: 1 }
+  ];
+  // percorsi di salti prima di una sala (chiave = nome del percorso in gioco.js)
+  const PERCORSI = {
+    ponte: { chi: 1, t: 'Il Ponte... delle Catene.', r: ['Le catene cigolano. Qualcuno, laggiù, ha fame.', 'Non guardate in basso. Lui vi sta già guardando.'] }
+  };
+  const GEMELLE = [
+    [[0, 'Le Gemelle...'], [1, '...del Velo.'], [0, 'Finalmente siete qui. Io prenderò la vostra luce...'], [1, '...e io la nasconderò. Per sempre.']],
+    [[1, 'Le Gemelle...'], [0, '...del Velo.'], [1, 'Avete fatto tanta strada per morire tra le nostre braccia.'], [0, 'Cantiamo per voi, sorella. Un\'ultima volta.']]
+  ];
+  const TRONO = [
+    [[1, 'Il Trono...'], [0, '...del Re senza Luce.'], [0, 'Padre... sono arrivati.'], [1, 'Inginocchiatevi davanti al Re. È l\'ultima cosa che vedrete.']],
+    [[0, 'Il Trono...'], [1, '...del Re senza Luce.'], [1, 'Ogni Starlight di quel trono era vostro.'], [0, 'Venite a riprenderlo. Se ci riuscite.']]
+  ];
+  const RITORNO = ['Di nuovo voi? Che divertimento.', 'Ancora qui? Il buio vi sta aspettando.', 'Tornate pure. Noi non ci stanchiamo mai.', 'Un altro tentativo... e un\'altra caduta.'];
+  const WIPE = ['Già finito?', 'Un\'altra lanterna spenta.', 'Che silenzio, adesso. Mi piace.', 'Rialzatevi. Vogliamo vedervi cadere ancora.', 'Nostro padre ringrazia per la luce.'];
+
+  const caso = a => a[Math.floor(Math.random() * a.length)];
+
+  /* ---------- acceso / spento ---------- */
+  let attive = true;
+  try { attive = localStorage.getItem('theborg.cripta.voci') !== '0'; } catch (e) { }
+  const muti = () => !attive || !!(B.Audio && B.Audio.effettiMuti && B.Audio.effettiMuti());
+  const SS = typeof window !== 'undefined' && window.speechSynthesis && window.SpeechSynthesisUtterance ? window.speechSynthesis : null;
+
+  /* ---------- scelta delle voci italiane del telefono (se ce ne sono due femminili, una per sorella) ---------- */
+  let voci = [null, null];
+  const FEMMINILI = /alice|federica|elsa|paola|isabella|carla|emma|silvia|bianca|giulia|female|donna|google italiano/i;
+  function scegliVoci() {
+    if (!SS) return; const tutte = SS.getVoices() || [], it = tutte.filter(v => /^it/i.test(v.lang || ''));
+    if (!it.length) return;
+    const f = it.filter(v => FEMMINILI.test(v.name)), lista = f.length ? f : it;
+    voci = [lista[0], lista[1] || lista[0]];
+  }
+  if (SS) { scegliVoci(); try { SS.addEventListener('voiceschanged', scegliVoci); } catch (e) { SS.onvoiceschanged = scegliVoci; } }
+
+  /* ---------- il sottofondo inquietante mentre parlano (rintocco, ronzio, sussurro) ---------- */
+  let ac = null, mst = null, bufN = null, letto = null;
+  function audio() {
+    if (ac) { if (ac.state === 'suspended') ac.resume(); return ac; }
+    const A = window.AudioContext || window.webkitAudioContext; if (!A) return null;
+    ac = new A(); mst = ac.createGain(); mst.gain.value = 0.5; mst.connect(ac.destination);
+    bufN = ac.createBuffer(1, ac.sampleRate * 2, ac.sampleRate); const d = bufN.getChannelData(0); for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
+    return ac;
+  }
+  function rintocco(t) {                              // campana grave e stonata
+    [[110, 0.22, 3.5], [110 * 2.76, 0.07, 1.8], [110 * 5.4, 0.035, 0.9], [116.5, 0.1, 3]].forEach(([f, v, d]) => {
+      const o = ac.createOscillator(), g = ac.createGain(); o.type = 'sine'; o.frequency.value = f;
+      g.gain.setValueAtTime(0.0001, t); g.gain.linearRampToValueAtTime(v, t + 0.01); g.gain.exponentialRampToValueAtTime(0.0001, t + d);
+      o.connect(g); g.connect(mst); o.start(t); o.stop(t + d + 0.1);
+    });
+  }
+  function accendiLetto() {
+    if (!audio()) return; spegniLetto(0.05); const t = ac.currentTime;
+    rintocco(t);
+    const g = ac.createGain(); g.gain.setValueAtTime(0.0001, t); g.gain.linearRampToValueAtTime(1, t + 0.6); g.connect(mst);
+    const lp = ac.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 280; lp.connect(g);
+    const o1 = ac.createOscillator(), o2 = ac.createOscillator(), og = ac.createGain(); o1.type = o2.type = 'sawtooth'; o1.frequency.value = 55; o2.frequency.value = 58.3; og.gain.value = 0.05;
+    o1.connect(og); o2.connect(og); og.connect(lp);
+    const n = ac.createBufferSource(), bp = ac.createBiquadFilter(), ng = ac.createGain(), lfo = ac.createOscillator(), lg = ac.createGain();
+    n.buffer = bufN; n.loop = true; bp.type = 'bandpass'; bp.Q.value = 4; bp.frequency.value = 2600; lfo.frequency.value = 0.35; lg.gain.value = 900; lfo.connect(lg); lg.connect(bp.frequency);
+    ng.gain.value = 0.035; n.connect(bp); bp.connect(ng); ng.connect(g);
+    [o1, o2, n, lfo].forEach(x => x.start(t));
+    letto = { g, nodi: [o1, o2, n, lfo] };
+    clearTimeout(accendiLetto.sicura); accendiLetto.sicura = setTimeout(() => spegniLetto(1.2), 20000);   // nel caso la voce non dica quando ha finito
+  }
+  function spegniLetto(dur) {
+    if (!letto || !ac) return; const l = letto; letto = null; const t = ac.currentTime;
+    l.g.gain.cancelScheduledValues(t); l.g.gain.setValueAtTime(Math.max(0.0001, l.g.gain.value), t); l.g.gain.exponentialRampToValueAtTime(0.0001, t + (dur || 1));
+    setTimeout(() => l.nodi.forEach(x => { try { x.stop(); } catch (e) { } }), ((dur || 1) + 0.2) * 1000);
+  }
+
+  /* ---------- parlare: una fila di battute [sorella, testo] ---------- */
+  let fila = 0;
+  function recita(battute) {
+    if (muti() || !battute.length) return;
+    zitte(); const mia = ++fila;
+    accendiLetto();
+    if (!SS) { setTimeout(() => spegniLetto(1.5), 3000); return; }     // senza sintesi vocale resta solo il sottofondo
+    if (!voci[0]) scegliVoci();
+    battute.forEach(([chi, testo], k) => {
+      const S = SORELLE[chi], u = new window.SpeechSynthesisUtterance(testo);
+      u.lang = 'it-IT'; if (voci[chi]) u.voice = voci[chi];
+      u.pitch = S.pitch; u.rate = k === 0 ? S.rate * 0.9 : S.rate; u.volume = 1;      // il titolo, piu' lento
+      if (k === battute.length - 1) { u.onend = u.onerror = () => { if (mia === fila) spegniLetto(1.2); }; }
+      SS.speak(u);
+    });
+  }
+  function zitte() { fila++; if (SS) try { SS.cancel(); } catch (e) { } spegniLetto(0.3); }
+
+  /* ---------- quello che usa gioco.js ---------- */
+  let ultima = null;
+  const V = B.CriptaVoci = {
+    // entrando in una sala (i = 0..13) o nel percorso che la precede (perc = nome del percorso)
+    sala(i, perc) {
+      const chiave = perc ? 'p:' + perc : 's:' + i, ritorno = chiave === ultima; ultima = chiave;
+      const d = perc ? PERCORSI[perc] : SALE[i]; if (!d) return;
+      if (d.gemelle || d.trono) {
+        const s = caso(d.gemelle ? GEMELLE : TRONO);
+        recita(ritorno ? [s[0], s[1], [s[0][0], caso(RITORNO)]] : s); return;
+      }
+      recita([[d.chi, d.t], [1 - d.chi, ritorno ? caso(RITORNO) : caso(d.r)]]);
+    },
+    // la squadra e' caduta tutta
+    wipe() { recita([[Math.random() < 0.5 ? 0 : 1, caso(WIPE)]]); },
+    // uscendo dalla Cripta o tornando alla stanza d'attesa: silenzio e si ricomincia
+    zitte() { zitte(); ultima = null; },
+    // da chiamare al primo tocco (sblocca la voce su iPhone)
+    sblocca() {
+      audio();
+      if (SS && !V._sbloccata) { V._sbloccata = true; try { const u = new window.SpeechSynthesisUtterance(' '); u.volume = 0; SS.speak(u); } catch (e) { } }
+    },
+    attive: () => attive,
+    cambia() { attive = !attive; try { localStorage.setItem('theborg.cripta.voci', attive ? '1' : '0'); } catch (e) { } if (!attive) zitte(); return attive; },
+    _frasi: { SALE, PERCORSI, GEMELLE, TRONO, RITORNO, WIPE }
+  };
+})();
+
+</script>
+<script>
+/* =====================================================================
    THE BORG - LA CRIPTA DEL RE SENZA LUCE (DEMO): raid originale, nomi e forme nostri.
    Prima persona, squadra da 6: tu + 5 compagni (amici o bot). Quattro incontri: La Soglia delle Lanterne (fiamme e veli),
    Il Portale Sigillato (totem e piastre),
@@ -8962,12 +9160,17 @@ float rumoreC(vec3 x) { vec3 i = floor(x); vec3 f = fract(x); f = f * f * (3.0 -
   };
   const nGranate = () => ALLENA ? CD.GRANATE_MAX : DATI.granate.length;
 
+  /* ---------- voci delle Gemelle (voci.js): titolo della sala e una frase, entrando ---------- */
+  const VOCI = () => B.CriptaVoci;
+  function voceSala(i, perc) { const V = VOCI(); if (V && i < NUM_SALE) V.sala(i, perc || null); }
+  function voceZitta() { const V = VOCI(); if (V) V.zitte(); }
+
   /* ---------- suoni (sintetizzati, nessun file) ---------- */
   let ac = null, mst = null, bufN = null;
   function audio() {
     if (ac) { if (ac.state === 'suspended') ac.resume(); return ac; }
     const A = window.AudioContext || window.webkitAudioContext; if (!A) return null;
-    ac = new A(); mst = ac.createGain(); mst.gain.value = 0.55; mst.connect(ac.destination);
+    ac = new A(); mst = ac.createGain(); mst.gain.value = 0.55; mst.connect(ac.destination); if (VOCI()) VOCI().sblocca();
     bufN = ac.createBuffer(1, ac.sampleRate * 0.5, ac.sampleRate); const d = bufN.getChannelData(0); for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
     return ac;
   }
@@ -11770,7 +11973,7 @@ float rumoreC(vec3 x) { vec3 i = floor(x); vec3 f = fract(x); f = f * f * (3.0 -
   }
   function menu() {
     if (SEGUI) { lascia(); return; }
-    ON = null; stato = 'menu'; ALLENA = false; if (!scena || !enc) prepara(0);
+    ON = null; stato = 'menu'; ALLENA = false; voceZitta(); if (!scena || !enc) prepara(0);
     const capo = SQ.capo, cR = capo ? null : capoR(), mem = capo ? membri() : [], tutti = capo ? mem : membriDi(cR);
     const paTxt = cR && typeof cR.d.pa === 'string' ? cR.d.pa.slice(0, 60) : NOMI_INC[clamp(cR ? nnum(cR.d.pa, 0) | 0 : 0, 0, NUM_SALE - 1)];
     // i 6 posti: capo, amici, poi i Custodi bot
@@ -11892,7 +12095,7 @@ float rumoreC(vec3 x) { vec3 i = floor(x); vec3 f = fract(x); f = f * f * (3.0 -
   }
 
   function intro(i) {
-    audio(); prepara(i);
+    audio(); prepara(i); if (i !== ALLENAMENTO) voceSala(i);
     // si entra direttamente nella sala: niente spiegazioni a schermo (sono in Pausa → Come funziona); parte alla prima azione
     if (i !== ALLENAMENTO) { pannello(''); stato = 'gioco'; return; }
     stato = 'intro';
@@ -11902,13 +12105,13 @@ float rumoreC(vec3 x) { vec3 i = floor(x); vec3 f = fract(x); f = f * f * (3.0 -
     ui.pan.querySelector('#rd-menu').onclick = () => menu();
   }
   function wipe(perche) {
-    if (stato !== 'gioco') return; stato = 'wipe'; sparo = false; if (ON) ON.wm = perche; suono('caduta'); ripristinaIngresso();
+    if (stato !== 'gioco') return; stato = 'wipe'; sparo = false; if (ON) ON.wm = perche; suono('caduta'); ripristinaIngresso(); if (VOCI()) VOCI().wipe();
     pannello('<div class="kick male">Squadra annientata</div><h2>' + enc.nome + '</h2><p class="sotto">' + perche + ' Le munizioni tornano quelle che avevi entrando.</p><div class="pul"><button id="rd-ri">Riprova</button><button class="sec" id="rd-menu">Stanza d\'attesa</button></div>');
     ui.pan.querySelector('#rd-ri').onclick = () => enc.prima ? avviaPercorso(encI) : intro(encI);
     ui.pan.querySelector('#rd-menu').onclick = () => menu();
   }
   // percorso di salti prima dell'incontro (se la sala ce l'ha), altrimenti l'introduzione
-  function avviaPercorso(k) { if (!SALE[k] || !SALE[k].prima) return intro(k); audio(); prepara(k, true); pannello(''); stato = 'gioco'; toast(enc.nome + ': raggiungi ' + NOMI_INC[k]); }
+  function avviaPercorso(k) { if (!SALE[k] || !SALE[k].prima) return intro(k); audio(); prepara(k, true); voceSala(k, SALE[k].prima); pannello(''); stato = 'gioco'; toast(enc.nome + ': raggiungi ' + NOMI_INC[k]); }
   function avviaSala(k) { ALLENA = k === ALLENAMENTO; inizioSala(); avviaPercorso(k); }
 
   /* ---------- fine sala: la cassa ---------- */
@@ -12242,10 +12445,11 @@ body.pc #rd-hud .tasto,body.pc #rd-hud .base{display:none}
     const pausa = () => {
       const avanti = cassa && cassa.aperta && !SEGUI && encI + 1 < NUM_SALE;
       stato = 'pausa'; sparo = false; zaino(false);
-      pannello('<div class="kick">Pausa</div><h2>' + enc.nome + '</h2><div class="pul">' + (avanti ? '<button id="rd-av2">Prossima sala</button>' : '') + '<button id="rd-ri2"' + (avanti ? ' class="sec"' : '') + '>Riprendi</button>' + (enc.guida ? '<button class="sec" id="rd-cf">Come funziona</button>' : '') + (ultimaCassa && cassa && cassa.aperta ? '<button class="sec" id="rd-bt">Bottino</button>' : '') + (C ? '<button class="sec" id="rd-cmd">Comandi</button>' : '') + '<button class="sec" id="rd-menu">Stanza d\'attesa</button>' + (B.solo ? '' : '<button class="sec" id="rd-x">Esci dalla Sala</button>') + '</div>');
+      pannello('<div class="kick">Pausa</div><h2>' + enc.nome + '</h2><div class="pul">' + (avanti ? '<button id="rd-av2">Prossima sala</button>' : '') + '<button id="rd-ri2"' + (avanti ? ' class="sec"' : '') + '>Riprendi</button>' + (enc.guida ? '<button class="sec" id="rd-cf">Come funziona</button>' : '') + (ultimaCassa && cassa && cassa.aperta ? '<button class="sec" id="rd-bt">Bottino</button>' : '') + (C ? '<button class="sec" id="rd-cmd">Comandi</button>' : '') + (VOCI() ? '<button class="sec" id="rd-voci">Voci delle Gemelle: ' + (VOCI().attive() ? 'sì' : 'no') + '</button>' : '') + '<button class="sec" id="rd-menu">Stanza d\'attesa</button>' + (B.solo ? '' : '<button class="sec" id="rd-x">Esci dalla Sala</button>') + '</div>');
       ui.pan.querySelector('#rd-ri2').onclick = () => { pannello(''); stato = 'gioco'; }; ui.pan.querySelector('#rd-menu').onclick = () => menu();
       const x = ui.pan.querySelector('#rd-x'); if (x) x.onclick = () => R.esci(); const cm = ui.pan.querySelector('#rd-cmd'); if (cm) cm.onclick = () => C.impostazioni(ui.pan, pausa);
       const av = ui.pan.querySelector('#rd-av2'); if (av) av.onclick = () => prossimaSala();
+      const vc = ui.pan.querySelector('#rd-voci'); if (vc) vc.onclick = () => { VOCI().cambia(); pausa(); };
       const bt = ui.pan.querySelector('#rd-bt'); if (bt) bt.onclick = () => { stato = 'gioco'; pannelloCassa(ultimaCassa); };
       const cf = ui.pan.querySelector('#rd-cf'); if (cf) cf.onclick = () => { pannello('<div class="kick">Come funziona</div><h2>' + enc.nome + '</h2><ul>' + (enc.guida || []).map(g => '<li>' + g + '</li>').join('') + '</ul><div class="pul"><button id="rd-cfx">Indietro</button></div>'); ui.pan.querySelector('#rd-cfx').onclick = pausa; };
     };
@@ -12428,7 +12632,7 @@ body.pc #rd-hud .tasto,body.pc #rd-hud .base{display:none}
     const lasciaSq = () => { esciDaSquadra(); lascia(); };
     let h;
     if (sto === 'intro') h = '<div class="kick">' + (encI === ALLENAMENTO ? 'Allenamento' : enc.percorso && enc.prima ? 'Percorso' : 'Sala ' + (encI + 1) + ' di ' + NUM_SALE) + ' · ' + enc.luogo + ' · con ' + n + '</div><h2>' + enc.nome + '</h2>' + (enc.guida ? '<ul>' + enc.guida.map(g => '<li>' + g + '</li>').join('') + '</ul>' : '') + '<p class="sotto">Aspetta che ' + n + ' inizi lo scontro.</p>';
-    else if (sto === 'wipe') { if (SEGUI.wipe !== SEGUI.pn) { SEGUI.wipe = SEGUI.pn; ripristinaIngresso(); } h = '<div class="kick male">Squadra annientata</div><h2>' + enc.nome + '</h2><p class="sotto">' + esc(d.wm || '') + ' Le munizioni tornano quelle che avevi entrando. Aspetta che ' + n + ' riprovi.</p>'; }
+    else if (sto === 'wipe') { if (SEGUI.wipe !== SEGUI.pn) { SEGUI.wipe = SEGUI.pn; ripristinaIngresso(); if (VOCI()) VOCI().wipe(); } h = '<div class="kick male">Squadra annientata</div><h2>' + enc.nome + '</h2><p class="sotto">' + esc(d.wm || '') + ' Le munizioni tornano quelle che avevi entrando. Aspetta che ' + n + ' riprovi.</p>'; }
     else if (sto === 'fatto') h = '<div class="kick bene">Sala superata</div><h2>' + enc.nome + '</h2><p class="sotto">Aspetta che ' + n + ' scelga cosa fare.</p>';
     else h = '<div class="kick">Pausa</div><h2>' + enc.nome + '</h2><p class="sotto">' + n + ' ha messo in pausa.</p>';
     pannello(h + esci); ui.pan.querySelector('#rd-lascia').onclick = lasciaSq;
@@ -12486,7 +12690,7 @@ body.pc #rd-hud .tasto,body.pc #rd-hud .base{display:none}
     if (d.pn !== SEGUI.pn) {
       SEGUI.pn = d.pn; const ei = clamp(d.ei | 0, 0, INCONTRI.length - 1);
       if (ei !== SEGUI.ei) { SEGUI.ei = ei; ALLENA = ei === ALLENAMENTO; inizioSala(); }   // nuova sala: lo zaino si ricarica dalla scorta
-      liberaFantasmi(); prepara(ei, !!d.pe); SEGUI.rp = -1; SEGUI.d = null; SEGUI.pan = ''; stato = 'intro';
+      liberaFantasmi(); prepara(ei, !!d.pe); if (!ALLENA && SALE[ei]) voceSala(ei, d.pe ? SALE[ei].prima : null); SEGUI.rp = -1; SEGUI.d = null; SEGUI.pan = ''; stato = 'intro';
     }
     if (SEGUI.d !== d) { SEGUI.d = d; seguiDati(d); }
     if (Array.isArray(d.lt) && nnum(d.lt[0], 0) > (SEGUI.ltN || 0)) { SEGUI.ltN = nnum(d.lt[0], 0); segnaLato(d.lt[1] ? 1 : 0); }   // ondata in arrivo
@@ -12628,7 +12832,7 @@ body.pc #rd-hud .tasto,body.pc #rd-hud .base{display:none}
   };
   R.esci = function () {
     if (SEGUI) { liberaFantasmi(); SEGUI = null; } ON = null; esciDaSquadra(); salvaDati(); zaino(false);   // uscendo dalla Cripta la squadra si scioglie
-    R.attivo = false; document.body.classList.remove('raid-attivo'); stato = 'menu'; sparo = false; mv.x = mv.y = 0; mv.id = sg.id = fu.id = null; pannello('');
+    voceZitta(); R.attivo = false; document.body.classList.remove('raid-attivo'); stato = 'menu'; sparo = false; mv.x = mv.y = 0; mv.id = sg.id = fu.id = null; pannello('');
     try { if (document.pointerLockElement) document.exitPointerLock(); } catch (e) { }
     try { screen.orientation.unlock(); } catch (e) { } if (B.orienta) B.orienta(false);
     if (R.onEsci) R.onEsci();
