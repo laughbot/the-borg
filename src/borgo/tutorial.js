@@ -13,7 +13,7 @@
   const PASSI = [
     { t: 'Benvenuto nel Borgo! 👋', d: 'Vuoi un giro veloce di circa un minuto? Ti mostro i comandi principali. Puoi saltarlo adesso, o in qualsiasi momento.', inizio: true },
     { sel: '#joy', t: 'Muoviti', d: 'Trascina il pallino del joystick per camminare. Sul computer puoi usare anche le frecce o i tasti W A S D.' },
-    { sel: '#controlli', t: 'Guarda come vuoi', d: 'Con questi pulsanti ruoti la visuale, ingrandisci o riduci, alzi e abbassi la telecamera. 😊 apre le emote (saluta, balla, ride...).' },
+    { sel: '#controlli', t: 'Guarda come vuoi', d: 'Trascina un dito sullo schermo per girare e inclinare la visuale; allarga o stringi due dita per ingrandire o rimpicciolire. Qui accanto ci sono musica, suoni, bici, telecamera dietro l\'avatar e 😊 per le emote.' },
     { sel: '#minimappa-box', t: 'Minimappa e casa', d: 'La mappa mostra dove sei: toccala per ingrandirla. Il pulsante con la casetta ti porta subito a casa tua.' },
     { sel: '#pill-coins', t: 'I tuoi ' + B3.Eco.nome, d: 'Sono la moneta del gioco. Servono per comprare mobili, pavimenti e pareti per la tua casa, e per ampliare la stanza.' },
     { sel: '#btn-miss', t: 'Missioni', d: 'Ogni giorno hai delle missioni facili (parlare in chat, sederti, arredare...). Completale per guadagnare ' + B3.Eco.nome + '. Più giorni di fila giochi, più guadagni.' },

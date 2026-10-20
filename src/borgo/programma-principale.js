@@ -349,15 +349,26 @@
   let drag = null;
   // modalita' "Arreda": il dito trascina direttamente il mobile (puntatore manuale)
   let dragMob = null;
+  // dita appoggiate sullo schermo, per lo zoom a pizzico
+  const dita = new Map(); let pizzico = null;
+  function distDita() { const v = [...dita.values()]; return Math.hypot(v[0][0] - v[1][0], v[0][1] - v[1][1]); }
   function raggioDa(cx, cy) {
     const r = canvas.getBoundingClientRect(), o = B.pt(r.left, r.top), o2 = B.pt(r.right, r.bottom), x0 = Math.min(o[0], o2[0]), y0 = Math.min(o[1], o2[1]), w = Math.abs(o2[0] - o[0]), h = Math.abs(o2[1] - o[1]);
     ndc.set(((cx - x0) / w) * 2 - 1, -((cy - y0) / h) * 2 + 1); ray.setFromCamera(ndc, cam); return ray;
   }
   canvas.addEventListener('pointerdown', e => {
     if (B.Arredo && B.Arredo.attivo && stanza.id === 'casa') { const p = B.ptE(e); if (B.Arredo.giu(raggioDa(p[0], p[1]))) { dragMob = e.pointerId; canvas.setPointerCapture(e.pointerId); e.preventDefault(); return; } }
-    const p = B.ptE(e); drag = { id: e.pointerId, x: p[0], y: p[1], x0: p[0], y0: p[1], t: performance.now() }; canvas.setPointerCapture(e.pointerId); });
-  canvas.addEventListener('pointermove', e => { if (dragMob !== null && e.pointerId === dragMob) { const p = B.ptE(e); B.Arredo.muovi(raggioDa(p[0], p[1])); return; } if (drag && e.pointerId === drag.id) { const p = B.ptE(e), dx = p[0] - drag.x; drag.x = p[0]; const dy = p[1] - drag.y; drag.y = p[1]; C.azT -= dx * 0.008; C.az -= dx * 0.008; if (Math.abs(dx) > 0.5) setSegui(false); inclina(dy * 0.18); } });
+    const p = B.ptE(e); dita.set(e.pointerId, p); canvas.setPointerCapture(e.pointerId);
+    // due dita: si allontanano = ingrandisci, si avvicinano = rimpicciolisci (come la fotocamera)
+    if (dita.size === 2) { drag = null; pizzico = { d0: distDita(), z0: C.zoom }; return; }
+    if (pizzico || dita.size > 2) return;
+    drag = { id: e.pointerId, x: p[0], y: p[1], x0: p[0], y0: p[1], t: performance.now() }; });
+  canvas.addEventListener('pointermove', e => { if (dragMob !== null && e.pointerId === dragMob) { const p = B.ptE(e); B.Arredo.muovi(raggioDa(p[0], p[1])); return; }
+    if (dita.has(e.pointerId)) dita.set(e.pointerId, B.ptE(e));
+    if (pizzico) { if (dita.size >= 2 && pizzico.d0 > 0) impostaZoom(pizzico.z0 * distDita() / pizzico.d0); return; }
+    if (drag && e.pointerId === drag.id) { const p = B.ptE(e), dx = p[0] - drag.x; drag.x = p[0]; const dy = p[1] - drag.y; drag.y = p[1]; C.azT -= dx * 0.008; C.az -= dx * 0.008; if (Math.abs(dx) > 0.5) setSegui(false); inclina(dy * 0.18); } });
   const dragFine = (e, tap) => {
+    dita.delete(e.pointerId); if (pizzico) { if (!dita.size) pizzico = null; return; }
     if (dragMob !== null && e.pointerId === dragMob) { dragMob = null; return; }
     if (!drag || e.pointerId !== drag.id) return;
     const pp = B.ptE(e), mosso = Math.hypot(pp[0] - drag.x0, pp[1] - drag.y0), breve = performance.now() - drag.t < 450; drag = null;
