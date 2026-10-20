@@ -107,4 +107,10 @@ eq(D.cadutaMun('x', true).map(c => c[0]).sort(), ['h', 'p', 's']);
   for (let i = 0; i < 5; i++) for (let sala = 0; sala < 14; sala++) { const b = D.vesteBot(i, sala); Object.values(b).forEach(e => ok(e.r >= 0 && e.r <= 4)); }
   eq(D.vesteBot(0, 8).mantello, { r: 4, k: 'stendardo' });
 }
+// pezzi in piazza: spenti all'inizio, si accendono dallo zaino
+{
+  eq(D.inPiazza(), false, 'in piazza spento all\'inizio'); eq(D.vestePiazza(), null);
+  const S = D.nuovo(); D.tuttoProva(S, 30); const p = S.pezzi.find(q => q.s === 'casco' && q.x === 'faro'); D.indossa(S, p.u); D.salva(S);
+  eq(D.inPiazza(true), true); eq(D.vestePiazza().casco, { r: 4, k: 'faro' }); D.inPiazza(false); eq(D.vestePiazza(), null);
+}
 console.log('ok  cripta (progressi e bottino): ' + n + ' controlli');

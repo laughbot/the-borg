@@ -118,6 +118,10 @@
     PARTI.forEach(s => { if (c[j] === '-') { j++; return; } const r = Math.max(0, Math.min(4, parseInt(c[j], 10) || 0)), k = K[parseInt(c[j + 1], 36)] || 'portatore'; j += 2; v[s] = r === 4 && STELLARI[s][k] ? { r, k } : { r: Math.min(r, 3), set: SETS[k] ? k : 'portatore' }; });
     return v;
   };
+  // in piazza i pezzi della Cripta si vedono solo se lo decidi tu (spento all'inizio)
+  const CHIAVE_PIAZZA = 'theborg.cripta.piazza';
+  const inPiazza = si => { try { if (si !== undefined) localStorage.setItem(CHIAVE_PIAZZA, si ? '1' : '0'); return localStorage.getItem(CHIAVE_PIAZZA) === '1'; } catch (e) { return false; } };
+  const vestePiazza = () => { if (!inPiazza()) return null; try { const v = vesteDi(carica()); return Object.keys(v).length ? v : null; } catch (e) { return null; } };
   const nomePezzo = p => p.r === 4 && STELLARI[p.s][p.x] ? STELLARI[p.s][p.x].nome : EQUIP[p.s].nome + ' ' + (SETS[p.set] || SETS.portatore).nome;
   const descPezzo = p => p.r === 4 && STELLARI[p.s][p.x] ? STELLARI[p.s][p.x].potere : (SETS[p.set] || SETS.portatore).desc;
   const stessoPezzo = (a, b) => a.s === b.s && (a.r === 4 || b.r === 4 ? a.r === b.r && a.x === b.x : a.set === b.set);
@@ -323,7 +327,7 @@
   B.CriptaDati = {
     NUM_SALE, LIV_MAX, RARITA, PROB, PIETA, DOPPIONE, MUN, TIPI_MUN, ARMI, BOTTINO_ARMI, STELLARI_ARMI, PARTI, EQUIP, GRANATE, GRANATE_MAX,
     livMaxSala, dopoSala, livAtteso, fattoreLiv, scalaSala,
-    nuovo, carica, salva, pulisci, statistiche, armaDi, pezzo, nomeOggetto, nomePezzo, descPezzo, vesteDi, vesteBot, codificaVeste, decodificaVeste, SETS, NOMI_SET, STELLARI, equipaggia, indossa,
+    nuovo, carica, salva, pulisci, statistiche, armaDi, pezzo, nomeOggetto, nomePezzo, descPezzo, vesteDi, vesteBot, codificaVeste, decodificaVeste, inPiazza, vestePiazza, SETS, NOMI_SET, STELLARI, equipaggia, indossa,
     riempiZaino, aggiungiMun, compra, cadutaMun, tiraRarita, apriCassa, salaFatta, partenza, azzeraSale, tuttoProva
   };
 })();

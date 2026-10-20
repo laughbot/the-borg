@@ -2,7 +2,7 @@
 <html lang="it">
 <head>
   <meta charset="utf-8">
-  <meta name="versione" content="b4494bfa8bba">
+  <meta name="versione" content="fcb8f8079ce7">
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="mobile-web-app-capable" content="yes">
@@ -6317,6 +6317,10 @@ body.pb-attivo #pb-hud{display:block}
     PARTI.forEach(s => { if (c[j] === '-') { j++; return; } const r = Math.max(0, Math.min(4, parseInt(c[j], 10) || 0)), k = K[parseInt(c[j + 1], 36)] || 'portatore'; j += 2; v[s] = r === 4 && STELLARI[s][k] ? { r, k } : { r: Math.min(r, 3), set: SETS[k] ? k : 'portatore' }; });
     return v;
   };
+  // in piazza i pezzi della Cripta si vedono solo se lo decidi tu (spento all'inizio)
+  const CHIAVE_PIAZZA = 'theborg.cripta.piazza';
+  const inPiazza = si => { try { if (si !== undefined) localStorage.setItem(CHIAVE_PIAZZA, si ? '1' : '0'); return localStorage.getItem(CHIAVE_PIAZZA) === '1'; } catch (e) { return false; } };
+  const vestePiazza = () => { if (!inPiazza()) return null; try { const v = vesteDi(carica()); return Object.keys(v).length ? v : null; } catch (e) { return null; } };
   const nomePezzo = p => p.r === 4 && STELLARI[p.s][p.x] ? STELLARI[p.s][p.x].nome : EQUIP[p.s].nome + ' ' + (SETS[p.set] || SETS.portatore).nome;
   const descPezzo = p => p.r === 4 && STELLARI[p.s][p.x] ? STELLARI[p.s][p.x].potere : (SETS[p.set] || SETS.portatore).desc;
   const stessoPezzo = (a, b) => a.s === b.s && (a.r === 4 || b.r === 4 ? a.r === b.r && a.x === b.x : a.set === b.set);
@@ -6522,7 +6526,7 @@ body.pb-attivo #pb-hud{display:block}
   B.CriptaDati = {
     NUM_SALE, LIV_MAX, RARITA, PROB, PIETA, DOPPIONE, MUN, TIPI_MUN, ARMI, BOTTINO_ARMI, STELLARI_ARMI, PARTI, EQUIP, GRANATE, GRANATE_MAX,
     livMaxSala, dopoSala, livAtteso, fattoreLiv, scalaSala,
-    nuovo, carica, salva, pulisci, statistiche, armaDi, pezzo, nomeOggetto, nomePezzo, descPezzo, vesteDi, vesteBot, codificaVeste, decodificaVeste, SETS, NOMI_SET, STELLARI, equipaggia, indossa,
+    nuovo, carica, salva, pulisci, statistiche, armaDi, pezzo, nomeOggetto, nomePezzo, descPezzo, vesteDi, vesteBot, codificaVeste, decodificaVeste, inPiazza, vestePiazza, SETS, NOMI_SET, STELLARI, equipaggia, indossa,
     riempiZaino, aggiungiMun, compra, cadutaMun, tiraRarita, apriCassa, salaFatta, partenza, azzeraSale, tuttoProva
   };
 })();
@@ -12366,7 +12370,7 @@ float rumoreC(vec3 x) { vec3 i = floor(x); vec3 f = fract(x); f = f * f * (3.0 -
       return '<div class="zr"><div><b style="color:' + rar(it.r).col + '">' + A.nome + '</b> <small>' + A.tipo + ' · ' + rar(it.r).nome + ' · danno ' + dn + ' · ' + (m ? '<i style="color:' + m.col + '">' + m.nome.toLowerCase() + '</i>' : 'colpi infiniti') + '</small><p>' + A.desc + '</p></div>' +
         '<div class="zb"><button class="ma' + (su === 0 ? ' on' : '') + '" data-u="' + it.u + '" data-p="0">1</button><button class="ma' + (su === 1 ? ' on' : '') + '" data-u="' + it.u + '" data-p="1">2</button></div></div>';
     }).join('') + '</div>';
-    h += '<div class="kick">Equipaggiamento · vita ' + st.vita + ' · difesa ' + Math.round((1 - st.res) * 100) + '%' + (st.salti > 1 ? ' · doppio salto' : '') + '</div>' + (inPartita ? '' : (f => f ? '<img class="zfoto" alt="Il tuo Portatore con i pezzi indossati" src="' + f + '">' : '')(fotoVestito())) + '<div class="zl">' + CD.PARTI.map(s => {
+    h += '<div class="kick">Equipaggiamento · vita ' + st.vita + ' · difesa ' + Math.round((1 - st.res) * 100) + '%' + (st.salti > 1 ? ' · doppio salto' : '') + '</div>' + (inPartita ? '' : (f => f ? '<img class="zfoto" alt="Il tuo Portatore con i pezzi indossati" src="' + f + '">' : '')(fotoVestito()) + '<div class="zl"><div class="zr"><div><b>Mostra i pezzi in piazza</b> <small>' + (CD.inPiazza() ? 'tutti ti vedono con i pezzi della Cripta' : 'in piazza hai solo il tuo avatar') + '</small></div><div class="zb"><button class="piaz' + (CD.inPiazza() ? ' on' : '') + '">' + (CD.inPiazza() ? 'Sì' : 'No') + '</button></div></div></div>') + '<div class="zl">' + CD.PARTI.map(s => {
       const E = CD.EQUIP[s], miei = DATI.pezzi.filter(p => p.s === s).sort((a, b) => b.r - a.r);
       if (!miei.length) return '<div class="zr"><div><b>' + E.nome + '</b> <small>non ne hai ancora: si trova nelle casse</small></div></div>';
       return miei.map(p => {
@@ -12389,7 +12393,9 @@ float rumoreC(vec3 x) { vec3 i = floor(x); vec3 f = fract(x); f = f * f * (3.0 -
       if (inPartita && !statoArmi[u]) { const st = armaSt(u), A = ARMI[itemDi(u).k]; if (st && A.mun) st.cur = 0; }   // presa dallo zaino: va caricata
       ia = clamp(ia, 0, 1); salvaDati(); mostraArma(); rifai();
     });
-    el.querySelectorAll('.ind').forEach(b => b.onclick = () => { CD.indossa(DATI, b.dataset.u); salvaDati(); applicaStat(inPartita); rifai(); });
+    const rivesti = () => { if (!PROVA && CD.inPiazza() && B.app && B.app.rivesti) B.app.rivesti(); };
+    el.querySelectorAll('.ind').forEach(b => b.onclick = () => { CD.indossa(DATI, b.dataset.u); salvaDati(); applicaStat(inPartita); rivesti(); rifai(); });
+    el.querySelectorAll('.piaz').forEach(b => b.onclick = () => { CD.inPiazza(!CD.inPiazza()); if (B.app && B.app.rivesti) B.app.rivesti(); rifai(); });
     el.querySelectorAll('.dona').forEach(b => b.onclick = () => {
       const t = b.dataset.t, q = CD.MUN[t].pacco; if (DATI.zaino[t] < q) return;
       DATI.zaino[t] -= q; DONI.push([++nDono, b.dataset.k, t, q]); if (DONI.length > 8) DONI.shift(); salvaDati();
@@ -13220,6 +13226,7 @@ body.pc #rd-hud .tasto,body.pc #rd-hud .base{display:none}
     R.attivo = false; document.body.classList.remove('raid-attivo'); stato = 'menu'; sparo = false; mv.x = mv.y = 0; mv.id = sg.id = fu.id = null; pannello('');
     try { if (document.pointerLockElement) document.exitPointerLock(); } catch (e) { }
     try { screen.orientation.unlock(); } catch (e) { } if (B.orienta) B.orienta(false);
+    if (CD.inPiazza() && B.app && B.app.rivesti) try { B.app.rivesti(); } catch (e) { }   // i pezzi nuovi si vedono subito in piazza
     if (R.onEsci) R.onEsci();
   };
   // per i test automatici
@@ -18978,7 +18985,9 @@ body.bb-attivo #controlli,body.bb-attivo #joy,body.bb-attivo #btn-contesto,body.
   function costruisciIo(look, nick) {
     if (io.av) { scene.remove(io.av.root); B.liberaAvatar(io.av); }
     io.nick = nick || io.nick; io.bolla = null;
-    io.av = B.unisciAvatar(B.creaAvatar(look)); scene.add(io.av.root);     // pezzi uniti come per gli abitanti: da ~110 a ~25 disegni
+    const grezzo = B.creaAvatar(look), eq = B.CriptaDati && B.CriptaDati.vestePiazza ? B.CriptaDati.vestePiazza() : null;   // pezzi della Cripta, se li vuoi in piazza
+    if (eq && B.ArmatureCripta) try { B.ArmatureCripta.veste(grezzo, eq); } catch (e) { }
+    io.av = B.unisciAvatar(grezzo); scene.add(io.av.root);     // pezzi uniti come per gli abitanti: da ~110 a ~25 disegni
     const et = B.etichetta(io.nick, { sfondo: '#f2c76e', altezza: 0.4 }); et.position.y = 2.55; io.av.root.add(et);
     io.av.root.userData.io = true;
     io.bk = null; if (io.bici) { montaBici(); io.av.bicT = io.av.bic = 1; }
@@ -19334,7 +19343,8 @@ body.bb-attivo #controlli,body.bb-attivo #joy,body.bb-attivo #btn-contesto,body.
   B.app = {
     io, gC, vistaAlto, assegnaLuci, ricostruisciCasa, casaOspite, setBici, creaBici, npc, C, cam, scene, renderer, stanze, G, joy, entraStanza, usaPorta, portaVicina, misura, atmosfera, impostaZoom,
     inclina, emote, mostraBolla, ruota: d => { C.azT += d * PI / 2; setSegui(false); },
-    stanza: () => stanza, gioco: () => giocoAttivo
+    stanza: () => stanza, gioco: () => giocoAttivo,
+    rivesti: () => { if (G.stato.giocatore && io.av) costruisciIo(G.stato.giocatore.look); }
   };
   if (B.Arredo) B.Arredo.init(B.app);
   if (B.Miss) B.Miss.init(B.app);
@@ -20608,6 +20618,9 @@ body.orizz #pagina-zaino .zn-carte{grid-template-columns:repeat(auto-fill,minmax
   const stessoLuogo = (a, b) => String(a).toLowerCase() === String(b).toLowerCase();
 
   /* ---------- quello che mando io ---------- */
+  // pezzi della Cripta da mostrare in piazza (solo se li ho accesi): codice corto di 10 caratteri
+  function codiceEq() { const CD = B.CriptaDati, v = CD && CD.vestePiazza ? CD.vestePiazza() : null; return v ? CD.codificaVeste(v) : undefined; }
+  const eqDa = x => typeof x === 'string' && x.length <= 12 ? x : '';
   function mia() {
     const io = app.io, st = app.stanza(), gioco = G.stato.giocatore;
     if (!gioco || !io.av) return null;
@@ -20616,7 +20629,7 @@ body.orizz #pagina-zaino .zn-carte{grid-template-columns:repeat(auto-fill,minmax
       vel: +Math.hypot(io.vx, io.vz).toFixed(2), sed: io.seduto ? (io.seduto.dorme ? 2 : 1) : 0, bk: io.bici ? 1 : 0, k: GIOCHI[dove] && GIOCHI[dove]().rete ? GIOCHI[dove]().rete() : null,
       mc: B.Mercato && B.Mercato.annunciRete ? B.Mercato.annunciRete() : null, mo: mieiMo.length ? { l: mieiMo } : undefined, re: mieiRe.length ? { l: mieiRe } : undefined,
       lt: Object.keys(mieiLetti).length ? Object.keys(mieiLetti).slice(-6).map(k => ({ a: k, n: mieiLetti[k] })) : undefined,
-      sc: scrivoA && performance.now() - tScrivo < 4000 ? testo(scrivoA, 20) : undefined };
+      sc: scrivoA && performance.now() - tScrivo < 4000 ? testo(scrivoA, 20) : undefined, eq: codiceEq() };
   }
   // q = numero progressivo (chi riceve scarta gli aggiornamenti vecchi arrivati in ritardo),
   // t = il mio orologio in ms e vx/vz = la velocita' vera tra un invio e l'altro: chi mi vede
@@ -20636,12 +20649,14 @@ body.orizz #pagina-zaino .zn-carte{grid-template-columns:repeat(auto-fill,minmax
   /* ---------- gli amici ---------- */
   function crea(peer, pr) {
     // come gli abitanti: pezzi uniti e niente ombra, se no ogni amico pesa sul telefono quanto mezza piazza
-    const look = lookDa(pr.look), av = B.unisciAvatar ? B.unisciAvatar(B.creaAvatar(look)) : B.creaAvatar(look);
+    const look = lookDa(pr.look), grezzo = B.creaAvatar(look), eq = eqDa(pr.eq);
+    if (eq && B.ArmatureCripta && B.CriptaDati) try { B.ArmatureCripta.veste(grezzo, B.CriptaDati.decodificaVeste(eq)); } catch (e) { }
+    const av = B.unisciAvatar ? B.unisciAvatar(grezzo) : grezzo;
     av.root.traverse(q => { if (q.isMesh) { q.castShadow = false; q.receiveShadow = false; } });
     const nick = testo(pr.nick, 20) || 'Amico';
     const et = B.etichetta(nick, { sfondo: '#7fd6a4', colore: '#163322', altezza: 0.38 }); et.position.y = 2.52; av.root.add(et);
     app.scene.add(av.root);
-    const a = { peer, av, nick, lookK: JSON.stringify(look), x: num(pr.x, 0), z: num(pr.z, 0), y: num(pr.y, 0), r: num(pr.r, 0), vel: 0, bolla: null, durBolla: 0, nMsg: pr.msg ? pr.msg.n : 0, nEm: pr.em ? pr.em.n : 0, nDm: maxDm(pr), nEv: maxN(pr.ev), nMo: maxN(pr.mo), nRe: maxN(pr.re), pr, q: null, off: null, buf: [], bk: null, vis: false };
+    const a = { peer, av, nick, eqK: eq, lookK: JSON.stringify(look), x: num(pr.x, 0), z: num(pr.z, 0), y: num(pr.y, 0), r: num(pr.r, 0), vel: 0, bolla: null, durBolla: 0, nMsg: pr.msg ? pr.msg.n : 0, nEm: pr.em ? pr.em.n : 0, nDm: maxDm(pr), nEv: maxN(pr.ev), nMo: maxN(pr.mo), nRe: maxN(pr.re), pr, q: null, off: null, buf: [], bk: null, vis: false };
     noti.set(nick.toLowerCase(), { nick, look });
     amici.set(peer, a); return a;
   }
@@ -20685,7 +20700,7 @@ body.orizz #pagina-zaino .zn-carte{grid-template-columns:repeat(auto-fill,minmax
     let a = amici.get(peer);
     // arrivato in ritardo dopo uno piu' nuovo: si butta (ogni aggiornamento contiene gia' tutto)
     if (a && a.q != null && typeof pr.q === 'number' && pr.q <= a.q && !(typeof pr.t === 'number' && pr.t < a.tm - 2000)) return;   // t molto piu' piccolo: ha ricaricato la pagina
-    if (a && (JSON.stringify(lookDa(pr.look)) !== a.lookK || (testo(pr.nick, 20) || 'Amico') !== a.nick)) { const vecchio = a; togli(peer); a = crea(peer, pr); a.nMsg = vecchio.nMsg; a.nEm = vecchio.nEm; a.nDm = vecchio.nDm; a.nEv = vecchio.nEv; a.nMo = vecchio.nMo; a.nRe = vecchio.nRe; }
+    if (a && (JSON.stringify(lookDa(pr.look)) !== a.lookK || eqDa(pr.eq) !== a.eqK || (testo(pr.nick, 20) || 'Amico') !== a.nick)) { const vecchio = a; togli(peer); a = crea(peer, pr); a.nMsg = vecchio.nMsg; a.nEm = vecchio.nEm; a.nDm = vecchio.nDm; a.nEv = vecchio.nEv; a.nMo = vecchio.nMo; a.nRe = vecchio.nRe; }
     if (!a) {
       a = crea(peer, pr);
       if (G.stato.giocatore) G.emetti('toast', a.nick + ' è online');

@@ -43,6 +43,9 @@
   const stessoLuogo = (a, b) => String(a).toLowerCase() === String(b).toLowerCase();
 
   /* ---------- quello che mando io ---------- */
+  // pezzi della Cripta da mostrare in piazza (solo se li ho accesi): codice corto di 10 caratteri
+  function codiceEq() { const CD = B.CriptaDati, v = CD && CD.vestePiazza ? CD.vestePiazza() : null; return v ? CD.codificaVeste(v) : undefined; }
+  const eqDa = x => typeof x === 'string' && x.length <= 12 ? x : '';
   function mia() {
     const io = app.io, st = app.stanza(), gioco = G.stato.giocatore;
     if (!gioco || !io.av) return null;
@@ -51,7 +54,7 @@
       vel: +Math.hypot(io.vx, io.vz).toFixed(2), sed: io.seduto ? (io.seduto.dorme ? 2 : 1) : 0, bk: io.bici ? 1 : 0, k: GIOCHI[dove] && GIOCHI[dove]().rete ? GIOCHI[dove]().rete() : null,
       mc: B.Mercato && B.Mercato.annunciRete ? B.Mercato.annunciRete() : null, mo: mieiMo.length ? { l: mieiMo } : undefined, re: mieiRe.length ? { l: mieiRe } : undefined,
       lt: Object.keys(mieiLetti).length ? Object.keys(mieiLetti).slice(-6).map(k => ({ a: k, n: mieiLetti[k] })) : undefined,
-      sc: scrivoA && performance.now() - tScrivo < 4000 ? testo(scrivoA, 20) : undefined };
+      sc: scrivoA && performance.now() - tScrivo < 4000 ? testo(scrivoA, 20) : undefined, eq: codiceEq() };
   }
   // q = numero progressivo (chi riceve scarta gli aggiornamenti vecchi arrivati in ritardo),
   // t = il mio orologio in ms e vx/vz = la velocita' vera tra un invio e l'altro: chi mi vede
@@ -71,12 +74,14 @@
   /* ---------- gli amici ---------- */
   function crea(peer, pr) {
     // come gli abitanti: pezzi uniti e niente ombra, se no ogni amico pesa sul telefono quanto mezza piazza
-    const look = lookDa(pr.look), av = B.unisciAvatar ? B.unisciAvatar(B.creaAvatar(look)) : B.creaAvatar(look);
+    const look = lookDa(pr.look), grezzo = B.creaAvatar(look), eq = eqDa(pr.eq);
+    if (eq && B.ArmatureCripta && B.CriptaDati) try { B.ArmatureCripta.veste(grezzo, B.CriptaDati.decodificaVeste(eq)); } catch (e) { }
+    const av = B.unisciAvatar ? B.unisciAvatar(grezzo) : grezzo;
     av.root.traverse(q => { if (q.isMesh) { q.castShadow = false; q.receiveShadow = false; } });
     const nick = testo(pr.nick, 20) || 'Amico';
     const et = B.etichetta(nick, { sfondo: '#7fd6a4', colore: '#163322', altezza: 0.38 }); et.position.y = 2.52; av.root.add(et);
     app.scene.add(av.root);
-    const a = { peer, av, nick, lookK: JSON.stringify(look), x: num(pr.x, 0), z: num(pr.z, 0), y: num(pr.y, 0), r: num(pr.r, 0), vel: 0, bolla: null, durBolla: 0, nMsg: pr.msg ? pr.msg.n : 0, nEm: pr.em ? pr.em.n : 0, nDm: maxDm(pr), nEv: maxN(pr.ev), nMo: maxN(pr.mo), nRe: maxN(pr.re), pr, q: null, off: null, buf: [], bk: null, vis: false };
+    const a = { peer, av, nick, eqK: eq, lookK: JSON.stringify(look), x: num(pr.x, 0), z: num(pr.z, 0), y: num(pr.y, 0), r: num(pr.r, 0), vel: 0, bolla: null, durBolla: 0, nMsg: pr.msg ? pr.msg.n : 0, nEm: pr.em ? pr.em.n : 0, nDm: maxDm(pr), nEv: maxN(pr.ev), nMo: maxN(pr.mo), nRe: maxN(pr.re), pr, q: null, off: null, buf: [], bk: null, vis: false };
     noti.set(nick.toLowerCase(), { nick, look });
     amici.set(peer, a); return a;
   }
@@ -120,7 +125,7 @@
     let a = amici.get(peer);
     // arrivato in ritardo dopo uno piu' nuovo: si butta (ogni aggiornamento contiene gia' tutto)
     if (a && a.q != null && typeof pr.q === 'number' && pr.q <= a.q && !(typeof pr.t === 'number' && pr.t < a.tm - 2000)) return;   // t molto piu' piccolo: ha ricaricato la pagina
-    if (a && (JSON.stringify(lookDa(pr.look)) !== a.lookK || (testo(pr.nick, 20) || 'Amico') !== a.nick)) { const vecchio = a; togli(peer); a = crea(peer, pr); a.nMsg = vecchio.nMsg; a.nEm = vecchio.nEm; a.nDm = vecchio.nDm; a.nEv = vecchio.nEv; a.nMo = vecchio.nMo; a.nRe = vecchio.nRe; }
+    if (a && (JSON.stringify(lookDa(pr.look)) !== a.lookK || eqDa(pr.eq) !== a.eqK || (testo(pr.nick, 20) || 'Amico') !== a.nick)) { const vecchio = a; togli(peer); a = crea(peer, pr); a.nMsg = vecchio.nMsg; a.nEm = vecchio.nEm; a.nDm = vecchio.nDm; a.nEv = vecchio.nEv; a.nMo = vecchio.nMo; a.nRe = vecchio.nRe; }
     if (!a) {
       a = crea(peer, pr);
       if (G.stato.giocatore) G.emetti('toast', a.nick + ' è online');
