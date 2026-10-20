@@ -2,7 +2,7 @@
 <html lang="it">
 <head>
   <meta charset="utf-8">
-  <meta name="versione" content="7af3f9953a27">
+  <meta name="versione" content="2c2987e08ce9">
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="mobile-web-app-capable" content="yes">
@@ -541,12 +541,6 @@ body.orizz #inizio-anteprima { width: 120px; height: 140px; }
     </header>
 
     <div id="controlli">
-      <button class="btn-mini" id="btn-rot-sx" aria-label="Ruota la visuale a sinistra">&#x21B6;</button>
-      <button class="btn-mini" id="btn-rot-dx" aria-label="Ruota la visuale a destra">&#x21B7;</button>
-      <button class="btn-mini" id="btn-zoom-piu" aria-label="Ingrandisci">+</button>
-      <button class="btn-mini" id="btn-zoom-meno" aria-label="Riduci zoom">&minus;</button>
-      <button class="btn-mini" id="btn-giu" aria-label="Abbassa la telecamera">&#x2B07;</button>
-      <button class="btn-mini" id="btn-su" aria-label="Alza la telecamera">&#x2B06;</button>
       <button class="btn-mini" id="btn-musica" aria-label="Spegni la musica">&#x1F3B5;</button>
       <button class="btn-mini" id="btn-audio" aria-label="Spegni gli effetti sonori">&#x1F50A;</button>
       <button class="btn-mini" id="btn-bici" aria-label="Bicicletta: tira fuori o rimetti">&#x1F6B2;</button>
@@ -18603,15 +18597,26 @@ body.bb-attivo #controlli,body.bb-attivo #joy,body.bb-attivo #btn-contesto,body.
   let drag = null;
   // modalita' "Arreda": il dito trascina direttamente il mobile (puntatore manuale)
   let dragMob = null;
+  // dita appoggiate sullo schermo, per lo zoom a pizzico
+  const dita = new Map(); let pizzico = null;
+  function distDita() { const v = [...dita.values()]; return Math.hypot(v[0][0] - v[1][0], v[0][1] - v[1][1]); }
   function raggioDa(cx, cy) {
     const r = canvas.getBoundingClientRect(), o = B.pt(r.left, r.top), o2 = B.pt(r.right, r.bottom), x0 = Math.min(o[0], o2[0]), y0 = Math.min(o[1], o2[1]), w = Math.abs(o2[0] - o[0]), h = Math.abs(o2[1] - o[1]);
     ndc.set(((cx - x0) / w) * 2 - 1, -((cy - y0) / h) * 2 + 1); ray.setFromCamera(ndc, cam); return ray;
   }
   canvas.addEventListener('pointerdown', e => {
     if (B.Arredo && B.Arredo.attivo && stanza.id === 'casa') { const p = B.ptE(e); if (B.Arredo.giu(raggioDa(p[0], p[1]))) { dragMob = e.pointerId; canvas.setPointerCapture(e.pointerId); e.preventDefault(); return; } }
-    const p = B.ptE(e); drag = { id: e.pointerId, x: p[0], y: p[1], x0: p[0], y0: p[1], t: performance.now() }; canvas.setPointerCapture(e.pointerId); });
-  canvas.addEventListener('pointermove', e => { if (dragMob !== null && e.pointerId === dragMob) { const p = B.ptE(e); B.Arredo.muovi(raggioDa(p[0], p[1])); return; } if (drag && e.pointerId === drag.id) { const p = B.ptE(e), dx = p[0] - drag.x; drag.x = p[0]; const dy = p[1] - drag.y; drag.y = p[1]; C.azT -= dx * 0.008; C.az -= dx * 0.008; if (Math.abs(dx) > 0.5) setSegui(false); inclina(dy * 0.18); } });
+    const p = B.ptE(e); dita.set(e.pointerId, p); canvas.setPointerCapture(e.pointerId);
+    // due dita: si allontanano = ingrandisci, si avvicinano = rimpicciolisci (come la fotocamera)
+    if (dita.size === 2) { drag = null; pizzico = { d0: distDita(), z0: C.zoom }; return; }
+    if (pizzico || dita.size > 2) return;
+    drag = { id: e.pointerId, x: p[0], y: p[1], x0: p[0], y0: p[1], t: performance.now() }; });
+  canvas.addEventListener('pointermove', e => { if (dragMob !== null && e.pointerId === dragMob) { const p = B.ptE(e); B.Arredo.muovi(raggioDa(p[0], p[1])); return; }
+    if (dita.has(e.pointerId)) dita.set(e.pointerId, B.ptE(e));
+    if (pizzico) { if (dita.size >= 2 && pizzico.d0 > 0) impostaZoom(pizzico.z0 * distDita() / pizzico.d0); return; }
+    if (drag && e.pointerId === drag.id) { const p = B.ptE(e), dx = p[0] - drag.x; drag.x = p[0]; const dy = p[1] - drag.y; drag.y = p[1]; C.azT -= dx * 0.008; C.az -= dx * 0.008; if (Math.abs(dx) > 0.5) setSegui(false); inclina(dy * 0.18); } });
   const dragFine = (e, tap) => {
+    dita.delete(e.pointerId); if (pizzico) { if (!dita.size) pizzico = null; return; }
     if (dragMob !== null && e.pointerId === dragMob) { dragMob = null; return; }
     if (!drag || e.pointerId !== drag.id) return;
     const pp = B.ptE(e), mosso = Math.hypot(pp[0] - drag.x0, pp[1] - drag.y0), breve = performance.now() - drag.t < 450; drag = null;
@@ -19285,15 +19290,9 @@ body.bb-attivo #controlli,body.bb-attivo #joy,body.bb-attivo #btn-contesto,body.
       const cv = $('#minimappa'), g = !cv.classList.contains('grande');
       cv.classList.toggle('grande', g); $('#minimappa-box').classList.toggle('grande', g); cv.width = cv.height = g ? 680 : 240;
     });
-    $('#btn-zoom-piu').addEventListener('click', () => B.app.impostaZoom(B.app.C.zoom * 1.2));
-    $('#btn-zoom-meno').addEventListener('click', () => B.app.impostaZoom(B.app.C.zoom / 1.2));
-    $('#btn-giu').addEventListener('click', () => B.app.inclina(-7));
-    $('#btn-su').addEventListener('click', () => B.app.inclina(7));
     const menuE = $('#menu-emote');
     $('#btn-emote').addEventListener('click', () => { menuE.hidden = !menuE.hidden; });
     menuE.addEventListener('click', e => { const b = e.target.closest('button[data-e]'); if (!b) return; B.app.emote(b.dataset.e); menuE.hidden = true; });
-    $('#btn-rot-sx').addEventListener('click', () => B.app.ruota(1));
-    $('#btn-rot-dx').addEventListener('click', () => B.app.ruota(-1));
     $('#btn-contesto').addEventListener('click', () => { const p = B.app.portaVicina(); if (p) B.app.usaPorta(p); });
 
     $('#chat-chiudi').addEventListener('click', compattaChat);
@@ -19470,7 +19469,7 @@ body.bb-attivo #controlli,body.bb-attivo #joy,body.bb-attivo #btn-contesto,body.
   const PASSI = [
     { t: 'Benvenuto nel Borgo! 👋', d: 'Vuoi un giro veloce di circa un minuto? Ti mostro i comandi principali. Puoi saltarlo adesso, o in qualsiasi momento.', inizio: true },
     { sel: '#joy', t: 'Muoviti', d: 'Trascina il pallino del joystick per camminare. Sul computer puoi usare anche le frecce o i tasti W A S D.' },
-    { sel: '#controlli', t: 'Guarda come vuoi', d: 'Con questi pulsanti ruoti la visuale, ingrandisci o riduci, alzi e abbassi la telecamera. 😊 apre le emote (saluta, balla, ride...).' },
+    { sel: '#controlli', t: 'Guarda come vuoi', d: 'Trascina un dito sullo schermo per girare e inclinare la visuale; allarga o stringi due dita per ingrandire o rimpicciolire. Qui accanto ci sono musica, suoni, bici, telecamera dietro l\'avatar e 😊 per le emote.' },
     { sel: '#minimappa-box', t: 'Minimappa e casa', d: 'La mappa mostra dove sei: toccala per ingrandirla. Il pulsante con la casetta ti porta subito a casa tua.' },
     { sel: '#pill-coins', t: 'I tuoi ' + B3.Eco.nome, d: 'Sono la moneta del gioco. Servono per comprare mobili, pavimenti e pareti per la tua casa, e per ampliare la stanza.' },
     { sel: '#btn-miss', t: 'Missioni', d: 'Ogni giorno hai delle missioni facili (parlare in chat, sederti, arredare...). Completale per guadagnare ' + B3.Eco.nome + '. Più giorni di fila giochi, più guadagni.' },

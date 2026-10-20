@@ -536,15 +536,9 @@
       const cv = $('#minimappa'), g = !cv.classList.contains('grande');
       cv.classList.toggle('grande', g); $('#minimappa-box').classList.toggle('grande', g); cv.width = cv.height = g ? 680 : 240;
     });
-    $('#btn-zoom-piu').addEventListener('click', () => B.app.impostaZoom(B.app.C.zoom * 1.2));
-    $('#btn-zoom-meno').addEventListener('click', () => B.app.impostaZoom(B.app.C.zoom / 1.2));
-    $('#btn-giu').addEventListener('click', () => B.app.inclina(-7));
-    $('#btn-su').addEventListener('click', () => B.app.inclina(7));
     const menuE = $('#menu-emote');
     $('#btn-emote').addEventListener('click', () => { menuE.hidden = !menuE.hidden; });
     menuE.addEventListener('click', e => { const b = e.target.closest('button[data-e]'); if (!b) return; B.app.emote(b.dataset.e); menuE.hidden = true; });
-    $('#btn-rot-sx').addEventListener('click', () => B.app.ruota(1));
-    $('#btn-rot-dx').addEventListener('click', () => B.app.ruota(-1));
     $('#btn-contesto').addEventListener('click', () => { const p = B.app.portaVicina(); if (p) B.app.usaPorta(p); });
 
     $('#chat-chiudi').addEventListener('click', compattaChat);
