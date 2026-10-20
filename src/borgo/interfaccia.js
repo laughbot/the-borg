@@ -71,7 +71,12 @@
       ridisegna();
     }
     nomiSchede.forEach((n, i) => { const b = el('button', 'tab-ed', n); b.type = 'button'; b.addEventListener('click', () => { scheda = i; mostra(); }); tabs.append(b); });
-    ed.append(tabs, pannello); box.append(ed); mostra();
+    // Maschio / Femmina: cambia il corpo; il viso parte da "Deciso" o "Dolce" ma si puo' cambiare. Capelli, abiti e accessori restano per tutti.
+    const corpoEd = el('div', 'corpo-ed'); corpoEd.setAttribute('role', 'group'); corpoEd.setAttribute('aria-label', 'Maschio o femmina');
+    const aggCorpo = () => { corpoEd.classList.toggle('scegli', look.corpo !== 0 && look.corpo !== 1); corpoEd.querySelectorAll('button').forEach((x, k) => { x.classList.toggle('sel', look.corpo === k); x.setAttribute('aria-pressed', look.corpo === k ? 'true' : 'false'); }); };
+    A.corpi.forEach((n, i) => { const b = el('button', null, (i ? '♀ ' : '♂ ') + n); b.type = 'button'; b.addEventListener('click', () => { look.corpo = i; look.viso = i ? 0 : 1; onChange(look); aggCorpo(); mostra(); const er = document.querySelector('#nick-errore'); if (er && /Maschio o Femmina/.test(er.textContent)) er.textContent = ''; }); corpoEd.append(b); });
+    aggCorpo();
+    ed.append(corpoEd, tabs, pannello); box.append(ed); mostra();
   }
 
   /* ---------- toast e transizioni ---------- */
@@ -161,7 +166,7 @@
 
   function rendiChat() {
     const lista = $('#chat-lista'); lista.innerHTML = '';
-    const benv = el('div', 'riga sistema', 'Benvenuto! Rispetta tutti e non scrivere mai dati personali.'), lr = el('button', 'link', 'Regole');
+    const benv = el('div', 'riga sistema', 'Ti diamo il benvenuto! Rispetta tutti e non scrivere mai dati personali.'), lr = el('button', 'link', 'Regole');
     lr.type = 'button'; lr.addEventListener('click', () => mostraRegole()); benv.append(lr); lista.append(benv);
     const visibili = G.chatQui().filter(m => !G.stato.bloccati.has(m.id));
     visibili.forEach(m => {
@@ -498,6 +503,7 @@
     if (!G.nickValido(nick)) { err.textContent = 'Usa da 3 a 14 caratteri: lettere, numeri o _ (senza spazi).'; return; }
     if (!G.nickPermesso(nick)) { err.textContent = 'Questo nickname non è permesso nel Borgo: scegline un altro.'; return; }
     if (CFG.utentiDemo.some(u => u.nick.toLowerCase() === nick.toLowerCase())) { err.textContent = 'Nickname gia\' in uso (prova dimostrativa: la verifica vera sara\' sul server).'; return; }
+    if (lookInizio.corpo !== 0 && lookInizio.corpo !== 1) { err.textContent = 'Scegli se il tuo avatar è Maschio o Femmina (in alto nell\'editor).'; const c = document.querySelector('#inizio-editor .corpo-ed'); if (c) { c.scrollIntoView({ block: 'center', behavior: 'smooth' }); c.classList.remove('lampo'); void c.offsetWidth; c.classList.add('lampo'); } return; }
     err.textContent = '';
     UI.fade(() => {
       $('#inizio').hidden = true; $('#hud').hidden = false; $('#tabbar').hidden = false; inGioco = true;
