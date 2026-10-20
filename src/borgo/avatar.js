@@ -86,6 +86,40 @@
   }
 
   /* ===================================================================== */
+  /* ---------- accessori sopra i capelli ----------
+     Ogni pettinatura ha un volume diverso: i cappelli coprono i capelli che sporgerebbero dalla calotta,
+     corona e orecchie salgono sopra le pettinature alte, fascia, cuffie, molletta e fiocco si allargano
+     quanto serve per restare fuori dai capelli. */
+  function adattaAccessori(acc, capelli, testa, nCap0, nTes0, code) {
+    if (acc === 1 || acc === 4 || acc === 11 || acc === 2) return;
+    const capelliVeri = capelli.children.slice(0, nCap0), dondolano = new Set(code);
+    capelli.updateMatrixWorld(true);
+    const inv = new T.Matrix4().copy(capelli.matrixWorld).invert(), box = o => new T.Box3().setFromObject(o).applyMatrix4(inv);
+    const info = capelliVeri.map(o => ({ o, b: box(o), coda: dondolano.has(o) }));
+    // cappelli: via i ciuffi sopra la tesa (restano la "campana" sui lati, i capelli lunghi e le code)
+    const tesa = { 3: 0.12, 12: 0.12, 13: 0.4, 8: 0.42, 9: 0.5, 7: 0.5 }[acc];
+    if (tesa !== undefined) info.forEach(i => { if (i.coda || i.o.userData.campana) return; const c = (i.b.min.y + i.b.max.y) / 2; const via = acc === 3 || acc === 12 ? c > tesa : acc === 13 || acc === 8 ? i.b.max.y > tesa + 0.12 : i.b.max.y > 0.62; if (via) i.o.visible = false; });
+    // i ciuffi a punta non contano per la misura: contano le masse (calotta, campana, ricci, panino...)
+    const resto = info.filter(i => i.o.visible && !i.coda && !(i.o.geometry && i.o.geometry.type === 'ConeGeometry'));
+    // quanto sono larghi i capelli intorno alla fronte e quanto sono alti
+    let largo = 0.46, alto = 0.47;
+    resto.forEach(i => {
+      if (i.b.max.y > 0.12 && i.b.min.y < 0.32 && i.b.max.y - i.b.min.y < 1) largo = Math.max(largo, Math.abs(i.b.min.x), Math.abs(i.b.max.x), Math.abs(i.b.max.z) * 0.95);
+      if (Math.abs((i.b.min.x + i.b.max.x) / 2) < 0.3 && Math.abs((i.b.min.z + i.b.max.z) / 2) < 0.3) alto = Math.max(alto, i.b.max.y);
+    });
+    largo = Math.min(largo, 0.7);
+    const nuovi = capelli.children.slice(nCap0).concat(testa.children.slice(nTes0));
+    if (acc === 9 || acc === 7) {                                       // corona e orecchie: sopra la pettinatura
+      const su = Math.max(0, alto - 0.49); nuovi.forEach(o => { o.position.y += su; });
+      if (acc === 9 && largo > 0.5) { const k = Math.min(1.5, largo / 0.48); nuovi.forEach(o => { o.position.x *= k; o.position.z *= k; o.scale.x *= k; o.scale.z *= k; }); }
+    } else if (acc === 10 || acc === 5) {                               // fascia e cuffie: si allargano fuori dai capelli
+      const k = Math.max(1, (largo + 0.025) / (acc === 10 ? 0.435 : 0.47));
+      nuovi.forEach(o => { o.position.x *= k; o.position.z *= k; if (acc === 10 && o.geometry && o.geometry.type === 'TorusGeometry') o.scale.multiplyScalar(k); else if (acc === 5 && o.geometry && o.geometry.type === 'TorusGeometry') o.scale.multiplyScalar(k); });
+      if (acc === 10) nuovi.forEach(o => { o.scale.z *= 1; });
+    } else if (acc === 0 || acc === 6) {                                // molletta e fiocco: appoggiati sopra i capelli
+      nuovi.forEach(o => { const d = o.position.clone(), r = d.length(); if (r < 0.01) return; o.position.copy(d.multiplyScalar(Math.max(r, largo + 0.04) / r)); });
+    }
+  }
   function creaAvatar(look) {
     const p = paletteDa(look), ab = p.abito;
     const root = new T.Group(), corpo = new T.Group(); root.add(corpo);
@@ -256,7 +290,7 @@
     const matDoppia = (col) => new T.MeshToonMaterial({ color: new T.Color(col), gradientMap: gm, side: T.DoubleSide });
     function campana(phiLibero, theta, raggio) {
       const c = mesh(new T.SphereGeometry(raggio || 0.47, 32, 20, PI / 2 + phiLibero, 2 * PI - 2 * phiLibero, 0, PI * theta), matDoppia(p.capelli), { l: 0.022 });
-      c.position.set(0, 0.0, -0.02); capelli.add(c); return c;
+      c.position.set(0, 0.0, -0.02); c.userData.campana = 1; capelli.add(c); return c;
     }
     function frangia(lungMin, lungMax, nCiuffi, liscia) {
       if (liscia === undefined) liscia = p.stile >= 8;
@@ -439,6 +473,7 @@
     }
 
     capelli.children.slice(nCap0).forEach(o => { o.userData.accessorio = 1; }); testa.children.slice(nTes0).forEach(o => { o.userData.accessorio = 1; });
+    adattaAccessori(acc, capelli, testa, nCap0, nTes0, code);
     corpo.traverse(o => { if (o.isMesh && o.castShadow !== false) o.castShadow = true; });
 
     /* area invisibile per toccare l'avatar */

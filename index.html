@@ -2,7 +2,7 @@
 <html lang="it">
 <head>
   <meta charset="utf-8">
-  <meta name="versione" content="fcb8f8079ce7">
+  <meta name="versione" content="9c25c6e0aa2d">
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="mobile-web-app-capable" content="yes">
@@ -627,7 +627,7 @@ body.orizz #inizio-anteprima { width: 120px; height: 140px; }
     <div class="vista scorri">
       <header class="pagina-testa"><h2>Zaino</h2></header>
       <p class="avviso">Lo zaino non esiste ancora: qui andranno oggetti, mobili per la casa e, in futuro, le carte. Gli spazi sono vuoti apposta, per mostrare come sara' l'interfaccia.</p>
-      <div class="zaino-schede"><span class="catena sel">Oggetti</span><span class="catena">Mobili</span><span class="catena">Carte</span></div>
+      <div class="zaino-schede"><span class="catena sel">Oggetti</span><span class="catena">Mobili</span><span class="catena">Carte</span><span class="catena">Cripta</span></div>
       <div id="zaino-griglia"></div>
     </div>
   </section>
@@ -1256,6 +1256,40 @@ window.CONFIG = {
   }
 
   /* ===================================================================== */
+  /* ---------- accessori sopra i capelli ----------
+     Ogni pettinatura ha un volume diverso: i cappelli coprono i capelli che sporgerebbero dalla calotta,
+     corona e orecchie salgono sopra le pettinature alte, fascia, cuffie, molletta e fiocco si allargano
+     quanto serve per restare fuori dai capelli. */
+  function adattaAccessori(acc, capelli, testa, nCap0, nTes0, code) {
+    if (acc === 1 || acc === 4 || acc === 11 || acc === 2) return;
+    const capelliVeri = capelli.children.slice(0, nCap0), dondolano = new Set(code);
+    capelli.updateMatrixWorld(true);
+    const inv = new T.Matrix4().copy(capelli.matrixWorld).invert(), box = o => new T.Box3().setFromObject(o).applyMatrix4(inv);
+    const info = capelliVeri.map(o => ({ o, b: box(o), coda: dondolano.has(o) }));
+    // cappelli: via i ciuffi sopra la tesa (restano la "campana" sui lati, i capelli lunghi e le code)
+    const tesa = { 3: 0.12, 12: 0.12, 13: 0.4, 8: 0.42, 9: 0.5, 7: 0.5 }[acc];
+    if (tesa !== undefined) info.forEach(i => { if (i.coda || i.o.userData.campana) return; const c = (i.b.min.y + i.b.max.y) / 2; const via = acc === 3 || acc === 12 ? c > tesa : acc === 13 || acc === 8 ? i.b.max.y > tesa + 0.12 : i.b.max.y > 0.62; if (via) i.o.visible = false; });
+    // i ciuffi a punta non contano per la misura: contano le masse (calotta, campana, ricci, panino...)
+    const resto = info.filter(i => i.o.visible && !i.coda && !(i.o.geometry && i.o.geometry.type === 'ConeGeometry'));
+    // quanto sono larghi i capelli intorno alla fronte e quanto sono alti
+    let largo = 0.46, alto = 0.47;
+    resto.forEach(i => {
+      if (i.b.max.y > 0.12 && i.b.min.y < 0.32 && i.b.max.y - i.b.min.y < 1) largo = Math.max(largo, Math.abs(i.b.min.x), Math.abs(i.b.max.x), Math.abs(i.b.max.z) * 0.95);
+      if (Math.abs((i.b.min.x + i.b.max.x) / 2) < 0.3 && Math.abs((i.b.min.z + i.b.max.z) / 2) < 0.3) alto = Math.max(alto, i.b.max.y);
+    });
+    largo = Math.min(largo, 0.7);
+    const nuovi = capelli.children.slice(nCap0).concat(testa.children.slice(nTes0));
+    if (acc === 9 || acc === 7) {                                       // corona e orecchie: sopra la pettinatura
+      const su = Math.max(0, alto - 0.49); nuovi.forEach(o => { o.position.y += su; });
+      if (acc === 9 && largo > 0.5) { const k = Math.min(1.5, largo / 0.48); nuovi.forEach(o => { o.position.x *= k; o.position.z *= k; o.scale.x *= k; o.scale.z *= k; }); }
+    } else if (acc === 10 || acc === 5) {                               // fascia e cuffie: si allargano fuori dai capelli
+      const k = Math.max(1, (largo + 0.025) / (acc === 10 ? 0.435 : 0.47));
+      nuovi.forEach(o => { o.position.x *= k; o.position.z *= k; if (acc === 10 && o.geometry && o.geometry.type === 'TorusGeometry') o.scale.multiplyScalar(k); else if (acc === 5 && o.geometry && o.geometry.type === 'TorusGeometry') o.scale.multiplyScalar(k); });
+      if (acc === 10) nuovi.forEach(o => { o.scale.z *= 1; });
+    } else if (acc === 0 || acc === 6) {                                // molletta e fiocco: appoggiati sopra i capelli
+      nuovi.forEach(o => { const d = o.position.clone(), r = d.length(); if (r < 0.01) return; o.position.copy(d.multiplyScalar(Math.max(r, largo + 0.04) / r)); });
+    }
+  }
   function creaAvatar(look) {
     const p = paletteDa(look), ab = p.abito;
     const root = new T.Group(), corpo = new T.Group(); root.add(corpo);
@@ -1426,7 +1460,7 @@ window.CONFIG = {
     const matDoppia = (col) => new T.MeshToonMaterial({ color: new T.Color(col), gradientMap: gm, side: T.DoubleSide });
     function campana(phiLibero, theta, raggio) {
       const c = mesh(new T.SphereGeometry(raggio || 0.47, 32, 20, PI / 2 + phiLibero, 2 * PI - 2 * phiLibero, 0, PI * theta), matDoppia(p.capelli), { l: 0.022 });
-      c.position.set(0, 0.0, -0.02); capelli.add(c); return c;
+      c.position.set(0, 0.0, -0.02); c.userData.campana = 1; capelli.add(c); return c;
     }
     function frangia(lungMin, lungMax, nCiuffi, liscia) {
       if (liscia === undefined) liscia = p.stile >= 8;
@@ -1609,6 +1643,7 @@ window.CONFIG = {
     }
 
     capelli.children.slice(nCap0).forEach(o => { o.userData.accessorio = 1; }); testa.children.slice(nTes0).forEach(o => { o.userData.accessorio = 1; });
+    adattaAccessori(acc, capelli, testa, nCap0, nTes0, code);
     corpo.traverse(o => { if (o.isMesh && o.castShadow !== false) o.castShadow = true; });
 
     /* area invisibile per toccare l'avatar */
@@ -12339,9 +12374,9 @@ float rumoreC(vec3 x) { vec3 i = floor(x); vec3 f = fract(x); f = f * f * (3.0 -
   /* ---------- zaino: armi, pezzi, granate, munizioni (in stanza d'attesa o in partita, senza pausa) ---------- */
   // foto del proprio avatar con i pezzi indossati (davanti e dietro), disegnata con lo stesso motore
   const fotoCache = {};
-  function fotoVestito() {
+  function fotoVestito(dati) {
     try {
-      const look = (window.Gioco && Gioco.stato && Gioco.stato.giocatore && Gioco.stato.giocatore.look) || {}, eq = CD.vesteDi(DATI);
+      const look = (window.Gioco && Gioco.stato && Gioco.stato.giocatore && Gioco.stato.giocatore.look) || {}, eq = CD.vesteDi(dati || DATI);
       const chiave = JSON.stringify(look) + CD.codificaVeste(eq); if (fotoCache[chiave]) return fotoCache[chiave];
       const r = B.app && B.app.renderer; if (!r || !B.creaAvatar) return null;
       const W = 220, H = 310, sc = new T.Scene(), cv = document.createElement('canvas'); cv.width = W * 2; cv.height = H; const cx = cv.getContext('2d');
@@ -13213,7 +13248,9 @@ body.pc #rd-hud .tasto,body.pc #rd-hud .base{display:none}
   R._colpoB = (i, dn) => { svegliati(); return bersagli[i] ? colpoMio(bersagli[i], dn) : 'no'; };
   R._on = () => ({ mioId, SEGUI, ON, amici: [...amiciR.values()].map(r => ({ nick: r.nick, d: r.d })), gHit });
 
+  R.foto = dati => fotoVestito(dati);   // per lo zaino della piazza
   R.avvia = function () {
+    if (stato === 'menu' && !SEGUI) { DATI = CD.carica(PROVA); applicaStat(); }   // i pezzi cambiati dallo zaino della piazza
     if (!pronto) { creaHud(); creaArmi(); pronto = true; }
     if (B.CreatureRaid && !B.CreatureRaid.pronte()) B.CreatureRaid.preparaPiano(null, 7);   // scolpisce i nemici a pezzi mentre sei nel menu
     R.attivo = true; document.body.classList.add('raid-attivo');
@@ -18988,7 +19025,7 @@ body.bb-attivo #controlli,body.bb-attivo #joy,body.bb-attivo #btn-contesto,body.
     const grezzo = B.creaAvatar(look), eq = B.CriptaDati && B.CriptaDati.vestePiazza ? B.CriptaDati.vestePiazza() : null;   // pezzi della Cripta, se li vuoi in piazza
     if (eq && B.ArmatureCripta) try { B.ArmatureCripta.veste(grezzo, eq); } catch (e) { }
     io.av = B.unisciAvatar(grezzo); scene.add(io.av.root);     // pezzi uniti come per gli abitanti: da ~110 a ~25 disegni
-    const et = B.etichetta(io.nick, { sfondo: '#f2c76e', altezza: 0.4 }); et.position.y = 2.55; io.av.root.add(et);
+    // il proprio nome non si mostra sopra la testa: lo vedono solo gli altri
     io.av.root.userData.io = true;
     io.bk = null; if (io.bici) { montaBici(); io.av.bicT = io.av.bic = 1; }
   }
@@ -20213,6 +20250,8 @@ body.bb-attivo #controlli,body.bb-attivo #joy,body.bb-attivo #btn-contesto,body.
 #pagina-zaino .zn-ogg b{font-size:12.5px}
 #pagina-zaino .zn-ogg small{color:var(--testo-tenue);font-size:11.5px}
 #pagina-zaino .zn-ogg .n{position:absolute;top:5px;right:6px;min-width:22px;height:22px;padding:0 5px;border-radius:11px;background:var(--ambra);color:#2a1a2e;font-weight:900;font-size:12px;display:grid;place-items:center}
+#pagina-zaino .zn-ogg.su{box-shadow:inset 0 0 0 2px var(--ambra)}
+#pagina-zaino .zn-foto{display:block;margin:0 auto 4px;width:240px;max-width:100%}
 #pagina-zaino .zn-vuoto{padding:14px;border-radius:14px;border:1.5px dashed rgba(255,255,255,.2);color:var(--testo-tenue);font-size:13px;text-align:center}
 #pagina-zaino .zn-bt{display:inline-flex;align-items:center;gap:6px;padding:9px 14px;border-radius:99px;border:0;background:var(--ambra);color:#2a1a2e;font-weight:800;font-size:14px;font-family:inherit;cursor:pointer}
 #pagina-zaino .zn-bt.sec{background:rgba(255,255,255,.12);color:var(--crema)}
@@ -20252,7 +20291,7 @@ body.orizz #pagina-zaino .zn-carte{grid-template-columns:repeat(auto-fill,minmax
     const tag = pagina.querySelector('.tag-demo'); if (tag) tag.remove();
     const avv = pagina.querySelector('.avviso'); if (avv) avv.remove();
     const schede = pagina.querySelector('.zaino-schede'); schede.innerHTML = '';
-    [['oggetti', 'Oggetti'], ['mobili', 'Mobili'], ['carte', 'Carte']].forEach(([id, t]) => {
+    [['oggetti', 'Oggetti'], ['mobili', 'Mobili'], ['carte', 'Carte'], ['cripta', 'Cripta']].forEach(([id, t]) => {
       const b = el('button', 'catena', t); b.type = 'button'; b.dataset.s = id;
       b.addEventListener('click', () => { scheda = id; disegna(); });
       schede.appendChild(b);
@@ -20419,6 +20458,34 @@ body.orizz #pagina-zaino .zn-carte{grid-template-columns:repeat(auto-fill,minmax
     c.appendChild(g);
   }
 
+  /* ---------- Cripta: i pezzi trovati nelle casse, da indossare anche qui ---------- */
+  const ICONE_PEZZI = { casco: '🪖', armatura: '🛡️', guanti: '🧤', scarpe: '👢', mantello: '🧣' };
+  function cripta(c) {
+    const CD = B.CriptaDati; if (!CD) { c.appendChild(vuoto('La Cripta non è disponibile.')); return; }
+    const S = CD.carica();
+    if (!S.pezzi.length) { c.appendChild(el('h3', '', 'Equipaggiamento della Cripta')); c.appendChild(vuoto('Non hai ancora pezzi: si trovano nelle casse della Cripta del Re senza Luce.')); return; }
+    const foto = B.Raid && B.Raid.foto ? B.Raid.foto(S) : null;
+    if (foto) { const i = new Image(); i.src = foto; i.alt = 'Il tuo avatar con i pezzi indossati'; i.className = 'zn-foto'; c.appendChild(i); }
+    const acceso = CD.inPiazza();
+    c.appendChild(el('h3', '', 'Mostra i pezzi in piazza'));
+    c.appendChild(el('p', 'zn-nota', acceso ? 'Tutti ti vedono con i pezzi indossati.' : 'In piazza hai solo il tuo avatar: i pezzi si vedono nella Cripta.'));
+    const r = el('div', 'zn-riga'), bt = el('button', 'zn-bt' + (acceso ? '' : ' sec'), acceso ? 'Sì, mostrali' : 'No, nascondili'); bt.type = 'button';
+    bt.addEventListener('click', () => { CD.inPiazza(!acceso); rivesti(); disegna(); }); r.appendChild(bt); c.appendChild(r);
+    CD.PARTI.forEach(s => {
+      const miei = S.pezzi.filter(p => p.s === s).sort((a, b) => b.r - a.r);
+      c.appendChild(el('h3', '', esc(CD.EQUIP[s].nome) + ' <small>' + (miei.length ? 'tocca per indossare o togliere' : 'nessuno') + '</small>'));
+      if (!miei.length) return;
+      const g = el('div', 'zn-griglia');
+      miei.forEach(p => {
+        const R = CD.RARITA[p.r], su = S.equip[s] === p.u;
+        const t = tile({ bg: R.col + '33', testo: ICONE_PEZZI[s] }, CD.nomePezzo(p), (su ? '✓ indossato · ' : '') + R.nome, 0, () => { CD.indossa(S, p.u); CD.salva(S); rivesti(); disegna(); });
+        t.title = CD.descPezzo(p); t.querySelector('b').style.color = R.col; if (su) t.classList.add('su');
+        g.appendChild(t);
+      });
+      c.appendChild(g);
+    });
+  }
+  function rivesti() { if (B.app && B.app.rivesti) B.app.rivesti(); }
   function disegna() {
     if (!costruito && !costruisci()) return;
     pagina.querySelectorAll('.zaino-schede .catena').forEach(b => b.classList.toggle('sel', b.dataset.s === scheda));
@@ -20428,7 +20495,7 @@ body.orizz #pagina-zaino .zn-carte{grid-template-columns:repeat(auto-fill,minmax
     const nMob = E ? (B.ARREDI || []).reduce((a, m) => a + E.posseduti(m.id), 0) : 0;
     pagina.querySelector('.zn-soldi').innerHTML = '<span class="zn-pill">' + B3.Eco.ico + ' <b>' + (E ? E.coins : 0) + '</b> ' + B3.Eco.nome + '</span><span class="zn-pill">🛋️ <b>' + nMob + '</b> mobili</span><span class="zn-pill">🃏 <b>' + nCarte + '</b> carte</span><span class="zn-pill">🐟 <b>' + pesci + '</b> nel secchio</span>';
     const c = document.getElementById('zaino-griglia'); c.innerHTML = '';
-    if (scheda === 'oggetti') oggetti(c); else if (scheda === 'mobili') mobili(c); else carte(c);
+    if (scheda === 'oggetti') oggetti(c); else if (scheda === 'mobili') mobili(c); else if (scheda === 'cripta') cripta(c); else carte(c);
   }
 
   B.Zaino = { disegna };

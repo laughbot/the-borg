@@ -30,6 +30,8 @@
 #pagina-zaino .zn-ogg b{font-size:12.5px}
 #pagina-zaino .zn-ogg small{color:var(--testo-tenue);font-size:11.5px}
 #pagina-zaino .zn-ogg .n{position:absolute;top:5px;right:6px;min-width:22px;height:22px;padding:0 5px;border-radius:11px;background:var(--ambra);color:#2a1a2e;font-weight:900;font-size:12px;display:grid;place-items:center}
+#pagina-zaino .zn-ogg.su{box-shadow:inset 0 0 0 2px var(--ambra)}
+#pagina-zaino .zn-foto{display:block;margin:0 auto 4px;width:240px;max-width:100%}
 #pagina-zaino .zn-vuoto{padding:14px;border-radius:14px;border:1.5px dashed rgba(255,255,255,.2);color:var(--testo-tenue);font-size:13px;text-align:center}
 #pagina-zaino .zn-bt{display:inline-flex;align-items:center;gap:6px;padding:9px 14px;border-radius:99px;border:0;background:var(--ambra);color:#2a1a2e;font-weight:800;font-size:14px;font-family:inherit;cursor:pointer}
 #pagina-zaino .zn-bt.sec{background:rgba(255,255,255,.12);color:var(--crema)}
@@ -69,7 +71,7 @@ body.orizz #pagina-zaino .zn-carte{grid-template-columns:repeat(auto-fill,minmax
     const tag = pagina.querySelector('.tag-demo'); if (tag) tag.remove();
     const avv = pagina.querySelector('.avviso'); if (avv) avv.remove();
     const schede = pagina.querySelector('.zaino-schede'); schede.innerHTML = '';
-    [['oggetti', 'Oggetti'], ['mobili', 'Mobili'], ['carte', 'Carte']].forEach(([id, t]) => {
+    [['oggetti', 'Oggetti'], ['mobili', 'Mobili'], ['carte', 'Carte'], ['cripta', 'Cripta']].forEach(([id, t]) => {
       const b = el('button', 'catena', t); b.type = 'button'; b.dataset.s = id;
       b.addEventListener('click', () => { scheda = id; disegna(); });
       schede.appendChild(b);
@@ -236,6 +238,34 @@ body.orizz #pagina-zaino .zn-carte{grid-template-columns:repeat(auto-fill,minmax
     c.appendChild(g);
   }
 
+  /* ---------- Cripta: i pezzi trovati nelle casse, da indossare anche qui ---------- */
+  const ICONE_PEZZI = { casco: '🪖', armatura: '🛡️', guanti: '🧤', scarpe: '👢', mantello: '🧣' };
+  function cripta(c) {
+    const CD = B.CriptaDati; if (!CD) { c.appendChild(vuoto('La Cripta non è disponibile.')); return; }
+    const S = CD.carica();
+    if (!S.pezzi.length) { c.appendChild(el('h3', '', 'Equipaggiamento della Cripta')); c.appendChild(vuoto('Non hai ancora pezzi: si trovano nelle casse della Cripta del Re senza Luce.')); return; }
+    const foto = B.Raid && B.Raid.foto ? B.Raid.foto(S) : null;
+    if (foto) { const i = new Image(); i.src = foto; i.alt = 'Il tuo avatar con i pezzi indossati'; i.className = 'zn-foto'; c.appendChild(i); }
+    const acceso = CD.inPiazza();
+    c.appendChild(el('h3', '', 'Mostra i pezzi in piazza'));
+    c.appendChild(el('p', 'zn-nota', acceso ? 'Tutti ti vedono con i pezzi indossati.' : 'In piazza hai solo il tuo avatar: i pezzi si vedono nella Cripta.'));
+    const r = el('div', 'zn-riga'), bt = el('button', 'zn-bt' + (acceso ? '' : ' sec'), acceso ? 'Sì, mostrali' : 'No, nascondili'); bt.type = 'button';
+    bt.addEventListener('click', () => { CD.inPiazza(!acceso); rivesti(); disegna(); }); r.appendChild(bt); c.appendChild(r);
+    CD.PARTI.forEach(s => {
+      const miei = S.pezzi.filter(p => p.s === s).sort((a, b) => b.r - a.r);
+      c.appendChild(el('h3', '', esc(CD.EQUIP[s].nome) + ' <small>' + (miei.length ? 'tocca per indossare o togliere' : 'nessuno') + '</small>'));
+      if (!miei.length) return;
+      const g = el('div', 'zn-griglia');
+      miei.forEach(p => {
+        const R = CD.RARITA[p.r], su = S.equip[s] === p.u;
+        const t = tile({ bg: R.col + '33', testo: ICONE_PEZZI[s] }, CD.nomePezzo(p), (su ? '✓ indossato · ' : '') + R.nome, 0, () => { CD.indossa(S, p.u); CD.salva(S); rivesti(); disegna(); });
+        t.title = CD.descPezzo(p); t.querySelector('b').style.color = R.col; if (su) t.classList.add('su');
+        g.appendChild(t);
+      });
+      c.appendChild(g);
+    });
+  }
+  function rivesti() { if (B.app && B.app.rivesti) B.app.rivesti(); }
   function disegna() {
     if (!costruito && !costruisci()) return;
     pagina.querySelectorAll('.zaino-schede .catena').forEach(b => b.classList.toggle('sel', b.dataset.s === scheda));
@@ -245,7 +275,7 @@ body.orizz #pagina-zaino .zn-carte{grid-template-columns:repeat(auto-fill,minmax
     const nMob = E ? (B.ARREDI || []).reduce((a, m) => a + E.posseduti(m.id), 0) : 0;
     pagina.querySelector('.zn-soldi').innerHTML = '<span class="zn-pill">' + B3.Eco.ico + ' <b>' + (E ? E.coins : 0) + '</b> ' + B3.Eco.nome + '</span><span class="zn-pill">🛋️ <b>' + nMob + '</b> mobili</span><span class="zn-pill">🃏 <b>' + nCarte + '</b> carte</span><span class="zn-pill">🐟 <b>' + pesci + '</b> nel secchio</span>';
     const c = document.getElementById('zaino-griglia'); c.innerHTML = '';
-    if (scheda === 'oggetti') oggetti(c); else if (scheda === 'mobili') mobili(c); else carte(c);
+    if (scheda === 'oggetti') oggetti(c); else if (scheda === 'mobili') mobili(c); else if (scheda === 'cripta') cripta(c); else carte(c);
   }
 
   B.Zaino = { disegna };

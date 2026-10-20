@@ -141,7 +141,7 @@
     const grezzo = B.creaAvatar(look), eq = B.CriptaDati && B.CriptaDati.vestePiazza ? B.CriptaDati.vestePiazza() : null;   // pezzi della Cripta, se li vuoi in piazza
     if (eq && B.ArmatureCripta) try { B.ArmatureCripta.veste(grezzo, eq); } catch (e) { }
     io.av = B.unisciAvatar(grezzo); scene.add(io.av.root);     // pezzi uniti come per gli abitanti: da ~110 a ~25 disegni
-    const et = B.etichetta(io.nick, { sfondo: '#f2c76e', altezza: 0.4 }); et.position.y = 2.55; io.av.root.add(et);
+    // il proprio nome non si mostra sopra la testa: lo vedono solo gli altri
     io.av.root.userData.io = true;
     io.bk = null; if (io.bici) { montaBici(); io.av.bicT = io.av.bic = 1; }
   }

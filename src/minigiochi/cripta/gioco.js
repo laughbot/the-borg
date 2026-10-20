@@ -2980,9 +2980,9 @@
   /* ---------- zaino: armi, pezzi, granate, munizioni (in stanza d'attesa o in partita, senza pausa) ---------- */
   // foto del proprio avatar con i pezzi indossati (davanti e dietro), disegnata con lo stesso motore
   const fotoCache = {};
-  function fotoVestito() {
+  function fotoVestito(dati) {
     try {
-      const look = (window.Gioco && Gioco.stato && Gioco.stato.giocatore && Gioco.stato.giocatore.look) || {}, eq = CD.vesteDi(DATI);
+      const look = (window.Gioco && Gioco.stato && Gioco.stato.giocatore && Gioco.stato.giocatore.look) || {}, eq = CD.vesteDi(dati || DATI);
       const chiave = JSON.stringify(look) + CD.codificaVeste(eq); if (fotoCache[chiave]) return fotoCache[chiave];
       const r = B.app && B.app.renderer; if (!r || !B.creaAvatar) return null;
       const W = 220, H = 310, sc = new T.Scene(), cv = document.createElement('canvas'); cv.width = W * 2; cv.height = H; const cx = cv.getContext('2d');
@@ -3854,7 +3854,9 @@ body.pc #rd-hud .tasto,body.pc #rd-hud .base{display:none}
   R._colpoB = (i, dn) => { svegliati(); return bersagli[i] ? colpoMio(bersagli[i], dn) : 'no'; };
   R._on = () => ({ mioId, SEGUI, ON, amici: [...amiciR.values()].map(r => ({ nick: r.nick, d: r.d })), gHit });
 
+  R.foto = dati => fotoVestito(dati);   // per lo zaino della piazza
   R.avvia = function () {
+    if (stato === 'menu' && !SEGUI) { DATI = CD.carica(PROVA); applicaStat(); }   // i pezzi cambiati dallo zaino della piazza
     if (!pronto) { creaHud(); creaArmi(); pronto = true; }
     if (B.CreatureRaid && !B.CreatureRaid.pronte()) B.CreatureRaid.preparaPiano(null, 7);   // scolpisce i nemici a pezzi mentre sei nel menu
     R.attivo = true; document.body.classList.add('raid-attivo');
