@@ -16,3 +16,4 @@ jobs:
           node-version: 22
       - run: node strumenti/costruisci.mjs --controlla
       - run: node test/filtro.test.mjs
+      - run: node test/cripta.test.mjs
