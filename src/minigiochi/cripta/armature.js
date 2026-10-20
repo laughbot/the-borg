@@ -56,7 +56,8 @@
      ===================================================================== */
   function calotta(g, S, met, r, alt) {   // calotta + paranuca (coprono capelli e nuca, il viso resta libero)
     const c = add(g, mesh(new T.SphereGeometry(0.5, 28, 18, 0, PI * 2, 0, PI * 0.5), met, { y: 0.1, l: 0.02 })); c.scale.set(1.1, alt || 1.02, 1.08);
-    const nuca = add(g, new T.Mesh(new T.CylinderGeometry(0.55, 0.53, 0.3, 28, 1, true, PI * 0.42, PI * 1.16), TELA(S.met, S.cristallo ? 0.12 : 0))); nuca.position.y = -0.04; nuca.scale.z = 1.06;
+    // paranuca: per la ragazza c'e' un'apertura dietro da cui escono i capelli lunghi (coda, trecce)
+    (CORPO ? [[PI * 0.42, PI * 0.4], [PI * 1.18, PI * 0.4]] : [[PI * 0.42, PI * 1.16]]).forEach(([a0, al]) => { const nuca = add(g, new T.Mesh(new T.CylinderGeometry(0.55, 0.53, 0.3, 28, 1, true, a0, al), TELA(S.met, S.cristallo ? 0.12 : 0))); nuca.position.y = -0.04; nuca.scale.z = 1.06; });
     anello(g, MAT(S.bordo, S.luce * 0.6), 0.5, 0.035, 0, 0.11, 0).scale.set(1.1, 1.08, 1);
     return c;
   }
@@ -120,8 +121,12 @@
   /* =====================================================================
      ARMATURA (busto)
      ===================================================================== */
+  let CORPO = 0;   // corporatura dell'avatar che si sta vestendo (0 ragazzo, 1 ragazza)
   function piastre(g, S, met, bordo, n) {   // corazza a piastre sovrapposte (non la sfera del Cavaliere dell'editor)
-    for (let i = 0; i < n; i++) { const p = add(g, mesh(new T.CylinderGeometry(0.27 - i * 0.012, 0.29 - i * 0.012, 0.13, 20), met, { y: 0.16 + i * 0.12, l: 0.018 })); p.scale.z = 0.86; anello(g, bordo, 0.29 - i * 0.012, 0.012, 0, 0.1 + i * 0.12, 0).scale.y = 0.86; }
+    for (let i = 0; i < n; i++) {
+      const top = CORPO ? [0.25, 0.28, 0.3][i] : 0.28 - i * 0.008, bot = CORPO ? [0.24, 0.25, 0.29][i] : 0.29 - i * 0.008;   // ragazza: vita stretta e petto sagomato
+      const p = add(g, mesh(new T.CylinderGeometry(top, bot, 0.13, 20), met, { y: 0.16 + i * 0.12, l: 0.018 })); p.scale.z = 0.86; anello(g, bordo, bot, 0.012, 0, 0.1 + i * 0.12, 0).scale.y = 0.86;
+    }
   }
   function emblemaLanterna(g, S, z) { lanterna(g, S, 0, 0.3, z, 0.9); }
   const ARMATURE = {
@@ -314,7 +319,7 @@
   const norm = v => v === null || v === undefined ? null : typeof v === 'number' ? (v < 0 ? null : { r: v, set: 'portatore' }) : v;
   function veste(av, equip) {
     if (!av || !av.parti) return { togli() { }, anima() { } };
-    const gruppi = [];
+    const gruppi = []; CORPO = av.corporatura === 1 ? 1 : 0;
     Object.keys(FORME).forEach(slot => {
       const e = norm(equip && equip[slot]); if (!e) return;
       const r = Math.max(0, Math.min(4, e.r | 0)), S = STILI[r];
@@ -322,6 +327,8 @@
       DOVE[slot](av).forEach(dove => {
         const g = new T.Group(); if (slot === 'mantello') g.position.set(0, 0.5, -0.24);
         dove.add(g); f(g, S, r); gruppi.push(g);
+        // spalline piu' grandi per il ragazzo, piu' piccole per la ragazza
+        if (slot === 'armatura') g.children.forEach(o => { if (Math.abs(o.position.x) > 0.25 && o.position.y > 0.38) { const k = CORPO ? 0.78 : 1.2; o.scale.multiplyScalar(k); o.position.x *= CORPO ? 0.95 : 1.05; } });
       });
     });
     // con l'armatura gonne e vestiti dell'editor spariscono e al loro posto ci sono i cosciali
@@ -331,7 +338,7 @@
     // il casco copre i capelli e gli accessori della testa: i capelli si stringono un po', gli accessori si nascondono
     const conCasco = !!norm(equip && equip.casco), cap = conCasco ? av.testa.children.filter(c => c.name === 'capelli') : [];
     const acc = conCasco ? [...av.testa.children, ...cap.flatMap(c => c.children)].filter(o => o.userData.accessorio) : [];
-    cap.forEach(c => { c.userData.sc = c.scale.x; c.scale.multiplyScalar(0.86); });
+    cap.forEach(c => { c.userData.sc = c.scale.x; c.scale.multiplyScalar(CORPO ? 0.92 : 0.86); });
     acc.forEach(o => { o.userData.vis = o.visible; o.visible = false; });
     let t = 0;
     return {

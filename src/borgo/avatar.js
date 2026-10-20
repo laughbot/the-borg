@@ -23,7 +23,7 @@
       pelle: scegli(A.pelli, L.pelle), capelli: cap, capelliLuce: mixa(cap, '#ffffff', 0.3),
       giacca: gia, giaccaLuce: mixa(gia, '#ffffff', 0.18), trim: scegli(A.dettagli, L.dettagli),
       camicia: '#f4e8d2', pantaloni: scegli(A.pantaloni, L.pantaloni), stivali: stiv, stivaliLuce: mixa(stiv, '#ffffff', 0.22),
-      occhi: scegli(A.occhi, L.occhi), espr: (L.espressione | 0), prop: (L.prop | 0), viso: ((L.viso | 0) % 2 + 2) % 2, barba: ((L.barba | 0) % 4 + 4) % 4,
+      occhi: scegli(A.occhi, L.occhi), espr: (L.espressione | 0), prop: (L.prop | 0), viso: ((L.viso | 0) % 2 + 2) % 2, corpo: ((L.corpo | 0) % 2 + 2) % 2, barba: ((L.barba | 0) % 4 + 4) % 4,
       stile: ((L.stile | 0) % A.stili.length + A.stili.length) % A.stili.length,
       abito: ((L.abito | 0) % A.abiti.length + A.abiti.length) % A.abiti.length,
       accessorio: ((L.accessorio | 0) % A.accessori.length + A.accessori.length) % A.accessori.length
@@ -114,6 +114,8 @@
 
     /* ---------- busto ---------- */
     const busto = new T.Group(); busto.position.y = 0.55; corpo.add(busto);
+    // corporatura: 0 ragazzo (spalle piu' larghe), 1 ragazza (spalle e vita piu' sottili)
+    if (p.corpo === 1) busto.scale.set(0.88, 1, 0.92); else busto.scale.set(1.1, 1.03, 1.04);
     const t = mesh(new T.CylinderGeometry(0.235, 0.255, 0.46, 18), ab === 4 ? M(p.trim) : giacca, { y: 0.27, l: 0.022 }); t.scale.z = 0.82; busto.add(t);
     if (lung) {
       const g2 = mesh(new T.CylinderGeometry(0.27, 0.38, 0.4, 20), giacca, { y: -0.1, l: 0.02 }); g2.scale.z = 0.88; g2.userData.gonna = 1; busto.add(g2);
@@ -442,7 +444,7 @@
     /* area invisibile per toccare l'avatar */
     const proxy = new T.Mesh(new T.CylinderGeometry(0.5, 0.5, 2.3, 8), new T.MeshBasicMaterial()); proxy.position.y = 1.15; proxy.visible = false; root.add(proxy);
 
-    const av = { parti: { busto, bL, bR, gL, gR }, root, corpo, testa, proxy, fase: 0, e: 0, sed: 0, sedT: 0, sdr: 0, sdrT: 0, emote: null, bic: 0, bicT: 0, fb: 0, p, look: Object.assign({}, look) };
+    const av = { corporatura: p.corpo, parti: { busto, bL, bR, gL, gR }, root, corpo, testa, proxy, fase: 0, e: 0, sed: 0, sedT: 0, sdr: 0, sdrT: 0, emote: null, bic: 0, bicT: 0, fb: 0, p, look: Object.assign({}, look) };
     av.aggiorna = function (dt, vel, tempo) {
       const v = Math.min(1, vel / B.CFG.velocita);
       av.e += (v - av.e) * Math.min(1, dt * 10);
