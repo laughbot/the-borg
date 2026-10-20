@@ -1144,7 +1144,7 @@
   }
   function cadutaNelVuoto() {
     const sp = enc.rinascita || { x: 0, z: 0 }; io.pos.set(sp.x, (sp.y || 0) + 0.5, sp.z); io.vy = 0; io.yaw = sp.yaw === undefined ? io.yaw : sp.yaw;
-    if (!SEGUI) io.hp = Math.max(1, io.hp - 20); io.ultimoColpo = ora; flashDanno = 0.8; suono('caduta'); toast('Sei caduto nel baratro: torni al punto di controllo', 'male', true);
+    if (!SEGUI) io.hp = Math.max(1, io.hp - 20); io.ultimoColpo = ora; flashDanno = 0.8; suono('caduta'); toast((window.B3 && B3.gen ? B3.gen('Sei caduto', 'Sei caduta') : 'Sei caduto') + ' nel baratro: torni al punto di controllo', 'male', true);
   }
   let tMirino = 0;
   // numeri di danno sopra il bersaglio: i colpi ravvicinati sullo stesso bersaglio si sommano
@@ -1803,7 +1803,7 @@
         tSg -= dt; cdB -= dt;
         if (cdB <= 0 && !tit.morto) { cdB = 1.5; anima(boss, 'lancio'); const da = puntoMod(boss, 'bocca') || new T.Vector3(boss.pos.x + f.x * 2, 5, boss.pos.z + f.z * 2); for (let k = 0; k < 3; k++) proiettile(da.clone(), centro(tit).clone(), 11, 16, 0xffb347, 0.42, 1.6); }
         if (!tit.io && !tit.morto) { const a = ora * 0.35 + 2; tit.meta = { x: Math.sin(a) * 15, z: -6 + Math.cos(a) * 13, corri: 1 }; }
-        if (tit.morto) libera((tit.io ? 'Sei caduto con' : tit.nome + ' è caduto con') + ' lo Sguardo.'); else if (tSg <= 0) libera('Lo Sguardo è svanito.');
+        if (tit.morto) libera((tit.io ? (window.B3 && B3.gen ? B3.gen('Sei caduto con', 'Sei caduta con') : 'Sei caduto con') : tit.nome + ' è caduto con') + ' lo Sguardo.'); else if (tSg <= 0) libera('Lo Sguardo è svanito.');
       } else {
         fin -= dt;
         if ((ciclo % 2 === 1 && fin < 5.5) || (umani().every(u => u.morto) && fin < 3)) { const k = bots.find(b => !b.morto && !b.remoto); if (k) { scia(new T.Vector3(k.pos.x, 1.3, k.pos.z), schiena.c, 0xe8f4ff, 0.15); prendi(k); } }
@@ -2909,7 +2909,7 @@
     const nonPronti = mem.filter(r => !r.d.pr).map(r => r.nick);
     const azioni = capo
       ? '<button id="rd-inizia"' + (nonPronti.length ? ' disabled' : '') + '>' + (nonPronti.length ? 'Aspetta: ' + esc(nonPronti.join(', ')) : 'Inizia') + '</button><button class="sec" id="rd-alle"' + (nonPronti.length ? ' disabled' : '') + '>Allenamento</button>' + (B.solo ? '' : '<button class="sec" id="rd-x2">Esci dalla Sala</button>')
-      : '<button id="rd-pronto">' + (SQ.pronto ? 'Non sono più pronto' : 'Sono pronto') + '</button><button class="sec" id="rd-lascia">Lascia la squadra</button>';
+      : '<button id="rd-pronto">' + (SQ.pronto ? (window.B3 && B3.gen ? B3.gen('Non sono più pronto', 'Non sono più pronta') : 'Non sono più pronto') : (window.B3 && B3.gen ? B3.gen('Sono pronto', 'Sono pronta') : 'Sono pronto')) + '</button><button class="sec" id="rd-lascia">Lascia la squadra</button>';
     pannello('<div class="lobby"><div class="col"><div class="kick">Raid · squadra privata</div><h2>La Cripta del Re senza Luce</h2>' +
       '<p class="sotto">' + (capo ? (nAmici ? 'La tua squadra' : 'Sei capo squadra. Invita gli amici o parti con i Custodi bot.') : 'Sei nella squadra di <b>' + esc(cR ? cR.nick : '…') + '</b>.') + '</p>' +
       modo + '<div class="slots">' + posti.map(slot).join('') + '</div><div class="pul">' + azioni + '</div>' + scelte + '<div class="pul"><button class="sec" id="rd-storia">La storia</button></div></div>' +
@@ -3741,7 +3741,7 @@ body.pc #rd-hud .tasto,body.pc #rd-hud .base{display:none}
   }
   function entraIn(r) {
     SQ = { g: r.d.g, capo: false, inv: {}, out: {}, pronto: false, pa: 0, entrato: performance.now() };
-    toast('Sei nella squadra di ' + r.nick + ': premi "Sono pronto"', 'bene', true); menu();
+    toast('Sei nella squadra di ' + r.nick + ': premi "' + (window.B3 && B3.gen ? B3.gen('Sono pronto', 'Sono pronta') : 'Sono pronto') + '"', 'bene', true); menu();
   }
   function esciDaSquadra() { SQ = squadraMia(); }
   function iniziaSquadra(k) {

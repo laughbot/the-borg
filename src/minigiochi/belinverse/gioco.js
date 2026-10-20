@@ -118,7 +118,7 @@
     throw new Fine();
   }
   async function perdiBelinata(p) {
-    if (!p.belinate.length) perde(p, V(p, 'sei stato colpito senza più Belinate', 'colpito senza più Belinate'));
+    if (!p.belinate.length) perde(p, V(p, 'ti hanno colpito senza più Belinate', 'colpito senza più Belinate'));
     const c = p.belinate.shift(); p.mano.push(c);
     log(V(p, 'Perdi', 'L\'avversario perde') + ' una Belinata' + V(p, ': ' + c.c.n + ' va in mano', '') + ' (ne restano ' + p.belinate.length + ')', true);
     UI.colpo(p); UI.render(); await attesa(650);

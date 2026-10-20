@@ -158,7 +158,7 @@
       const et = B.etichetta('Negozio online', { sfondo: '#2a1f36', colore: '#ffe9c4', altezza: 0.34 }); et.position.y = 2.5; av.root.add(et);
       anim.push((t, dt) => { av.aggiorna(dt || 0.016, 0, t); });
       ostCer(0, 1.6, 0.4);
-      toccabili.push({ obj: av.proxy, tipo: 'azione', testo: 'Commessa: "Benvenuto da Laugh Tale! Vuoi vedere il negozio online?" — premi "Apri il negozio online"' });
+      toccabili.push({ obj: av.proxy, tipo: 'azione', testo: 'Commessa: "' + (window.B3 && B3.gen ? B3.gen('Benvenuto', 'Benvenuta') : 'Benvenuto') + ' da Laugh Tale! Vuoi vedere il negozio online?" — premi "Apri il negozio online"' });
       const pr = new T.Mesh(new T.BoxGeometry(11.2, 1.4, 1.6), new T.MeshBasicMaterial()); pr.position.set(0, 0.8, 3.2); pr.visible = false; scena.add(pr);
       toccabili.push({ obj: pr, tipo: 'azione', testo: 'Bancone Laugh Tale: avvicinati e premi "Apri il negozio online"' });
     })();

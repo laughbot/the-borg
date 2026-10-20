@@ -757,7 +757,7 @@
       const solo = gioca.modo === 'solo', host = gioca.modo === 'host';
       pannello('<div class="bb-tit">GAME OVER</div>' +
         '<p class="bb-grande">' + punti + ' punti</p>' +
-        '<p>Sei arrivato al round ' + (n + 1) + (nuovoRecord ? ' · <b>nuovo record!</b>' : ' · record ' + SAV.record) + '</p>' +
+        '<p>Hai raggiunto il round ' + (n + 1) + (nuovoRecord ? ' · <b>nuovo record!</b>' : ' · record ' + SAV.record) + '</p>' +
         (premio ? '<p class="bb-premio">' + (B.Eco.ico || '') + ' +' + esc(B.Eco.fmt(premio)) + '</p>' : '') +
         '<div class="bb-riga">' + (solo ? '<button class="pri" data-a="ancora">Rigioca</button>' : '') + '<button class="' + (solo ? 'sec' : 'pri') + '" data-a="menu">Menu</button></div>' +
         (host || !solo ? '<small>La partita con ' + esc(ON ? ON.nick : 'l\'amico') + ' è finita</small>' : ''), a => {

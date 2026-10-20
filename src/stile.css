@@ -354,6 +354,13 @@ body.orizz #chat.grande #chat-lista { max-height: 150px; }
 .tabs-ed { display: flex; gap: 2px; border-radius: 14px 14px 0 0; overflow: hidden; background: rgba(255,255,255,.08); }
 .tab-ed { flex: 1; padding: 11px 2px; font-size: 14px; font-weight: 700; color: var(--testo-tenue); }
 .tab-ed.sel { background: #f1effa; color: #3a3560; }
+.corpo-ed { display: flex; gap: 8px; margin-bottom: 8px; padding: 4px; border-radius: 14px; background: rgba(255,255,255,.08); }
+.corpo-ed button { flex: 1; padding: 10px 4px; border-radius: 10px; font-size: 15px; font-weight: 800; color: var(--testo-tenue); background: transparent; }
+.corpo-ed button.sel { background: #f1effa; color: #3a3560; }
+.corpo-ed.scegli { outline: 2px dashed #f2c46b; outline-offset: 2px; }
+.corpo-ed.scegli::before { content: 'Scegli:'; align-self: center; padding: 0 2px 0 8px; font-size: 13px; font-weight: 800; color: #f2c46b; }
+.corpo-ed.lampo { animation: corpoLampo .5s ease 3; }
+@keyframes corpoLampo { 50% { outline-color: #fff; transform: scale(1.02); } }
 .pannello-ed { background: #f1effa; border-radius: 0 0 14px 14px; padding: 12px; color: #3a3560; display: flex; flex-direction: column; gap: 12px; }
 .pannello-ed .gruppo-ed > label { display: block; font-size: 12px; font-weight: 800; color: #6d68a0; margin-bottom: 7px; text-transform: uppercase; letter-spacing: .05em; }
 .griglia-ed { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }

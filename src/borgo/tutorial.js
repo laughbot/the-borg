@@ -11,7 +11,7 @@
   const segna = () => { try { localStorage.setItem(CH, '1'); } catch (e) { /* ok */ } };
 
   const PASSI = [
-    { t: 'Benvenuto nel Borgo! 👋', d: 'Vuoi un giro veloce di circa un minuto? Ti mostro i comandi principali. Puoi saltarlo adesso, o in qualsiasi momento.', inizio: true },
+    { t: () => (window.B3 && B3.gen ? B3.gen('Benvenuto', 'Benvenuta') : 'Benvenuto') + ' nel Borgo! 👋', d: 'Vuoi un giro veloce di circa un minuto? Ti mostro i comandi principali. Puoi saltarlo adesso, o in qualsiasi momento.', inizio: true },
     { sel: '#joy', t: 'Muoviti', d: 'Trascina il pallino del joystick per camminare. Sul computer puoi usare anche le frecce o i tasti W A S D.' },
     { sel: '#controlli', t: 'Guarda come vuoi', d: 'Trascina un dito sullo schermo per girare e inclinare la visuale; allarga o stringi due dita per ingrandire o rimpicciolire. Qui accanto ci sono musica, suoni, bici, telecamera dietro l\'avatar e 😊 per le emote.' },
     { sel: '#minimappa-box', t: 'Minimappa e casa', d: 'La mappa mostra dove sei: toccala per ingrandirla. Il pulsante con la casetta ti porta subito a casa tua.' },
@@ -21,7 +21,7 @@
     { sel: '#chat', t: 'Chat della piazza', d: 'In piazza puoi scrivere agli altri. Tocca un personaggio per vedere il profilo, scrivergli in privato, segnalarlo o bloccarlo.' },
     { sel: '#tabbar', t: 'Il menu', d: 'Mondo, Chat privata, Amici, Zaino e Profilo (qui cambi aspetto e atmosfera, e puoi rivedere questo tutorial).' },
     { t: 'Dove andare in piazza 🏛️', d: 'Esci da casa dalla porta in alto: in piazza trovi il negozio Arredamenti (lato ovest), Laugh Tale Collectibles con la sala giochi TCG, la Sala Giochi con kart e paintball, la Biblioteca e il belvedere. Quando sei vicino a una porta compare un pulsante giallo per entrare.' },
-    { t: 'Sei pronto! 🎉', d: 'Divertiti e fai amicizia. Ricorda: gli altri abitanti e la chat sono ancora simulati (DEMO).', fine: true }
+    { t: 'Tutto pronto! 🎉', d: 'Divertiti e fai amicizia. Ricorda: gli altri abitanti e la chat sono ancora simulati (DEMO).', fine: true }
   ];
 
   let ov, spot, card, tit, txt, bAv, bIn, bSa, dots, i = 0, attivo = false;
@@ -64,7 +64,7 @@
 
   function mostra() {
     const p = PASSI[i], rg = card.querySelector('.rg'); rg.textContent = '';
-    tit.textContent = p.t; txt.textContent = p.d;
+    tit.textContent = typeof p.t === 'function' ? p.t() : p.t; txt.textContent = p.d;
     dots.innerHTML = PASSI.map((q, k) => '<i class="' + (k === i ? 'on' : '') + '"></i>').join('');
     const btn = (cl, t, f) => { const b = document.createElement('button'); b.className = cl; b.textContent = t; b.addEventListener('click', f); rg.appendChild(b); return b; };
     if (p.inizio) {

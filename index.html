@@ -2,7 +2,7 @@
 <html lang="it">
 <head>
   <meta charset="utf-8">
-  <meta name="versione" content="b376278e1b2c">
+  <meta name="versione" content="cc316dc5938c">
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="mobile-web-app-capable" content="yes">
@@ -417,6 +417,13 @@ body.orizz #chat.grande #chat-lista { max-height: 150px; }
 .tabs-ed { display: flex; gap: 2px; border-radius: 14px 14px 0 0; overflow: hidden; background: rgba(255,255,255,.08); }
 .tab-ed { flex: 1; padding: 11px 2px; font-size: 14px; font-weight: 700; color: var(--testo-tenue); }
 .tab-ed.sel { background: #f1effa; color: #3a3560; }
+.corpo-ed { display: flex; gap: 8px; margin-bottom: 8px; padding: 4px; border-radius: 14px; background: rgba(255,255,255,.08); }
+.corpo-ed button { flex: 1; padding: 10px 4px; border-radius: 10px; font-size: 15px; font-weight: 800; color: var(--testo-tenue); background: transparent; }
+.corpo-ed button.sel { background: #f1effa; color: #3a3560; }
+.corpo-ed.scegli { outline: 2px dashed #f2c46b; outline-offset: 2px; }
+.corpo-ed.scegli::before { content: 'Scegli:'; align-self: center; padding: 0 2px 0 8px; font-size: 13px; font-weight: 800; color: #f2c46b; }
+.corpo-ed.lampo { animation: corpoLampo .5s ease 3; }
+@keyframes corpoLampo { 50% { outline-color: #fff; transform: scale(1.02); } }
 .pannello-ed { background: #f1effa; border-radius: 0 0 14px 14px; padding: 12px; color: #3a3560; display: flex; flex-direction: column; gap: 12px; }
 .pannello-ed .gruppo-ed > label { display: block; font-size: 12px; font-weight: 800; color: #6d68a0; margin-bottom: 7px; text-transform: uppercase; letter-spacing: .05em; }
 .griglia-ed { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
@@ -784,6 +791,7 @@ window.CONFIG = {
     dettagli:  ['#e3a63a', '#e8e2d6', '#e05a6d', '#7ad7ff', '#9be0a8', '#2a1a2e'],
     pantaloni: ['#2b2030', '#3e3a5c', '#5a4636', '#8a8f9c', '#e8e2d6', '#7a3f4d'],
     stivali:   ['#6b4326', '#2a2a30', '#e8e2d6', '#a63f55', '#3f6fb8'],
+    corpi:     ['Maschio', 'Femmina'],
     visi:      ['Dolce', 'Deciso'],
     barbe:     ['Nessuna', 'Baffi', 'Pizzetto', 'Barba'],
     stili:     ['Ribelle', 'Corto', 'Caschetto', 'Lungo', 'Codino', 'Due code', 'Ricci', 'A punte', 'Panino', 'Cresta', 'Treccia', 'Onde', 'Rasato', 'Coda alta', 'Ciuffo', 'Undercut', 'Afro', 'Spazzola'],
@@ -796,16 +804,16 @@ window.CONFIG = {
   /* ---------- Utenti dimostrativi (NON sono utenti reali) ---------- */
   maxBotPiazza: 24,          // abitanti dimostrativi che girano in piazza (erano 39: meno abitanti = telefono piu' fluido)
   utentiDemo: [
-    { id: 'u1', nick: 'Luna',     online: true,  bio: 'Passo le serate in piazza a guardare le lanterne.', look: { pelle: 0, stile: 5, capelli: 9,  occhi: 4, giacca: 3,  dettagli: 4, abito: 0, pantaloni: 1, stivali: 3, accessorio: 6 } },
-    { id: 'u2', nick: 'Tobia',    online: true,  bio: 'Colleziono carte e storie assurde.',                look: { pelle: 3, stile: 1, capelli: 1,  occhi: 1, giacca: 4,  dettagli: 5, abito: 1, pantaloni: 2, stivali: 0, accessorio: 3 } },
-    { id: 'u3', nick: 'Mirtilla', online: true,  bio: 'Giardiniera ufficiale del borgo.',                  look: { pelle: 1, stile: 6, capelli: 6,  occhi: 3, giacca: 8,  dettagli: 1, abito: 2, pantaloni: 4, stivali: 0, accessorio: 4 } },
-    { id: 'u4', nick: 'Ciro_88',  online: true,  bio: 'Se cerchi qualcuno per una partita, sono qui.',     look: { pelle: 2, stile: 7, capelli: 3,  occhi: 2, giacca: 5,  dettagli: 3, abito: 0, pantaloni: 0, stivali: 1, accessorio: 5 } },
-    { id: 'u5', nick: 'Nuvola',   online: true,  bio: 'Mi perdo sempre, ma mi diverto.',                   look: { pelle: 4, stile: 4, capelli: 8,  occhi: 5, giacca: 10, dettagli: 2, abito: 3, pantaloni: 5, stivali: 2, accessorio: 2 } },
-    { id: 'u6', nick: 'Pepe',     online: false, bio: 'Chiedimi pure dove si trova la fontana.',           look: { pelle: 5, stile: 1, capelli: 11, occhi: 0, giacca: 6,  dettagli: 0, abito: 2, pantaloni: 3, stivali: 1, accessorio: 1 } },
-    { id: 'u7', nick: 'Kiri',     online: true,  bio: 'Disegno tutto quello che vedo in piazza.',          look: { pelle: 0, stile: 2, capelli: 7,  occhi: 2, giacca: 9,  dettagli: 2, abito: 3, pantaloni: 1, stivali: 4, accessorio: 7 } },
-    { id: 'u8', nick: 'Dario',    online: true,  bio: 'Sempre alla caffetteria, ma stasera sono qui.',     look: { pelle: 1, stile: 3, capelli: 2,  occhi: 1, giacca: 11, dettagli: 0, abito: 1, pantaloni: 0, stivali: 0, accessorio: 1 } },
-    { id: 'u9', nick: 'Sora',     online: false, bio: 'Amo i ciliegi e le serate lunghe.',                 look: { pelle: 2, stile: 0, capelli: 1,  occhi: 5, giacca: 7,  dettagli: 1, abito: 0, pantaloni: 4, stivali: 3, accessorio: 0 } },
-    { id: 'u10', nick: 'Bimbo_Z', online: false, bio: 'Cerco compagni di avventura.',                      look: { pelle: 3, stile: 7, capelli: 10, occhi: 3, giacca: 2,  dettagli: 4, abito: 1, pantaloni: 2, stivali: 4, accessorio: 3 } }
+    { id: 'u1', nick: 'Luna',     online: true,  bio: 'Passo le serate in piazza a guardare le lanterne.', look: { corpo: 1, pelle: 0, stile: 5, capelli: 9,  occhi: 4, giacca: 3,  dettagli: 4, abito: 0, pantaloni: 1, stivali: 3, accessorio: 6 } },
+    { id: 'u2', nick: 'Tobia',    online: true,  bio: 'Colleziono carte e storie assurde.',                look: { corpo: 0, pelle: 3, stile: 1, capelli: 1,  occhi: 1, giacca: 4,  dettagli: 5, abito: 1, pantaloni: 2, stivali: 0, accessorio: 3 } },
+    { id: 'u3', nick: 'Mirtilla', online: true,  bio: 'Giardiniera ufficiale del borgo.',                  look: { corpo: 1, pelle: 1, stile: 6, capelli: 6,  occhi: 3, giacca: 8,  dettagli: 1, abito: 2, pantaloni: 4, stivali: 0, accessorio: 4 } },
+    { id: 'u4', nick: 'Ciro_88',  online: true,  bio: 'Se cerchi qualcuno per una partita, sono qui.',     look: { corpo: 0, pelle: 2, stile: 7, capelli: 3,  occhi: 2, giacca: 5,  dettagli: 3, abito: 0, pantaloni: 0, stivali: 1, accessorio: 5 } },
+    { id: 'u5', nick: 'Nuvola',   online: true,  bio: 'Mi perdo sempre, ma mi diverto.',                   look: { corpo: 1, pelle: 4, stile: 4, capelli: 8,  occhi: 5, giacca: 10, dettagli: 2, abito: 3, pantaloni: 5, stivali: 2, accessorio: 2 } },
+    { id: 'u6', nick: 'Pepe',     online: false, bio: 'Chiedimi pure dove si trova la fontana.',           look: { corpo: 0, pelle: 5, stile: 1, capelli: 11, occhi: 0, giacca: 6,  dettagli: 0, abito: 2, pantaloni: 3, stivali: 1, accessorio: 1 } },
+    { id: 'u7', nick: 'Kiri',     online: true,  bio: 'Disegno tutto quello che vedo in piazza.',          look: { corpo: 1, pelle: 0, stile: 2, capelli: 7,  occhi: 2, giacca: 9,  dettagli: 2, abito: 3, pantaloni: 1, stivali: 4, accessorio: 7 } },
+    { id: 'u8', nick: 'Dario',    online: true,  bio: 'Sempre alla caffetteria, ma stasera sono qui.',     look: { corpo: 0, pelle: 1, stile: 3, capelli: 2,  occhi: 1, giacca: 11, dettagli: 0, abito: 1, pantaloni: 0, stivali: 0, accessorio: 1 } },
+    { id: 'u9', nick: 'Sora',     online: false, bio: 'Amo i ciliegi e le serate lunghe.',                 look: { corpo: 1, pelle: 2, stile: 0, capelli: 1,  occhi: 5, giacca: 7,  dettagli: 1, abito: 0, pantaloni: 4, stivali: 3, accessorio: 0 } },
+    { id: 'u10', nick: 'Bimbo_Z', online: false, bio: 'Cerco compagni di avventura.',                      look: { corpo: 0, pelle: 3, stile: 7, capelli: 10, occhi: 3, giacca: 2,  dettagli: 4, abito: 1, pantaloni: 2, stivali: 4, accessorio: 3 } }
   ],
 
   frasiPiazza: [
@@ -813,7 +821,7 @@ window.CONFIG = {
     'Chi viene a fare due passi?', 'Le lanterne stasera sono bellissime', 'Mi sono perso, aiuto!',
     'Passate dalla bacheca, c\'e\' una novita\'', 'Buonasera borgo!', 'Che bel posto per fare due chiacchiere'
   ],
-  rispostePiazza: ['Ciao {nick}!', 'Benvenuto nel borgo, {nick}!', 'Hehe, giusto!', 'Concordo!', 'Che bella idea, {nick}', 'Ci sono anch\'io!'],
+  rispostePiazza: ['Ciao {nick}!', 'Benvenut{o} nel borgo, {nick}!', 'Hehe, giusto!', 'Concordo!', 'Che bella idea, {nick}', 'Ci sono anch\'io!'],
   rispostePrivate: [
     'Ciao! Che piacere sentirti.', 'Ah, che bella idea!', 'Ci vediamo in piazza tra poco?',
     'Ahah, mi hai fatto ridere.', 'Va benissimo per me!', 'Dammi un attimo e ti rispondo meglio.',
@@ -838,7 +846,7 @@ window.CONFIG = {
   const C = window.CONFIG, nomi = ['Alba', 'Brio', 'Cleo', 'Dante', 'Elia', 'Fiamma', 'Gigi', 'Ilaria', 'Jack_77', 'Kaito', 'Lilla', 'Marlo', 'Nina', 'Orso', 'Pia', 'Quasar', 'Rosa', 'Sasha', 'Teo', 'Uma', 'Vale', 'Wendy', 'Xena', 'Yuri', 'Zeno', 'Bea', 'Cico', 'Dolly', 'Ettore', 'Fiore', 'Gufo', 'Hana', 'Iris', 'Jolly', 'Kira', 'Leo_99', 'Mimi', 'Nemo', 'Olly', 'Pippo', 'Rea', 'Stella'];
   const bios = ['Passeggio tra le lanterne.', 'Cerco una partita a carte.', 'Mi piace il caffe\' della Caffetteria.', 'Sono qui per fare amicizia.', 'Amo i ciliegi.', 'Prima volta nel borgo!', 'Ci vediamo alla fontana.', 'Disegno e chiacchiero.', 'Gioco ai kart nel fine settimana.', 'Chiedimi pure, conosco il borgo.'];
   let s = 20260101; const r = n => { s = (s * 1103515245 + 12345) & 0x7fffffff; return (s >> 8) % n; };
-  nomi.slice(0, 32).forEach((n, i) => C.utentiDemo.push({ id: 'u' + (11 + i), nick: n, online: true, extra: true, bio: bios[i % bios.length], look: { pelle: r(6), stile: r(8), capelli: r(12), occhi: r(6), giacca: r(12), dettagli: r(6), abito: r(4), pantaloni: r(6), stivali: r(5), accessorio: r(8) } }));
+  nomi.slice(0, 32).forEach((n, i) => C.utentiDemo.push({ id: 'u' + (11 + i), nick: n, online: true, extra: true, bio: bios[i % bios.length], look: { corpo: r(2), pelle: r(6), stile: r(8), capelli: r(12), occhi: r(6), giacca: r(12), dettagli: r(6), abito: r(4), pantaloni: r(6), stivali: r(5), accessorio: r(8) } }));
 })();
 
 </script>
@@ -3391,7 +3399,7 @@ window.B3_LOGO = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAyAAAAC3CAIAAABl
       const et = B.etichetta('Negozio online', { sfondo: '#2a1f36', colore: '#ffe9c4', altezza: 0.34 }); et.position.y = 2.5; av.root.add(et);
       anim.push((t, dt) => { av.aggiorna(dt || 0.016, 0, t); });
       ostCer(0, 1.6, 0.4);
-      toccabili.push({ obj: av.proxy, tipo: 'azione', testo: 'Commessa: "Benvenuto da Laugh Tale! Vuoi vedere il negozio online?" — premi "Apri il negozio online"' });
+      toccabili.push({ obj: av.proxy, tipo: 'azione', testo: 'Commessa: "' + (window.B3 && B3.gen ? B3.gen('Benvenuto', 'Benvenuta') : 'Benvenuto') + ' da Laugh Tale! Vuoi vedere il negozio online?" — premi "Apri il negozio online"' });
       const pr = new T.Mesh(new T.BoxGeometry(11.2, 1.4, 1.6), new T.MeshBasicMaterial()); pr.position.set(0, 0.8, 3.2); pr.visible = false; scena.add(pr);
       toccabili.push({ obj: pr, tipo: 'azione', testo: 'Bancone Laugh Tale: avvicinati e premi "Apri il negozio online"' });
     })();
@@ -10445,7 +10453,7 @@ float rumoreC(vec3 x) { vec3 i = floor(x); vec3 f = fract(x); f = f * f * (3.0 -
   }
   function cadutaNelVuoto() {
     const sp = enc.rinascita || { x: 0, z: 0 }; io.pos.set(sp.x, (sp.y || 0) + 0.5, sp.z); io.vy = 0; io.yaw = sp.yaw === undefined ? io.yaw : sp.yaw;
-    if (!SEGUI) io.hp = Math.max(1, io.hp - 20); io.ultimoColpo = ora; flashDanno = 0.8; suono('caduta'); toast('Sei caduto nel baratro: torni al punto di controllo', 'male', true);
+    if (!SEGUI) io.hp = Math.max(1, io.hp - 20); io.ultimoColpo = ora; flashDanno = 0.8; suono('caduta'); toast((window.B3 && B3.gen ? B3.gen('Sei caduto', 'Sei caduta') : 'Sei caduto') + ' nel baratro: torni al punto di controllo', 'male', true);
   }
   let tMirino = 0;
   // numeri di danno sopra il bersaglio: i colpi ravvicinati sullo stesso bersaglio si sommano
@@ -11104,7 +11112,7 @@ float rumoreC(vec3 x) { vec3 i = floor(x); vec3 f = fract(x); f = f * f * (3.0 -
         tSg -= dt; cdB -= dt;
         if (cdB <= 0 && !tit.morto) { cdB = 1.5; anima(boss, 'lancio'); const da = puntoMod(boss, 'bocca') || new T.Vector3(boss.pos.x + f.x * 2, 5, boss.pos.z + f.z * 2); for (let k = 0; k < 3; k++) proiettile(da.clone(), centro(tit).clone(), 11, 16, 0xffb347, 0.42, 1.6); }
         if (!tit.io && !tit.morto) { const a = ora * 0.35 + 2; tit.meta = { x: Math.sin(a) * 15, z: -6 + Math.cos(a) * 13, corri: 1 }; }
-        if (tit.morto) libera((tit.io ? 'Sei caduto con' : tit.nome + ' è caduto con') + ' lo Sguardo.'); else if (tSg <= 0) libera('Lo Sguardo è svanito.');
+        if (tit.morto) libera((tit.io ? (window.B3 && B3.gen ? B3.gen('Sei caduto con', 'Sei caduta con') : 'Sei caduto con') : tit.nome + ' è caduto con') + ' lo Sguardo.'); else if (tSg <= 0) libera('Lo Sguardo è svanito.');
       } else {
         fin -= dt;
         if ((ciclo % 2 === 1 && fin < 5.5) || (umani().every(u => u.morto) && fin < 3)) { const k = bots.find(b => !b.morto && !b.remoto); if (k) { scia(new T.Vector3(k.pos.x, 1.3, k.pos.z), schiena.c, 0xe8f4ff, 0.15); prendi(k); } }
@@ -12210,7 +12218,7 @@ float rumoreC(vec3 x) { vec3 i = floor(x); vec3 f = fract(x); f = f * f * (3.0 -
     const nonPronti = mem.filter(r => !r.d.pr).map(r => r.nick);
     const azioni = capo
       ? '<button id="rd-inizia"' + (nonPronti.length ? ' disabled' : '') + '>' + (nonPronti.length ? 'Aspetta: ' + esc(nonPronti.join(', ')) : 'Inizia') + '</button><button class="sec" id="rd-alle"' + (nonPronti.length ? ' disabled' : '') + '>Allenamento</button>' + (B.solo ? '' : '<button class="sec" id="rd-x2">Esci dalla Sala</button>')
-      : '<button id="rd-pronto">' + (SQ.pronto ? 'Non sono più pronto' : 'Sono pronto') + '</button><button class="sec" id="rd-lascia">Lascia la squadra</button>';
+      : '<button id="rd-pronto">' + (SQ.pronto ? (window.B3 && B3.gen ? B3.gen('Non sono più pronto', 'Non sono più pronta') : 'Non sono più pronto') : (window.B3 && B3.gen ? B3.gen('Sono pronto', 'Sono pronta') : 'Sono pronto')) + '</button><button class="sec" id="rd-lascia">Lascia la squadra</button>';
     pannello('<div class="lobby"><div class="col"><div class="kick">Raid · squadra privata</div><h2>La Cripta del Re senza Luce</h2>' +
       '<p class="sotto">' + (capo ? (nAmici ? 'La tua squadra' : 'Sei capo squadra. Invita gli amici o parti con i Custodi bot.') : 'Sei nella squadra di <b>' + esc(cR ? cR.nick : '…') + '</b>.') + '</p>' +
       modo + '<div class="slots">' + posti.map(slot).join('') + '</div><div class="pul">' + azioni + '</div>' + scelte + '<div class="pul"><button class="sec" id="rd-storia">La storia</button></div></div>' +
@@ -13042,7 +13050,7 @@ body.pc #rd-hud .tasto,body.pc #rd-hud .base{display:none}
   }
   function entraIn(r) {
     SQ = { g: r.d.g, capo: false, inv: {}, out: {}, pronto: false, pa: 0, entrato: performance.now() };
-    toast('Sei nella squadra di ' + r.nick + ': premi "Sono pronto"', 'bene', true); menu();
+    toast('Sei nella squadra di ' + r.nick + ': premi "' + (window.B3 && B3.gen ? B3.gen('Sono pronto', 'Sono pronta') : 'Sono pronto') + '"', 'bene', true); menu();
   }
   function esciDaSquadra() { SQ = squadraMia(); }
   function iniziaSquadra(k) {
@@ -13560,7 +13568,7 @@ body.pc #rd-hud .tasto,body.pc #rd-hud .base{display:none}
     }
     if (stato.stanzaId === 'piazza' && Math.random() < 0.55) {
       const cand = inPiazza();
-      if (cand.length) setTimeout(() => { const u = pick(inPiazza().length ? inPiazza() : cand); aggiungiChat(u.id, u.nick, pick(CFG.rispostePiazza).replace('{nick}', stato.giocatore.nick)); }, rnd(1500, 3200));
+      if (cand.length) setTimeout(() => { const u = pick(inPiazza().length ? inPiazza() : cand); aggiungiChat(u.id, u.nick, pick(CFG.rispostePiazza).replace('{nick}', stato.giocatore.nick).replace('{o}', B3.gen('o', 'a'))); }, rnd(1500, 3200));
     }
     return true;
   }
@@ -13668,6 +13676,8 @@ body.pc #rd-hud .tasto,body.pc #rd-hud .base{display:none}
 
   su('dm', salvaDM);
 
+  // parole che cambiano tra maschile e femminile: gen('Benvenuto', 'Benvenuta')
+  window.B3.gen = (m, f) => (stato.giocatore && stato.giocatore.look && stato.giocatore.look.corpo === 1 ? f : m);
   window.Gioco = { stato, su, emetti, avvia, tick, inviaChat, inviaDM, eliminaConversazione, eliminaMessaggio, conversazione, totNonLetti, segnaLetti, blocca, sblocca, segnala,
     segnalazioni, MOTIVI, elencoBloccati, controllaMessaggio, aggiungiVoce, chatQui, inviaSussurro, citaNick, REAZIONI, reagisci, voceDaChiave, carica, salva, utente, nickValido, nickPermesso, impostaAtmosfera, impostaGrafica, cambiaLook, inPiazza, botPiazza };
 })();
@@ -15468,7 +15478,7 @@ body.arredando #joy,body.arredando #controlli,body.arredando #btn-contesto,body.
     apri(i) {
       Mercato.aperto = i; nuovoGiornoMercato();
       const ven = ruoli.venditori.find(r => r.b === W.banchi[i]);
-      if (ven && app.mostraBolla) app.mostraBolla(ven.o, VENDITORI_FRASI[(Math.random() * VENDITORI_FRASI.length) | 0].replace('{nick}', app.io.nick || ''), 3.5);
+      if (ven && app.mostraBolla) app.mostraBolla(ven.o, VENDITORI_FRASI[(Math.random() * VENDITORI_FRASI.length) | 0].replace('{nick}', app.io.nick || '').replace('Benvenuto', (window.B3 && B3.gen ? B3.gen('Benvenuto', 'Benvenuta') : 'Benvenuto')), 3.5);
       Mercato.disegna(); ov.apri(BANCHI[i].nome);
     },
     disegna() {
@@ -16207,7 +16217,7 @@ body.orizz #pesca-pan{left:auto;right:136px;bottom:16px}
     throw new Fine();
   }
   async function perdiBelinata(p) {
-    if (!p.belinate.length) perde(p, V(p, 'sei stato colpito senza più Belinate', 'colpito senza più Belinate'));
+    if (!p.belinate.length) perde(p, V(p, 'ti hanno colpito senza più Belinate', 'colpito senza più Belinate'));
     const c = p.belinate.shift(); p.mano.push(c);
     log(V(p, 'Perdi', 'L\'avversario perde') + ' una Belinata' + V(p, ': ' + c.c.n + ' va in mano', '') + ' (ne restano ' + p.belinate.length + ')', true);
     UI.colpo(p); UI.render(); await attesa(650);
@@ -18446,7 +18456,7 @@ body.bv-attivo #barra-alto,body.bv-attivo #controlli,body.bv-attivo #btn-contest
       const solo = gioca.modo === 'solo', host = gioca.modo === 'host';
       pannello('<div class="bb-tit">GAME OVER</div>' +
         '<p class="bb-grande">' + punti + ' punti</p>' +
-        '<p>Sei arrivato al round ' + (n + 1) + (nuovoRecord ? ' · <b>nuovo record!</b>' : ' · record ' + SAV.record) + '</p>' +
+        '<p>Hai raggiunto il round ' + (n + 1) + (nuovoRecord ? ' · <b>nuovo record!</b>' : ' · record ' + SAV.record) + '</p>' +
         (premio ? '<p class="bb-premio">' + (B.Eco.ico || '') + ' +' + esc(B.Eco.fmt(premio)) + '</p>' : '') +
         '<div class="bb-riga">' + (solo ? '<button class="pri" data-a="ancora">Rigioca</button>' : '') + '<button class="' + (solo ? 'sec' : 'pri') + '" data-a="menu">Menu</button></div>' +
         (host || !solo ? '<small>La partita con ' + esc(ON ? ON.nick : 'l\'amico') + ' è finita</small>' : ''), a => {
@@ -19302,7 +19312,12 @@ body.bb-attivo #controlli,body.bb-attivo #joy,body.bb-attivo #btn-contesto,body.
       ridisegna();
     }
     nomiSchede.forEach((n, i) => { const b = el('button', 'tab-ed', n); b.type = 'button'; b.addEventListener('click', () => { scheda = i; mostra(); }); tabs.append(b); });
-    ed.append(tabs, pannello); box.append(ed); mostra();
+    // Maschio / Femmina: cambia il corpo; il viso parte da "Deciso" o "Dolce" ma si puo' cambiare. Capelli, abiti e accessori restano per tutti.
+    const corpoEd = el('div', 'corpo-ed'); corpoEd.setAttribute('role', 'group'); corpoEd.setAttribute('aria-label', 'Maschio o femmina');
+    const aggCorpo = () => { corpoEd.classList.toggle('scegli', look.corpo !== 0 && look.corpo !== 1); corpoEd.querySelectorAll('button').forEach((x, k) => { x.classList.toggle('sel', look.corpo === k); x.setAttribute('aria-pressed', look.corpo === k ? 'true' : 'false'); }); };
+    A.corpi.forEach((n, i) => { const b = el('button', null, (i ? '♀ ' : '♂ ') + n); b.type = 'button'; b.addEventListener('click', () => { look.corpo = i; look.viso = i ? 0 : 1; onChange(look); aggCorpo(); mostra(); const er = document.querySelector('#nick-errore'); if (er && /Maschio o Femmina/.test(er.textContent)) er.textContent = ''; }); corpoEd.append(b); });
+    aggCorpo();
+    ed.append(corpoEd, tabs, pannello); box.append(ed); mostra();
   }
 
   /* ---------- toast e transizioni ---------- */
@@ -19392,7 +19407,7 @@ body.bb-attivo #controlli,body.bb-attivo #joy,body.bb-attivo #btn-contesto,body.
 
   function rendiChat() {
     const lista = $('#chat-lista'); lista.innerHTML = '';
-    const benv = el('div', 'riga sistema', 'Benvenuto! Rispetta tutti e non scrivere mai dati personali.'), lr = el('button', 'link', 'Regole');
+    const benv = el('div', 'riga sistema', 'Ti diamo il benvenuto! Rispetta tutti e non scrivere mai dati personali.'), lr = el('button', 'link', 'Regole');
     lr.type = 'button'; lr.addEventListener('click', () => mostraRegole()); benv.append(lr); lista.append(benv);
     const visibili = G.chatQui().filter(m => !G.stato.bloccati.has(m.id));
     visibili.forEach(m => {
@@ -19729,6 +19744,7 @@ body.bb-attivo #controlli,body.bb-attivo #joy,body.bb-attivo #btn-contesto,body.
     if (!G.nickValido(nick)) { err.textContent = 'Usa da 3 a 14 caratteri: lettere, numeri o _ (senza spazi).'; return; }
     if (!G.nickPermesso(nick)) { err.textContent = 'Questo nickname non è permesso nel Borgo: scegline un altro.'; return; }
     if (CFG.utentiDemo.some(u => u.nick.toLowerCase() === nick.toLowerCase())) { err.textContent = 'Nickname gia\' in uso (prova dimostrativa: la verifica vera sara\' sul server).'; return; }
+    if (lookInizio.corpo !== 0 && lookInizio.corpo !== 1) { err.textContent = 'Scegli se il tuo avatar è Maschio o Femmina (in alto nell\'editor).'; const c = document.querySelector('#inizio-editor .corpo-ed'); if (c) { c.scrollIntoView({ block: 'center', behavior: 'smooth' }); c.classList.remove('lampo'); void c.offsetWidth; c.classList.add('lampo'); } return; }
     err.textContent = '';
     UI.fade(() => {
       $('#inizio').hidden = true; $('#hud').hidden = false; $('#tabbar').hidden = false; inGioco = true;
@@ -19944,7 +19960,7 @@ body.bb-attivo #controlli,body.bb-attivo #joy,body.bb-attivo #btn-contesto,body.
   const segna = () => { try { localStorage.setItem(CH, '1'); } catch (e) { /* ok */ } };
 
   const PASSI = [
-    { t: 'Benvenuto nel Borgo! 👋', d: 'Vuoi un giro veloce di circa un minuto? Ti mostro i comandi principali. Puoi saltarlo adesso, o in qualsiasi momento.', inizio: true },
+    { t: () => (window.B3 && B3.gen ? B3.gen('Benvenuto', 'Benvenuta') : 'Benvenuto') + ' nel Borgo! 👋', d: 'Vuoi un giro veloce di circa un minuto? Ti mostro i comandi principali. Puoi saltarlo adesso, o in qualsiasi momento.', inizio: true },
     { sel: '#joy', t: 'Muoviti', d: 'Trascina il pallino del joystick per camminare. Sul computer puoi usare anche le frecce o i tasti W A S D.' },
     { sel: '#controlli', t: 'Guarda come vuoi', d: 'Trascina un dito sullo schermo per girare e inclinare la visuale; allarga o stringi due dita per ingrandire o rimpicciolire. Qui accanto ci sono musica, suoni, bici, telecamera dietro l\'avatar e 😊 per le emote.' },
     { sel: '#minimappa-box', t: 'Minimappa e casa', d: 'La mappa mostra dove sei: toccala per ingrandirla. Il pulsante con la casetta ti porta subito a casa tua.' },
@@ -19954,7 +19970,7 @@ body.bb-attivo #controlli,body.bb-attivo #joy,body.bb-attivo #btn-contesto,body.
     { sel: '#chat', t: 'Chat della piazza', d: 'In piazza puoi scrivere agli altri. Tocca un personaggio per vedere il profilo, scrivergli in privato, segnalarlo o bloccarlo.' },
     { sel: '#tabbar', t: 'Il menu', d: 'Mondo, Chat privata, Amici, Zaino e Profilo (qui cambi aspetto e atmosfera, e puoi rivedere questo tutorial).' },
     { t: 'Dove andare in piazza 🏛️', d: 'Esci da casa dalla porta in alto: in piazza trovi il negozio Arredamenti (lato ovest), Laugh Tale Collectibles con la sala giochi TCG, la Sala Giochi con kart e paintball, la Biblioteca e il belvedere. Quando sei vicino a una porta compare un pulsante giallo per entrare.' },
-    { t: 'Sei pronto! 🎉', d: 'Divertiti e fai amicizia. Ricorda: gli altri abitanti e la chat sono ancora simulati (DEMO).', fine: true }
+    { t: 'Tutto pronto! 🎉', d: 'Divertiti e fai amicizia. Ricorda: gli altri abitanti e la chat sono ancora simulati (DEMO).', fine: true }
   ];
 
   let ov, spot, card, tit, txt, bAv, bIn, bSa, dots, i = 0, attivo = false;
@@ -19997,7 +20013,7 @@ body.bb-attivo #controlli,body.bb-attivo #joy,body.bb-attivo #btn-contesto,body.
 
   function mostra() {
     const p = PASSI[i], rg = card.querySelector('.rg'); rg.textContent = '';
-    tit.textContent = p.t; txt.textContent = p.d;
+    tit.textContent = typeof p.t === 'function' ? p.t() : p.t; txt.textContent = p.d;
     dots.innerHTML = PASSI.map((q, k) => '<i class="' + (k === i ? 'on' : '') + '"></i>').join('');
     const btn = (cl, t, f) => { const b = document.createElement('button'); b.className = cl; b.textContent = t; b.addEventListener('click', f); rg.appendChild(b); return b; };
     if (p.inizio) {

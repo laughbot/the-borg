@@ -657,7 +657,7 @@
     apri(i) {
       Mercato.aperto = i; nuovoGiornoMercato();
       const ven = ruoli.venditori.find(r => r.b === W.banchi[i]);
-      if (ven && app.mostraBolla) app.mostraBolla(ven.o, VENDITORI_FRASI[(Math.random() * VENDITORI_FRASI.length) | 0].replace('{nick}', app.io.nick || ''), 3.5);
+      if (ven && app.mostraBolla) app.mostraBolla(ven.o, VENDITORI_FRASI[(Math.random() * VENDITORI_FRASI.length) | 0].replace('{nick}', app.io.nick || '').replace('Benvenuto', (window.B3 && B3.gen ? B3.gen('Benvenuto', 'Benvenuta') : 'Benvenuto')), 3.5);
       Mercato.disegna(); ov.apri(BANCHI[i].nome);
     },
     disegna() {

@@ -111,7 +111,7 @@
     }
     if (stato.stanzaId === 'piazza' && Math.random() < 0.55) {
       const cand = inPiazza();
-      if (cand.length) setTimeout(() => { const u = pick(inPiazza().length ? inPiazza() : cand); aggiungiChat(u.id, u.nick, pick(CFG.rispostePiazza).replace('{nick}', stato.giocatore.nick)); }, rnd(1500, 3200));
+      if (cand.length) setTimeout(() => { const u = pick(inPiazza().length ? inPiazza() : cand); aggiungiChat(u.id, u.nick, pick(CFG.rispostePiazza).replace('{nick}', stato.giocatore.nick).replace('{o}', B3.gen('o', 'a'))); }, rnd(1500, 3200));
     }
     return true;
   }
@@ -219,6 +219,8 @@
 
   su('dm', salvaDM);
 
+  // parole che cambiano tra maschile e femminile: gen('Benvenuto', 'Benvenuta')
+  window.B3.gen = (m, f) => (stato.giocatore && stato.giocatore.look && stato.giocatore.look.corpo === 1 ? f : m);
   window.Gioco = { stato, su, emetti, avvia, tick, inviaChat, inviaDM, eliminaConversazione, eliminaMessaggio, conversazione, totNonLetti, segnaLetti, blocca, sblocca, segnala,
     segnalazioni, MOTIVI, elencoBloccati, controllaMessaggio, aggiungiVoce, chatQui, inviaSussurro, citaNick, REAZIONI, reagisci, voceDaChiave, carica, salva, utente, nickValido, nickPermesso, impostaAtmosfera, impostaGrafica, cambiaLook, inPiazza, botPiazza };
 })();
