@@ -2,7 +2,7 @@
 <html lang="it">
 <head>
   <meta charset="utf-8">
-  <meta name="versione" content="4f0aa4716827">
+  <meta name="versione" content="289fb884f84a">
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="mobile-web-app-capable" content="yes">
@@ -10066,25 +10066,58 @@ float rumoreC(vec3 x) { vec3 i = floor(x); vec3 f = fract(x); f = f * f * (3.0 -
   function aggEffetti(dt) {
     for (let i = effetti.length - 1; i >= 0; i--) { const e = effetti[i]; e.t += dt; if (e.f) e.f(dt, e); if (e.t >= e.dur) { if (e.fine) e.fine(); effetti.splice(i, 1); } }
   }
-  function spawnLato(tipi, xs, zr) {
+  // lato: 0 sinistra, 1 destra (da dove arriva l'ondata annunciata); senza lato, a caso e da piu' parti
+  function spawnLato(tipi, xs, zr, lato, molt) {
     if (SEGUI) return;   // da ospite i nemici arrivano dal padrone di casa
-    const quanti = Math.min(Math.round(tipi.length * D.n), D.cap - nemici.length); if (quanti <= 0) return;
-    const P = enc && enc.ingressi;
+    const quanti = Math.min(Math.round(tipi.length * D.n * (molt || 1)), D.cap - nemici.length); if (quanti <= 0) return;
+    const P = enc && enc.ingressi, unLato = lato === 0 || lato === 1;
     if (P && P.length) {   // la sala ha porte vere: escono dal buio della porta e camminano dentro
-      const i0 = Math.floor(Math.random() * P.length), usate = new Set();
+      const ord = P.map((p, i) => i).sort((a, b) => P[a].x - P[b].x);
+      const i0 = unLato ? ord[lato ? ord.length - 1 : 0] : Math.floor(Math.random() * P.length), usate = new Set();
       for (let k = 0; k < quanti; k++) {
-        const i = k % 2 ? (i0 + 1 + Math.floor(Math.random() * (P.length - 1))) % P.length : i0, p = P[i];   // arrivano da piu' porte insieme
+        const i = k % 2 && !unLato ? (i0 + 1 + Math.floor(Math.random() * (P.length - 1))) % P.length : i0, p = P[i];   // arrivano da piu' porte insieme
         const lat = ((k >> 1) % 3 - 1) * p.w * 0.8 + rnd(-0.2, 0.2), x = p.x - p.dz * lat, z = p.z + p.dx * lat;
         const e = nemico(tipi[k % tipi.length], x, z); e.pos.y = p.y || 0; e.entra = { x: x + p.dx * rnd(3.5, 6), z: z + p.dz * rnd(3.5, 6) }; e.entraT = 4;
         if (!usate.has(i)) { usate.add(i); scoppio(new T.Vector3(p.x, (p.y || 0) + 1.4, p.z), 0x8affa8, 10, 2.5); if (ambiente && ambiente.varco) ambiente.varco(i); }
       }
       return;
     }
-    const x0 = xs[Math.floor(Math.random() * xs.length)];
+    const xo = xs.slice().sort((a, b) => a - b), x0 = unLato ? xo[lato ? xo.length - 1 : 0] : xs[Math.floor(Math.random() * xs.length)];
     for (let k = 0; k < quanti; k++) {
-      const x = k % 2 ? xs[(xs.indexOf(x0) + 1) % xs.length] : x0;   // arrivano da piu' lati insieme
+      const x = k % 2 && !unLato ? xs[(xs.indexOf(x0) + 1) % xs.length] : x0;   // arrivano da piu' lati insieme
       nemico(tipi[k % tipi.length], x + (x < 0 ? 1.5 : -1.5) + rnd(-0.5, 0.5), rnd(zr[0], zr[1]));
     }
+  }
+
+  /* ---------- REGIA DELLE ONDATE ----------
+     I nemici arrivano per un motivo: ogni sala chiama un'ondata quando succede qualcosa (prendi un oggetto,
+     rompi un bersaglio, finisce una fase), annunciata 2,5 secondi prima e da un lato solo, cosi' ci si gira.
+     La pressione non cala: se in campo restano pochi nemici ne arrivano altri, e a ogni giro (G.forza)
+     le ondate sono piu' grosse e piu' frequenti. All'inizio della sala qualche secondo per orientarsi. */
+  const NOME_LATO = ['sinistra', 'destra'];
+  function regia(o) {
+    const G = { xs: o.xs, zr: o.zr, calma: o.calma === undefined ? 7 : o.calma, pausa: o.pausa || 9, min: o.min || 6, base: o.base || ['schiavo', 'schiavo', 'accolito'],
+      t: 0, ultima: -99, coda: [], forza: 0, ferma: false };
+    const vivi = () => nemici.filter(e => e.vivo && !e.boss && !e.mini).length;
+    const molt = () => 1 + G.forza * 0.2;
+    // un'ondata: tipi di nemici, dopo 'ritardo' secondi (piu' i 2,5 dell'avviso), da un lato
+    G.ondata = (tipi, q) => {
+      if (SEGUI) return; q = q || {};
+      const lato = q.lato === 0 || q.lato === 1 ? q.lato : Math.random() < 0.5 ? 0 : 1;
+      G.coda.push({ t: (q.ritardo || 0) + (q.subito ? 0 : 2.5), tipi: tipi || G.base, lato, m: (q.m || 1) * molt(), perche: q.perche || '', avv: !!q.subito });
+      G.ultima = G.t;
+    };
+    G.agg = dt => {
+      if (SEGUI) return; G.t += dt;
+      for (let i = G.coda.length - 1; i >= 0; i--) {
+        const q = G.coda[i]; q.t -= dt;
+        if (!q.avv && q.t <= 2.5) { q.avv = true; toast((q.perche ? q.perche + ': ' : '') + 'nemici in arrivo da ' + NOME_LATO[q.lato] + '!', 'male'); }
+        if (q.t <= 0) { spawnLato(q.tipi, G.xs, G.zr, q.lato, q.m); G.coda.splice(i, 1); G.ultima = G.t; }
+      }
+      // pressione costante: pochi nemici in campo e nessuna ondata da un po' -> ne arriva un'altra
+      if (!G.ferma && G.t > G.calma && !G.coda.length && G.t - G.ultima > G.pausa / molt() && vivi() < G.min) G.ondata(G.base);
+    };
+    return G;
   }
 
   /* =====================================================================
@@ -10107,7 +10140,8 @@ float rumoreC(vec3 x) { vec3 i = floor(x); vec3 f = fract(x); f = f * f * (3.0 -
       'Se chi porta una fiamma cade, la fiamma resta a terra per 12 secondi: riprendila prima che torni al piedistallo. Proteggete i portatori: i Guardacripta arrivano a ogni coppia.'];
     const POSA = 4, A_TERRA = 12, VELO_HP = 300;
     const LANT = [[-13, 2], [13, 2], [-13, -8], [13, -8], [-13, -18], [13, -18]];
-    let lanterne = [], fiamme = [], giro = 0, onda = 4, nOnda = 0, aperto = -1, porta = null, runa = null, guardia = 0, avvisoPosa = 0;
+    let lanterne = [], fiamme = [], giro = 0, aperto = -1, porta = null, runa = null, guardia = 0, avvisoPosa = 0, presaGiro = -1;
+    const RG = regia({ xs: [-20, 20], zr: [-16, 3], base: ['schiavo', 'schiavo', 'schiavo'] });
     const attivi = () => giro < 3 ? [lanterne[giro * 2], lanterne[giro * 2 + 1]] : [];
     function velo(L) {
       const m = new T.Mesh(new T.CylinderGeometry(2.0, 2.0, 3.4, 28, 1, true), mb(0x13281c, { transparent: true, opacity: 0.6, side: T.DoubleSide, depthWrite: false }));
@@ -10121,6 +10155,7 @@ float rumoreC(vec3 x) { vec3 i = floor(x); vec3 f = fract(x); f = f * f * (3.0 -
     function giu(v, u) {
       v.vivo = false; v.m.visible = false; const i = ostacoli.indexOf(v.ost); if (i >= 0) ostacoli.splice(i, 1);
       scoppio(v.c, 0x7fe08a, 18, 4); suono('esplo'); toast('Velo d\'Ombra abbattuto' + (u && u.nome && !u.io ? ' da ' + u.nome : ''), 'bene');
+      RG.ondata(['schiavo', 'schiavo', 'accolito'], { perche: 'Il velo è caduto' });
     }
     function torna(F, perche) {
       if (F.k) F.k.porta = null; F.k = null; F.posata = null; F.terra = -1; F.pos.set(F.base.x, 1.3, F.base.z); F.bot = null;
@@ -10163,7 +10198,7 @@ float rumoreC(vec3 x) { vec3 i = floor(x); vec3 f = fract(x); f = f * f * (3.0 -
     function nuovoGiro() {
       lanterne.forEach(L => { L.an.material.opacity = 0; });
       attivi().forEach(L => { L.v = velo(L); L.an.material.opacity = 0.85; });
-      if (giro > 0) toast('Coppia ' + (giro + 1) + ' di 3: abbattete i veli delle lanterne ' + (giro === 1 ? 'centrali' : 'in fondo'), '');
+      if (giro > 0) { toast('Coppia ' + (giro + 1) + ' di 3: abbattete i veli delle lanterne ' + (giro === 1 ? 'centrali' : 'in fondo'), ''); RG.forza = giro; RG.ondata(['accolito', 'accolito', 'schiavo', 'schiavo'], { ritardo: 2, perche: 'Le lanterne accese attirano i servitori' }); }
       guardia = 6;   // tra poco arriva un Guardacripta
     }
     // a chi tocca portare: chi ha gia' la fiamma; se no un compagno bot libero (un umano vicino ha la precedenza)
@@ -10195,7 +10230,8 @@ float rumoreC(vec3 x) { vec3 i = floor(x); vec3 f = fract(x); f = f * f * (3.0 -
         if (F.posata) { F.posata.t -= dt; if (F.posata.t <= 0) { torna(F, 'Fiamma spenta: le due fiamme vanno posate insieme!'); suono('allarme'); } return; }
         if (!F.k) {
           const u = squadra.find(s => !s.morto && !s.porta && Math.hypot(s.pos.x - F.pos.x, s.pos.z - F.pos.z) < 1.4 && Math.abs(s.pos.y - (F.terra > 0 ? 0 : 0)) < 1.5 && (s.io || s.remoto || F.bot === s));
-          if (u) { F.k = u; u.porta = F; F.terra = -1; F.bot = null; avvisa(u, 'Hai la Fiamma ' + F.nome + ': portala alla lanterna. Non puoi sparare', u.nome + ' ha la Fiamma ' + F.nome, 'bene'); if (u.io) suono('ok'); if (!u.io && !u.remoto) radio(u, 'Ho la fiamma ' + F.nome + ', vado alla lanterna'); }
+          if (u) { if (presaGiro !== giro) { presaGiro = giro; RG.ondata(['schiavo', 'accolito', 'schiavo'], { perche: 'Hanno visto la fiamma' }); }
+            F.k = u; u.porta = F; F.terra = -1; F.bot = null; avvisa(u, 'Hai la Fiamma ' + F.nome + ': portala alla lanterna. Non puoi sparare', u.nome + ' ha la Fiamma ' + F.nome, 'bene'); if (u.io) suono('ok'); if (!u.io && !u.remoto) radio(u, 'Ho la fiamma ' + F.nome + ', vado alla lanterna'); }
         }
         if (F.k) {
           const u = F.k; F.pos.set(u.pos.x, u.pos.y + 2.25, u.pos.z);
@@ -10211,7 +10247,7 @@ float rumoreC(vec3 x) { vec3 i = floor(x); vec3 f = fract(x); f = f * f * (3.0 -
         runa.emissiveIntensity = 0.1 + giro / 3 * 1.4;
         if (giro >= 3) {
           const g = miniBoss('guardiano', 0, -20); g.onMorte = () => { aperto = 0; nemici.slice().forEach(e => muore(e)); toast('Il Guardiano Spento è caduto: il Portale delle Anime si apre', 'bene'); suono('vittoria'); };
-          toast('Sei lanterne accese... e si sveglia il Guardiano Spento!', 'male'); suono('allarme'); return;
+          toast('Sei lanterne accese... e si sveglia il Guardiano Spento!', 'male'); suono('allarme'); RG.forza = 3; RG.ondata(['accolito', 'schiavo', 'schiavo'], { ritardo: 4, perche: 'Il Guardiano chiama aiuto' }); return;
         }
         toast('Lanterne accese: ' + giro * 2 + ' di 6', 'bene'); nuovoGiro();
       }
@@ -10230,7 +10266,7 @@ float rumoreC(vec3 x) { vec3 i = floor(x); vec3 f = fract(x); f = f * f * (3.0 -
       // avviso a chi porta: la tua lanterna e' pronta?
       if (io.porta && ora - avvisoPosa > 6) { const L = lanternaPer(io.porta); if (L && !(L.v && L.v.vivo)) { avvisoPosa = ora; toast('Velo giù: porta la fiamma nella lanterna ' + L.nome + ' insieme all\'altro portatore', ''); } }
       // nemici: ondate dai lati e un Guardacripta per coppia
-      onda -= dt; if (onda <= 0) { onda = 8 * D.int; nOnda++; spawnLato(nOnda % 3 === 0 ? ['accolito', 'accolito', 'schiavo'] : ['schiavo', 'schiavo', 'schiavo'], [-20, 20], [-16, 3]); }
+      RG.agg(dt);
       if (guardia > 0) { guardia -= dt; if (guardia <= 0 && !SEGUI) { const L = attivi()[Math.random() < 0.5 ? 0 : 1]; if (L) { nemico('cavaliere', L.x * 0.55, L.z - 2); if (giro === 2) nemico('cavaliere', -L.x * 0.55, L.z - 2); toast('Un Guardacripta difende le lanterne!', 'male'); } } }
       lanterne.forEach(L => { if (L.v && L.v.vivo) { L.v.lampo = Math.max(0, (L.v.lampo || 0) - dt); L.v.m.material.opacity = 0.5 + Math.sin(ora * 3 + L.i) * 0.08 + L.v.lampo * 2; } if (!L.acceso && L.an.material.opacity > 0) L.an.material.opacity = 0.55 + Math.sin(ora * 4) * 0.3; });
       vediFiamme();
@@ -10282,7 +10318,8 @@ float rumoreC(vec3 x) { vec3 i = floor(x); vec3 f = fract(x); f = f * f * (3.0 -
       'Una piastra la tiene solo chi ha la <b>Pretesa</b>: la prendi sulla piastra piccola al centro, tra i totem, e dura 10 secondi.',
       'Chi tiene una piastra accumula <b>Cenere</b>: a 10 cumuli muore. I compagni si danno il cambio da soli. Ogni 10 secondi i totem lanciano un <b>impulso</b>: se una piastra è scoperta, colpisce tutta la squadra. Se succede, prendi la Pretesa e coprila tu.',
       'La <b>Cantrice del Lutto</b> appare sopra il portale: uccidila tu prima che finisca il canto, i compagni sono impegnati.'];
-    let prog = 0, cantore = null, canto = 0, prossimo = 16, onda = 3, nOnda = 0, aperto = -1, avvisoIo = false;
+    let prog = 0, cantore = null, canto = 0, prossimo = 16, tappa = 0, aperto = -1, avvisoIo = false;
+    const RG = regia({ xs: [-19, 19], zr: [-14, 6] });
     const NEED = 70; let pi, lati, porta, raggi = [], runa, pret, impulso = 18;
     const PRET = { x: 0, z: -12 };
     E.costruisci = () => {
@@ -10375,11 +10412,13 @@ float rumoreC(vec3 x) { vec3 i = floor(x); vec3 f = fract(x); f = f * f * (3.0 -
       if (!cantore && tEnc >= prossimo) {
         cantore = nemico('cantore', rnd(-4, 4), -25, { noBot: true, ancora: { x: 0, z: -25 } }); canto = 24;
         cantore.onMorte = () => { cantore = null; prossimo = tEnc + 24; toast('Cantrice del Lutto uccisa', 'bene'); suono('ok'); };
-        toast('Una Cantrice del Lutto canta sopra il portale!', 'male'); suono('allarme'); radio(bots[4].remoto ? bots.find(b => !b.remoto && !b.morto) : bots[4], 'Cantrice sopra il portale, la prendo io!', 0.9);
+        toast('Una Cantrice del Lutto canta sopra il portale!', 'male'); suono('allarme'); RG.ondata(['schiavo', 'schiavo'], { ritardo: 1, perche: 'La Cantrice chiama la sua scorta' }); radio(bots[4].remoto ? bots.find(b => !b.remoto && !b.morto) : bots[4], 'Cantrice sopra il portale, la prendo io!', 0.9);
       }
       if (cantore) { canto -= dt; if (canto <= 0) return wipe('Il Canto del Lutto si è compiuto.'); }
-      // ondate dai lati
-      onda -= dt; if (onda <= 0) { onda = 7.5 * D.int; nOnda++; spawnLato(nOnda % 4 === 0 ? ['cavaliere'] : nOnda % 2 ? ['schiavo', 'schiavo', 'schiavo'] : ['accolito', 'schiavo'], [-19, 19], [-14, 6]); }
+      // ondate: ogni quarto di sigillo caricato i servitori accorrono, sempre piu' forti; nella pulizia finale si ferma
+      const tp = Math.min(3, Math.floor(prog / NEED * 4));
+      if (tp > tappa) { tappa = tp; RG.forza = tp; RG.ondata([['accolito', 'schiavo', 'schiavo'], ['cavaliere', 'schiavo', 'schiavo'], ['cavaliere', 'accolito', 'accolito']][tp - 1], { perche: 'Il sigillo si carica' }); }
+      RG.ferma = !!(E.pul85 && !E.pul85.fatta); RG.agg(dt);
       if (prog >= NEED) { aperto = 0; nemici.slice().forEach(e => muore(e)); toast('Il sigillo è carico: il portale si apre', 'bene'); suono('vittoria'); }
     };
     E.hud = () => {
@@ -10414,14 +10453,15 @@ float rumoreC(vec3 x) { vec3 i = floor(x); vec3 f = fract(x); f = f * f * (3.0 -
     E.guida = ['L\'Officiante è protetto da uno scudo. Guarda in che <b>ordine</b> si accendono le tre piastre, poi <b>calpestale tu</b> nello stesso ordine.',
       'Se la sequenza è giusta lo scudo cade e ricevi il <b>Marchio dell\'Iniziato</b> (danni aumentati). Dura poco, ma <b>ogni nemico che uccidi tu lo allunga</b>: tieni d\'occhio i rinforzi mentre colpisci.',
       'Quando il Marchio finisce apre l\'<b>Occhio Ardente</b>: nasconditi dietro un pilastro, in modo che non possa vederti, o verrai incenerito. Dopo il quinto Occhio l\'Officiante si infuria e vi annienta.'];
-    let tDps = 0, rinf = 12, boss, scudo, occhio, pi, fase = '', ft = 0, seq = [], passo = 0, ultimo = -1, giri = 0, num = [], cdB = 2;
+    let tDps = 0, boss, scudo, occhio, pi, fase = '', ft = 0, seq = [], passo = 0, ultimo = -1, giri = 0, num = [], cdB = 2;
+    const RG = regia({ xs: [-21, 21], zr: [-6, 8], base: ['schiavo', 'accolito'] });
     let PIL = [[-9, -9], [9, -9], [-16, 3], [16, 3]]; const OCC = new T.Vector3(0, 11.2, -22.5);
     function vai(f) {
       fase = f;
-      if (f === 'ondata') { ft = giri ? 6 : 8; boss.imm = true; scudo.visible = true; spawnLato(giri ? ['accolito', 'accolito', 'cavaliere'] : ['accolito', 'schiavo', 'schiavo'], [-21, 21], [-6, 8]); bots.forEach(b => b.meta = null); }
+      if (f === 'ondata') { ft = giri ? 6 : 8; boss.imm = true; scudo.visible = true; RG.forza = giri; RG.ondata(giri ? ['accolito', 'accolito', 'cavaliere'] : ['accolito', 'schiavo', 'schiavo'], { subito: true }); toast('L\'Officiante chiama i suoi fedeli', 'male'); bots.forEach(b => b.meta = null); }
       if (f === 'mostra') { ft = 0; seq = [0, 1, 2].sort(() => Math.random() - 0.5); passo = 0; ultimo = -1; pi.forEach(p => p.col(0x3b4a5a, 0x0a1220)); toast('Osserva l\'ordine delle piastre...'); }
       if (f === 'input') { ft = 24; umani().forEach(u => { u.ultP = pi.findIndex(p => dentro(u, p)); }); toast('Ora calpesta le piastre nello stesso ordine'); }
-      if (f === 'dps') { ft = 14; boss.imm = false; scudo.visible = false; toast('Scudo abbattuto! Hai il Marchio dell\'Iniziato: colpiscilo!', 'bene'); suono('ok'); bots.forEach((b, k) => b.meta = { x: -8 + k * 4, z: -12 }); tDps = 0; spawnLato(['schiavo'], [-21, 21], [-6, 8]); }
+      if (f === 'dps') { ft = 14; boss.imm = false; scudo.visible = false; toast('Scudo abbattuto! Hai il Marchio dell\'Iniziato: colpiscilo!', 'bene'); suono('ok'); bots.forEach((b, k) => b.meta = { x: -8 + k * 4, z: -12 }); tDps = 0; RG.ondata(['schiavo', 'schiavo'], { perche: 'Il Marchio si allunga uccidendo' }); }
       if (f === 'oculus') { ft = 6.5; anima(boss, 'invoca', 6.6); boss.imm = true; scudo.visible = true; toast('OCCHIO ARDENTE! Nasconditi dietro un pilastro!', 'male'); suono('allarme'); bots.forEach((b, k) => { const p = PIL[(k + 1) % 4], dx = p[0] - OCC.x, dz = p[1] - OCC.z, d = Math.hypot(dx, dz); b.meta = { x: p[0] + dx / d * 2.3, z: p[1] + dz / d * 2.3, corri: 1 }; }); }
     }
     E.costruisci = () => {
@@ -10458,7 +10498,7 @@ float rumoreC(vec3 x) { vec3 i = floor(x); vec3 f = fract(x); f = f * f * (3.0 -
       if (!boss.vivo) return;
       if (pulizia(E, boss, ['accolito', 'schiavo', 'schiavo'], [-21, 21], [-6, 8], dt)) { scudo.visible = true; scudo.position.set(boss.pos.x, 5, boss.pos.z); return; }
       scudo.visible = !!boss.imm;
-      rinf -= dt; if (rinf <= 0) { rinf = 12 * D.int; if (fase !== 'oculus') spawnLato(['schiavo', 'accolito'], [-21, 21], [-6, 8]); }
+      RG.ferma = fase === 'oculus'; RG.agg(dt);
       scudo.position.set(boss.pos.x, 5, boss.pos.z); scudo.material.opacity = 0.14 + Math.sin(ora * 3) * 0.04;
       occhio.scale.setScalar(fase === 'oculus' ? 0.5 + (6.5 - ft) * 0.35 : 0.4);
       ft -= dt;
@@ -10475,11 +10515,11 @@ float rumoreC(vec3 x) { vec3 i = floor(x); vec3 f = fract(x); f = f * f * (3.0 -
           let k = -1; pi.forEach((p, j) => { if (dentro(u, p)) k = j; });
           if (k >= 0 && k !== u.ultP) {
             if (k === seq[passo]) { pi[k].col(0x58c26a, 0x0e3a12); passo++; suono('ok'); if (passo === 3) vai('dps'); }
-            else if (pi[k].mat.color.getHex() !== 0x58c26a) { toast('Sequenza errata! Riguarda l\'ordine', 'male'); suono('errore'); spawnLato(['schiavo', 'schiavo'], [-21, 21], [-6, 8]); vai('mostra'); ft = -0.0; }
+            else if (pi[k].mat.color.getHex() !== 0x58c26a) { toast('Sequenza errata! Riguarda l\'ordine', 'male'); suono('errore'); RG.ondata(['schiavo', 'schiavo', 'accolito'], { perche: 'Sequenza errata' }); vai('mostra'); ft = -0.0; }
           }
           u.ultP = k;
         }
-        if (fase === 'input' && ft <= 0) { toast('Tempo scaduto: l\'Officiante chiama rinforzi', 'male'); spawnLato(['cavaliere'], [-21, 21], [-4, 6]); vai('mostra'); }
+        if (fase === 'input' && ft <= 0) { RG.ondata(['cavaliere', 'accolito'], { perche: 'Tempo scaduto' }); vai('mostra'); }
       } else if (fase === 'dps') { tDps += dt; if (ft <= 0 || tDps > 26) vai('oculus'); }
       else if (fase === 'oculus' && ft <= 0) {
         scoppio(OCC, 0xfff0b0, 30, 10); suono('esplo'); scuoti = 0.5;
@@ -10522,14 +10562,15 @@ float rumoreC(vec3 x) { vec3 i = floor(x); vec3 f = fract(x); f = f * f * (3.0 -
       'Spara al punto debole sulla sua <b>schiena</b> per prendere il suo <b>Sguardo</b>: ti seguirà con le sue sfere, allontanati e schivale. Tu e ' + (conAvatar() ? window.CONFIG.utentiDemo[0].nick : 'Kira') + ' vi alternate: quando tocca a te, riprendilo prima che scada il tempo.',
       'Spara alle <b>sfere sul soffitto</b>: cadendo creano una <b>Pozza di Luce</b>. Chi sta dentro fa danni tripli al ventre.',
       'Attento agli <b>Striscianti Maledetti</b> (alone verde): esplodono quando muoiono o quando ti raggiungono. Abbattili da lontano.'];
-    let boss, ventre, schiena, sfere = [], pozze = [], tit = null, tSg = 0, fin = 12, ciclo = 0, cdB = 1.5, cdPest = 0, onda = 10, tPozzaBot = 0;
+    let boss, ventre, schiena, sfere = [], pozze = [], tit = null, tSg = 0, fin = 12, ciclo = 0, cdB = 1.5, cdPest = 0, tPozzaBot = 0;
+    const RG = regia({ xs: [-23, 23], zr: [6, 16], base: ['maledetto', 'schiavo', 'accolito'], pausa: 12, calma: 10 });
     const POS = new T.Vector3(0, 0, -6);
     function fwd() { return new T.Vector3(Math.sin(boss.yaw), 0, Math.cos(boss.yaw)); }
     function prendi(u) {
       tit = u; tSg = 16; schiena.vivo = false; tPozzaBot = 0; suono('sguardo');
       avvisa(u, 'Hai lo Sguardo di Bruthak! Allontanati e schiva le sfere', u.nome + ' ha preso lo Sguardo: vai nella pozza e colpisci il ventre', 'male', 'bene');
     }
-    function libera(perche) { tit = null; fin = 8; ciclo++; schiena.vivo = true; toast(perche + (ciclo % 2 ? ' Tocca a ' + bots[0].nome + ' riprenderlo.' : umani().length > 1 ? ' Tocca a voi: sparate alla schiena!' : ' Tocca a te: spara alla schiena!'), ciclo % 2 ? '' : 'male'); }
+    function libera(perche) { tit = null; fin = 8; ciclo++; RG.forza = Math.floor(ciclo / 2); RG.ondata(['maledetto', 'schiavo', 'schiavo'], { ritardo: 1, perche: 'Bruthak è libero dallo Sguardo' }); schiena.vivo = true; toast(perche + (ciclo % 2 ? ' Tocca a ' + bots[0].nome + ' riprenderlo.' : umani().length > 1 ? ' Tocca a voi: sparate alla schiena!' : ' Tocca a te: spara alla schiena!'), ciclo % 2 ? '' : 'male'); }
     const inPozza = u => pozze.some(p => Math.hypot(u.pos.x - p.x, u.pos.z - p.z) < p.r && u.pos.y < 1.5);
     E.costruisci = () => {
       const AMB = B.AmbientiRaid && B.AmbientiRaid.fossaBruthak; let SF = [[-11, -3], [11, -3], [0, 9]], Q = 0;
@@ -10611,7 +10652,7 @@ float rumoreC(vec3 x) { vec3 i = floor(x); vec3 f = fract(x); f = f * f * (3.0 -
       bots.forEach((b, k) => { if (b === tit) return; const p = pozze[0]; b.meta = p ? { x: p.x + Math.sin(k * 1.3) * 1.6, z: p.z + Math.cos(k * 1.3) * 1.6, corri: 1 } : { x: -9 + k * 4.5, z: 6 }; });
       // pestone se ti avvicini troppo
       cdPest -= dt; if (cdPest <= 0) { const vic = squadra.filter(u => !u.morto && Math.hypot(u.pos.x - boss.pos.x, u.pos.z - boss.pos.z) < 6.2); if (vic.length) { cdPest = 2.6; anima(boss, 'pestone'); effetti.push({ t: 0, dur: modDi(boss) ? 0.68 : 0, f: () => { }, fine: () => { if (!boss.vivo) return; anello(boss.pos.x, boss.pos.z, 0xffb347, 6); suono('esplo'); scuoti = Math.max(scuoti, 0.25); squadra.filter(u => !u.morto && Math.hypot(u.pos.x - boss.pos.x, u.pos.z - boss.pos.z) < 6.2).forEach(u => { ferisci(u, 28, 'pestone di Bruthak'); const dx = u.pos.x - boss.pos.x, dz = u.pos.z - boss.pos.z, d = Math.hypot(dx, dz) || 1; u.pos.x += dx / d * 3; u.pos.z += dz / d * 3; if (u.io) io.vy = 5; }); } }); } }
-      onda -= dt; if (onda <= 0) { onda = 15 * D.int; spawnLato(['maledetto', 'schiavo', 'accolito'], [-23, 23], [6, 16]); }
+      RG.ferma = inPulizia(E); RG.agg(dt);
     };
     E.miraBot = b => pozze.length && b !== tit && inPozza(b) ? ventre : null;
     E.hud = () => {
@@ -10720,12 +10761,14 @@ float rumoreC(vec3 x) { vec3 i = floor(x); vec3 f = fract(x); f = f * f * (3.0 -
       'Se uno <b>Strisciante</b> tocca un frammento a terra, lo riporta nella vena. Servono <b>cinque frammenti</b>.',
       'Poi arriva il <b>Caposquadra</b>: quando batte il piccone a terra compare un cerchio rosso, allontanati.'];
     const NEED = 5, VENE = [[-17, -4], [17, -4], [-12, -22], [12, -22], [0, -26], [-15, 6], [15, 6]], L = { x: 0, z: -6, r: 2.4 };
-    let vene = [], fr = [], portati = 0, onda = 4, nOnda = 0, capo = null, fase = 'scavo', lant = null, luceL = null;
+    let vene = [], fr = [], portati = 0, capo = null, fase = 'scavo', lant = null, luceL = null;
+    const RG = regia({ xs: [-21, 21], zr: [-20, 8] });
     function rompi(v) {
       scoppio(v.c, 0x9fe8ff, 18, 5); suono('esplo');
       if (fase !== 'scavo' || fr.length + portati >= NEED) return;   // la Lanterna ne ha gia' abbastanza
       const x = v.c.x + (0 - v.c.x) * 0.18, z = v.c.z + (-7 - v.c.z) * 0.18, o = portabile('frammento', x, z, 0x9fe8ff); o.v = v; fr.push(o);
       toast('Frammento di luce liberato: portalo alla Lanterna Madre', 'bene');
+      RG.ondata(['schiavo', 'schiavo', 'maledetto'], { perche: 'Gli Striscianti fiutano il frammento' });
     }
     E.costruisci = () => {
       nuovaScena(64); arena({ x0: -22, x1: 22, z0: -30, z1: 16, h: 14, tinta: '#a08a72', mosaicoZ: 1 });
@@ -10759,9 +10802,10 @@ float rumoreC(vec3 x) { vec3 i = floor(x); vec3 f = fract(x); f = f * f * (3.0 -
           if (Math.hypot(o.chi.pos.x - L.x, o.chi.pos.z - L.z) < L.r + 0.3) {
             togliP(o); fr.splice(i, 1); portati++; aggLanterna(); suono('vittoria'); anello(L.x, L.z, 0x9fe8ff, 4);
             toast('Frammento nella Lanterna Madre: ' + portati + ' di ' + NEED, 'bene');
+            RG.forza = portati; if (portati < NEED) RG.ondata(portati % 2 ? ['accolito', 'schiavo', 'schiavo'] : ['cavaliere', 'schiavo', 'schiavo'], { perche: 'La Lanterna si accende e richiama gli scavatori' });
             if (portati >= NEED && fase === 'scavo') {
               fr.forEach(q => { if (q !== o) togliP(q); }); fr.length = 0;   // gli altri frammenti non servono piu'
-              fase = 'capo'; onda = 8; capo = miniBoss('caposquadra', 0, -24); nemico('cavaliere', -6, -23); nemico('cavaliere', 6, -23);
+              fase = 'capo'; RG.base = ['schiavo', 'accolito', 'accolito']; capo = miniBoss('caposquadra', 0, -24); nemico('cavaliere', -6, -23); nemico('cavaliere', 6, -23);
               toast('La Lanterna è piena. Arriva il Caposquadra!', 'male'); suono('allarme');
               break;
             }
@@ -10770,9 +10814,8 @@ float rumoreC(vec3 x) { vec3 i = floor(x); vec3 f = fract(x); f = f * f * (3.0 -
         }
         vediP(o);
       }
-      onda -= dt;
-      if (fase === 'scavo' && onda <= 0) { onda = 7.5 * D.int; nOnda++; spawnLato(nOnda % 4 === 0 ? ['cavaliere', 'schiavo'] : nOnda % 2 ? ['schiavo', 'schiavo', 'schiavo'] : ['accolito', 'schiavo', 'maledetto'], [-21, 21], [-20, 8]); }
-      if (fase === 'capo') { if (onda <= 0) { onda = 11 * D.int; spawnLato(['schiavo', 'accolito'], [-21, 21], [-20, 8]); } if (capo && !capo.vivo && stato === 'gioco') { fase = 'fine'; tFine = 2.5; toast('Il Caposquadra è caduto!', 'bene'); } }
+      RG.ferma = fase === 'fine'; RG.agg(dt);
+      if (fase === 'capo') { if (capo && !capo.vivo && stato === 'gioco') { fase = 'fine'; tFine = 2.5; toast('Il Caposquadra è caduto!', 'bene'); } }
     };
     E.miraBot = b => fase !== 'scavo' || fr.length + portati >= NEED ? null : vene.filter(v => v.vivo).sort((p, q) => p.c.distanceTo(b.pos) - q.c.distanceTo(b.pos))[0] || null;
     E.hud = () => {
@@ -10797,7 +10840,8 @@ float rumoreC(vec3 x) { vec3 i = floor(x); vec3 f = fract(x); f = f * f * (3.0 -
       'Fermati davanti a un mercante finché l\'<b>anello</b> si stringe: se è un Custode ti dà una <b>Moneta di Luce</b>, se è un\'Ombra si trasforma e attacca, con altri nemici intorno.',
       'Servono <b>tre Monete di Luce</b>. Poi arriva il <b>Banditore</b>: vola e ogni tanto si sposta su un\'altra bancarella.'];
     const POS = [[-14, 3], [-5, 5], [5, 5], [14, 3], [-14, -15], [-5, -19], [5, -19], [14, -15]], TELI = ['#b84a3a', '#3a6ab8', '#c9a14a', '#4a9a5a', '#8a4ab8', '#b8784a', '#3a9ab8', '#b83a7a'];
-    let banchi = [], monete = 0, fase = 'cerca', capo = null, onda = 6, tSalta = 9;
+    let banchi = [], monete = 0, fase = 'cerca', capo = null, tSalta = 9;
+    const RG = regia({ xs: [-21, 21], zr: [-8, 8], base: ['schiavo', 'accolito'] });
     E.costruisci = () => {
       nuovaScena(64); arena({ x0: -22, x1: 22, z0: -30, z1: 16, h: 14, tinta: '#8c7a96' });
       const veri = [0, 1, 2, 3, 4, 5, 6, 7].sort(() => Math.random() - 0.5).slice(0, 3);   // li decide il padrone di casa
@@ -10822,7 +10866,8 @@ float rumoreC(vec3 x) { vec3 i = floor(x); vec3 f = fract(x); f = f * f * (3.0 -
       b.m.visible = false; const p = new T.Vector3(b.x, 1.6, b.z);
       if (b.vero) {
         b.st = 1; monete++; scoppio(p, 0xffd27a, 26, 5); suono('vittoria'); toast('Un Custode della Luce! Moneta di Luce ' + monete + ' di 3', 'bene');
-        if (monete >= 3) { fase = 'capo'; onda = 8; capo = miniBoss('banditore', 0, -7); toast('Il Banditore apre l\'asta: abbattilo!', 'male'); suono('allarme'); }
+        RG.forza = monete; if (monete < 3) RG.ondata(['accolito', 'schiavo', 'schiavo'], { perche: 'Le Ombre vogliono la Moneta' });
+        if (monete >= 3) { fase = 'capo'; RG.base = ['schiavo', 'schiavo', 'accolito']; capo = miniBoss('banditore', 0, -7); toast('Il Banditore apre l\'asta: abbattilo!', 'male'); suono('allarme'); }
       } else {
         b.st = 2; suono('allarme'); scoppio(p, 0x7a3aa8, 22, 5); toast('Era un\'Ombra!', 'male');
         const e = nemico(Math.random() < 0.35 ? 'cavaliere' : 'accolito', b.px, b.pz); e.yaw = b.z > -6 ? PI : 0;
@@ -10837,12 +10882,10 @@ float rumoreC(vec3 x) { vec3 i = floor(x); vec3 f = fract(x); f = f * f * (3.0 -
       });
     }
     E.agg = dt => {
-      aggBanchi(dt, true); onda -= dt;
-      if (fase === 'cerca' && onda <= 0) { onda = 9 * D.int; spawnLato(['schiavo', 'accolito'], [-21, 21], [-8, 8]); }
+      aggBanchi(dt, true); RG.ferma = fase === 'fine'; RG.agg(dt);
       if (fase === 'capo') {
         tSalta -= dt;
-        if (capo && capo.vivo && tSalta <= 0) { tSalta = 9; const b = aCaso(banchi); capo.ancora = { x: b.x, z: b.z }; capo.pos.x = b.x; capo.pos.z = b.z; scoppio(new T.Vector3(b.x, 4, b.z), 0xb98cff, 16, 5); toast('Il Banditore cambia bancarella!', ''); }
-        if (onda <= 0) { onda = 10 * D.int; spawnLato(['schiavo', 'schiavo', 'accolito'], [-21, 21], [-8, 8]); }
+        if (capo && capo.vivo && tSalta <= 0) { tSalta = 9; const b = aCaso(banchi); capo.ancora = { x: b.x, z: b.z }; capo.pos.x = b.x; capo.pos.z = b.z; scoppio(new T.Vector3(b.x, 4, b.z), 0xb98cff, 16, 5); toast('Il Banditore cambia bancarella!', ''); RG.ondata(['schiavo', 'schiavo'], { lato: b.x < 0 ? 0 : 1, perche: 'Il Banditore batte l\'asta' }); }
         if (capo && !capo.vivo && stato === 'gioco') { fase = 'fine'; tFine = 2.5; toast('Il Banditore è caduto!', 'bene'); }
       }
       bots.forEach((b, k) => { if (b.remoto) return; b.meta = null; if (fase !== 'cerca' || nemici.length > 5 || k > 1) return; const t = banchi.filter(x => !x.st).sort((p, q) => Math.hypot(p.px - b.pos.x, p.pz - b.pos.z) - Math.hypot(q.px - b.pos.x, q.pz - b.pos.z))[k]; if (t) b.meta = { x: t.px, z: t.pz }; });
@@ -10864,7 +10907,8 @@ float rumoreC(vec3 x) { vec3 i = floor(x); vec3 f = fract(x); f = f * f * (3.0 -
       'Abbattuti tutti i tentacoli la Bestia <b>emerge</b> per pochi secondi: colpiscila con tutto. Poi si rituffa e i tentacoli ricrescono.',
       'Se la Bestia si rituffa per la sesta volta vi trascina sul fondo.'];
     const C0 = { x: 0, z: -6 }, AR = 13, AZ = 11.5, NZ = 4, RZ = 8.2, VZ = 0.17;
-    let boss, tent = [], zattere = [], fase = 'tentacoli', ft = 0, giri = 0, angZ = 0, cdS = 2, onda = 10, tAcqua = 0, acqua;
+    let boss, tent = [], zattere = [], fase = 'tentacoli', ft = 0, giri = 0, angZ = 0, cdS = 2, tAcqua = 0, acqua;
+    const RG = regia({ xs: [-23, 23], zr: [8, 16], base: ['schiavo', 'schiavo', 'maledetto'], pausa: 11, calma: 9 });
     const inAcqua = p => { const dx = (p.x - C0.x) / AR, dz = (p.z - C0.z) / AZ; return dx * dx + dz * dz < 1; };
     const zattera = p => zattere.find(q => Math.hypot(p.x - q.x, p.z - q.z) < 2.7) || null;
     const bagnato = u => !u.morto && inAcqua(u.pos) && !zattera(u.pos);
@@ -10923,7 +10967,7 @@ float rumoreC(vec3 x) { vec3 i = floor(x); vec3 f = fract(x); f = f * f * (3.0 -
       ft -= dt;
       if (fase === 'tentacoli') {
         tent.forEach(t => { if (!t.vivo) return; t.cd -= dt; if (t.cd <= 0) { t.cd = rnd(3.2, 4.6); const u = squadra.filter(v => !v.morto && Math.hypot(v.pos.x - t.x, v.pos.z - t.z) < 11).sort(() => Math.random() - 0.5)[0]; if (u) { anima(boss, 'x'); attaccoArea(u.pos.x, u.pos.z, u.pos.y, 2.4, 1.3, 32, 'tentacolo'); } } });
-        if (tent.every(t => !t.vivo)) { fase = 'emerge'; ft = 1.5; toast('La Bestia emerge: colpiscila!', 'bene'); suono('allarme'); }
+        if (tent.every(t => !t.vivo)) { fase = 'emerge'; ft = 1.5; toast('La Bestia emerge: colpiscila!', 'bene'); suono('allarme'); RG.ondata(['accolito', 'schiavo', 'schiavo'], { ritardo: 2, perche: 'La Bestia chiama aiuto dalla riva' }); }
       } else if (fase === 'emerge' && ft <= 0) { fase = 'esposta'; ft = 12; boss.imm = false; }
       else if (fase === 'esposta') {
         cdS -= dt; if (cdS <= 0) { cdS = 1.8; const u = aCaso(squadra.filter(v => !v.morto)); if (u) for (let k = 0; k < 4; k++) proiettile(boss.c.clone(), centro(u).clone(), 12, 14, 0x9be59a, 0.34, 1.4); }
@@ -10931,8 +10975,9 @@ float rumoreC(vec3 x) { vec3 i = floor(x); vec3 f = fract(x); f = f * f * (3.0 -
       } else if (fase === 'giu' && ft <= 0) {
         giri++; if (giri >= 6) return wipe('La Bestia vi ha trascinati sul fondo del lago.');
         fase = 'tentacoli'; tent.forEach(t => { rinasceB(t); t.cd = rnd(2, 4); });
+        RG.forza = giri; RG.ondata(giri % 2 ? ['accolito', 'accolito', 'schiavo'] : ['maledetto', 'schiavo', 'schiavo'], { perche: 'Dal lago risalgono i servitori' });
       }
-      onda -= dt; if (onda <= 0) { onda = 13 * D.int; spawnLato(giri % 2 ? ['accolito', 'accolito', 'schiavo'] : ['schiavo', 'schiavo', 'maledetto'], [-23, 23], [8, 16]); }
+      RG.ferma = inPulizia(E); RG.agg(dt);
       bots.forEach((b, k) => { if (b.remoto) return; b.meta = null; if (bagnato(b)) { const q = zattere[k % NZ]; b.meta = Math.hypot(b.pos.x, b.pos.z - 14) < Math.hypot(b.pos.x - q.x, b.pos.z - q.z) ? { x: b.pos.x * 0.6, z: 13, corri: 1 } : { x: q.x, z: q.z, corri: 1 }; } });
     };
     E.miraBot = b => fase === 'esposta' ? boss : tent.filter(t => t.vivo).sort((p, q) => p.c.distanceTo(b.pos) - q.c.distanceTo(b.pos))[0] || null;
@@ -10960,7 +11005,8 @@ float rumoreC(vec3 x) { vec3 i = floor(x); vec3 f = fract(x); f = f * f * (3.0 -
       'Sui leggii ci sono quattro <b>Libri di Luce</b>: passaci sopra per prenderne uno e portalo all\'<b>altare</b> al centro. Chi porta un libro non può sparare.',
       'Con quattro libri si sveglia il <b>Bibliotecario</b>, e il Silenzio arriva più spesso.'];
     const LEGGII = [[-15, 2], [15, 2], [-12, -20], [12, -20]], ALT = { x: 0, z: -8, r: 2.4 };
-    let libri = [], posati = 0, fase = 'libri', capo = null, tSil = 14, sil = 0, onda = 5, vel = null, altare = null;
+    let libri = [], posati = 0, fase = 'libri', capo = null, tSil = 14, sil = 0, vel = null, altare = null;
+    const RG = regia({ xs: [-21, 21], zr: [-20, 6], base: ['accolito', 'accolito', 'schiavo'] });
     const ECO_MAX = 8;
     E.costruisci = () => {
       nuovaScena(58); arena({ x0: -22, x1: 22, z0: -30, z1: 16, h: 13, tinta: '#a8957a' });
@@ -10990,25 +11036,25 @@ float rumoreC(vec3 x) { vec3 i = floor(x); vec3 f = fract(x); f = f * f * (3.0 -
     E.agg = dt => {
       tSil -= dt;
       if (sil > 0) { sil -= dt; if (sil <= 0) { toast('Il Silenzio finisce: si può sparare', 'bene'); tSil = fase === 'capo' ? 12 : 18; } }
-      else if (tSil <= 0) { sil = 6; toast('ORA DEL SILENZIO: non sparare!', 'male'); suono('sguardo'); }
+      else if (tSil <= 0) { sil = 6; toast('ORA DEL SILENZIO: non sparare!', 'male'); suono('sguardo'); RG.ondata(['schiavo', 'schiavo', 'schiavo'], { subito: true }); toast('Gli Striscianti approfittano del Silenzio: usa il pugno!', 'male'); }
       else if (tSil < 3 && tSil + dt >= 3) toast('Il Silenzio sta per scendere...', 'male');
       squadra.forEach(u => { if (!silenzio()) { u.eco = Math.max(0, (u.eco || 0) - dt); if (u.eco < 3) u.avvEco = false; } });
       vel.material.opacity = silenzio() ? 0.32 : Math.max(0, vel.material.opacity - dt);
       bots.forEach(b => { if (!b.remoto) b.meta = null; });
       libri.forEach(o => {
         if (o.fatto) return; cadutoP(o, 'Un Libro di Luce è caduto a terra');
-        if (!o.chi) { const u = raccoglitore(o); if (u) prendiP(o, u, 'Hai un Libro di Luce: portalo all\'altare (non puoi sparare)', u.nome + ' porta un libro'); else mandaBot(o, libri); }
+        if (!o.chi) { const u = raccoglitore(o); if (u) { prendiP(o, u, 'Hai un Libro di Luce: portalo all\'altare (non puoi sparare)', u.nome + ' porta un libro'); if (!o.preso) { o.preso = 1; RG.ondata(['accolito', 'schiavo', 'schiavo'], { perche: 'Un libro lascia il suo leggio' }); } } else mandaBot(o, libri); }
         if (o.chi) {
           if (!o.chi.io && !o.chi.remoto) o.chi.meta = { x: ALT.x, z: ALT.z, corri: 1 };
           if (Math.hypot(o.chi.pos.x - ALT.x, o.chi.pos.z - ALT.z) < ALT.r + 0.3) {
             posaP(o); o.fatto = true; o.pos.set(ALT.x + (posati - 1.5) * 0.5, 1.4, ALT.z); posati++; suono('vittoria'); anello(ALT.x, ALT.z, 0xfff1a8, 4);
-            toast('Libro sull\'altare: ' + posati + ' di 4', 'bene'); altare.col(0xfff1a8, Math.round(posati / 4 * 0x60) << 16 | Math.round(posati / 4 * 0x50) << 8);
-            if (posati >= 4) { fase = 'capo'; capo = miniBoss('bibliotecario', 0, -24); tSil = Math.min(tSil, 8); toast('Il Bibliotecario si sveglia!', 'male'); suono('allarme'); }
+            toast('Libro sull\'altare: ' + posati + ' di 4', 'bene'); RG.forza = posati; altare.col(0xfff1a8, Math.round(posati / 4 * 0x60) << 16 | Math.round(posati / 4 * 0x50) << 8);
+            if (posati >= 4) { fase = 'capo'; RG.base = ['accolito', 'schiavo', 'schiavo']; capo = miniBoss('bibliotecario', 0, -24); tSil = Math.min(tSil, 8); toast('Il Bibliotecario si sveglia!', 'male'); suono('allarme'); }
           }
         }
         vediP(o);
       });
-      onda -= dt; if (onda <= 0) { onda = (fase === 'capo' ? 12 : 9) * D.int; spawnLato(silenzio() ? ['schiavo', 'schiavo'] : ['accolito', 'accolito', 'schiavo'], [-21, 21], [-20, 6]); }
+      RG.ferma = fase === 'fine' || silenzio(); RG.agg(dt);
       if (fase === 'capo' && capo && !capo.vivo && stato === 'gioco') { fase = 'fine'; tFine = 2.5; toast('Il Bibliotecario è caduto!', 'bene'); }
       if (silenzio()) bots.forEach(b => { if (!b.remoto && !b.porta && !b.meta) { const c = ostacoli.filter(o => o.h > 3).sort((p, q) => Math.hypot(p.x - b.pos.x, p.z - b.pos.z) - Math.hypot(q.x - b.pos.x, q.z - b.pos.z))[0]; if (c) b.meta = { x: c.x + (b.pos.x > c.x ? 1.8 : -1.8), z: c.z + 1.8 }; } });
     };
@@ -11037,7 +11083,8 @@ float rumoreC(vec3 x) { vec3 i = floor(x); vec3 f = fract(x); f = f * f * (3.0 -
       'Sei <b>Semi d\'Ombra</b> crescono sulle statue. Un seme si può colpire solo mentre <b>qualcuno sta sulla sua piastra</b> (puoi muoverti dentro la piastra).',
       'Distrutti i semi arriva la <b>Giardiniera di Pietra</b>: quando apre gli occhi chi la guarda diventa pietra in fretta. <b>Nasconditi dietro le statue</b>.'];
     const SEMI = [[-15, 0], [15, 0], [-15, -16], [15, -16], [-6, -24], [6, -24]];
-    let semi = [], fase = 'semi', capo = null, onda = 5, tSg = 12, sguardo = 0;
+    let semi = [], fase = 'semi', capo = null, tSg = 12, sguardo = 0;
+    const RG = regia({ xs: [-21, 21], zr: [-20, 6] });
     const P_MAX = 10;
     E.costruisci = () => {
       nuovaScena(62); arena({ x0: -22, x1: 22, z0: -30, z1: 16, h: 14, tinta: '#8a9a80' });
@@ -11050,7 +11097,7 @@ float rumoreC(vec3 x) { vec3 i = floor(x); vec3 f = fract(x); f = f * f * (3.0 -
         pz(tornio([[0.9, 0], [0.9, 0.5], [0.6, 0.8], [0, 0.85]], 14), TM(C2.pietra), 0, 0, 0, 0.03, g);
         const s = pz(new T.SphereGeometry(0.75, 14, 10), TMx({ color: 0x3a2a4a, emissive: 0x6a2a9a, emissiveIntensity: 0.8 }), 0, 1.5, 0, 0.02, g);
         const pl = piastra(x + (x < 0 ? 4.2 : -4.2), z + 2.5, 2.0, 'del seme');
-        const b = bersaglio('Seme d\'Ombra', x, 1.5, z, 0.9, 900, g, () => { scoppio(new T.Vector3(x, 1.5, z), 0x9a6aff, 20, 5); suono('esplo'); toast('Seme d\'Ombra distrutto: ' + semi.filter(q => !q.vivo).length + ' di 6', 'bene'); });
+        const b = bersaglio('Seme d\'Ombra', x, 1.5, z, 0.9, 900, g, () => { scoppio(new T.Vector3(x, 1.5, z), 0x9a6aff, 20, 5); suono('esplo'); toast('Seme d\'Ombra distrutto: ' + semi.filter(q => !q.vivo).length + ' di 6', 'bene'); const n = semi.filter(q => !q.vivo).length; RG.forza = Math.floor(n / 2); if (n < 6) RG.ondata(n % 2 ? ['schiavo', 'schiavo', 'accolito'] : ['cavaliere', 'schiavo', 'schiavo'], { lato: x < 0 ? 1 : 0, perche: 'Il giardino si vendica del seme' }); });
         b.s = s; b.pl = pl; b.imm = true; ostacoli.push({ x, z, r: 0.9, h: 1.0 }); return b;
       });
       for (let i = 0; i < 5; i++) creaBot(i, -4 + i * 2, 12);
@@ -11073,15 +11120,19 @@ float rumoreC(vec3 x) { vec3 i = floor(x); vec3 f = fract(x); f = f * f * (3.0 -
       semi.forEach(b => { if (!b.vivo) return; lampoB(b, dt); const su = squadra.some(u => dentro(u, b.pl)); b.imm = !su; b.pl.col(su ? 0x9a6aff : 0x3b4a5a, su ? 0x2a1050 : 0x0a1220); b.s.material.emissiveIntensity = su ? 1.6 : 0.6; });
       if (fase === 'semi' && semi.every(b => !b.vivo)) { fase = 'capo'; capo = miniBoss('giardiniera', 0, -20); tSg = 8; toast('La Giardiniera di Pietra si sveglia: nasconditi dal suo sguardo!', 'male'); suono('allarme'); }
       if (fase === 'capo') {
-        tSg -= dt; if (sguardo > 0) { sguardo -= dt; } else if (tSg <= 0) { sguardo = 4; tSg = 12; toast('La Giardiniera apre gli occhi: nasconditi dietro una statua!', 'male'); suono('sguardo'); bots.forEach(b => { if (b.remoto) return; const c = ostacoli.filter(o => o.h > 3).sort((p, q) => Math.hypot(p.x - b.pos.x, p.z - b.pos.z) - Math.hypot(q.x - b.pos.x, q.z - b.pos.z))[0]; if (c && capo) { const dx = c.x - capo.pos.x, dz = c.z - capo.pos.z, d = Math.hypot(dx, dz) || 1; b.meta = { x: c.x + dx / d * 2, z: c.z + dz / d * 2, corri: 1 }; } }); }
+        tSg -= dt; if (sguardo > 0) { sguardo -= dt; } else if (tSg <= 0) { sguardo = 4; tSg = 12; toast('La Giardiniera apre gli occhi: nasconditi dietro una statua!', 'male'); suono('sguardo'); RG.ondata(['schiavo', 'schiavo'], { subito: true }); bots.forEach(b => { if (b.remoto) return; const c = ostacoli.filter(o => o.h > 3).sort((p, q) => Math.hypot(p.x - b.pos.x, p.z - b.pos.z) - Math.hypot(q.x - b.pos.x, q.z - b.pos.z))[0]; if (c && capo) { const dx = c.x - capo.pos.x, dz = c.z - capo.pos.z, d = Math.hypot(dx, dz) || 1; b.meta = { x: c.x + dx / d * 2, z: c.z + dz / d * 2, corri: 1 }; } }); }
         if (sguardo <= 0) bots.forEach(b => { if (!b.remoto && !b.porta) b.meta = null; });
         if (capo && !capo.vivo && stato === 'gioco') { fase = 'fine'; tFine = 2.5; toast('La Giardiniera è caduta!', 'bene'); }
       } else {
         // due bot tengono le piastre dei semi piu' vicini, gli altri sparano
         const vivi = semi.filter(b => b.vivo);
-        bots.forEach((b, k) => { if (b.remoto) return; const t = vivi[k % Math.max(1, vivi.length)]; b.meta = k < 2 && t ? { x: t.pl.x + Math.sin(ora * 1.3 + k) * 1.1, z: t.pl.z + Math.cos(ora * 1.1 + k) * 1.1 } : null; });
+        bots.forEach((b, k) => {
+          if (b.remoto) return; const t = vivi[k % Math.max(1, vivi.length)]; b.meta = k < 2 && t ? { x: t.pl.x + Math.sin(ora * 1.3 + k) * 1.1, z: t.pl.z + Math.cos(ora * 1.1 + k) * 1.1 } : null;
+          // la siepe centrale (z = -10, x tra -4 e 4) va aggirata: prima di lato, poi dietro
+          if (b.meta && (b.meta.z < -10) !== (b.pos.z < -10) && Math.abs(b.pos.x) < 5.5) b.meta = { x: b.pos.x < 0 ? -6.5 : 6.5, z: -10, corri: 1 };
+        });
       }
-      onda -= dt; if (onda <= 0) { onda = 9.5 * D.int; spawnLato(['schiavo', 'schiavo', 'accolito'], [-21, 21], [-20, 6]); }
+      RG.ferma = fase === 'fine'; RG.agg(dt);
     };
     E.miraBot = b => fase === 'semi' ? semi.filter(s => s.vivo && !s.imm).sort((p, q) => p.c.distanceTo(b.pos) - q.c.distanceTo(b.pos))[0] || null : null;
     E.hud = () => {
@@ -11107,7 +11158,8 @@ float rumoreC(vec3 x) { vec3 i = floor(x); vec3 f = fract(x); f = f * f * (3.0 -
       'Ogni tanto una Gemella canta il <b>Tormento</b> (la scritta in alto conta i secondi): alla fine <b>chi non è dentro l\'Aura muore</b>. Mentre canta, quella Gemella si può colpire: state tutti nell\'Aura e sparatele.',
       'Quando una Gemella cade, l\'altra canta più spesso.'];
     const PIA = [[-17, -4], [17, -4], [-11, -20], [11, -20]], REL = { x: 0, z: -9 }, AURA_R = 4.6, AURA_T = 20, PRONTA = 14;
-    let gem = [], pia = [], pietra, yP = 7, auraChi = null, auraT = 0, auraMesh, canto = 0, chiCanta = -1, tCanto = 26, onda = 8, raggio = null;
+    let gem = [], pia = [], pietra, yP = 7, auraChi = null, auraT = 0, auraMesh, canto = 0, chiCanta = -1, tCanto = 26, nCanti = 0, raggio = null;
+    const RG = regia({ xs: [-22, 22], zr: [-6, 10], pausa: 11 });
     function sorella(i) {
       const x = i ? 9 : -9, z = -20, e = nemico('cantore', x, z, { nome: i ? 'Sorna' : 'Velna', hp: 9000, max: 9000, boss: true, imm: true, noBot: false, r: 2.0, hy: 3.2, scala: 2.0, ancora: { x, z }, vola: 5 });
       if (texPunto) { const al = sprite(texPunto, i ? 0xff8ad0 : 0x8ad0ff, 7, 7, 0.4); al.position.y = 3; e.mesh.add(al); e.alone = al; }
@@ -11152,7 +11204,7 @@ float rumoreC(vec3 x) { vec3 i = floor(x); vec3 f = fract(x); f = f * f * (3.0 -
         if (canto <= 0) {
           gem.forEach(x => x.imm = true); scuoti = 0.5; suono('esplo');
           squadra.forEach(u => { if (!u.morto && !nAura(u)) abbatti(u, 'Tormento di ' + (g ? g.nome : 'una Gemella')); });
-          tCanto = ultima ? 18 : 28; chiCanta = -1;
+          tCanto = ultima ? 18 : 28; chiCanta = -1; nCanti++; RG.forza = nCanti; RG.ondata(['accolito', 'schiavo', 'schiavo'], { ritardo: 1, perche: 'Il Tormento è finito: arrivano i servitori del Velo' });
         }
       } else if (tCanto <= 0) {
         chiCanta = vive.length === 1 ? gem.indexOf(vive[0]) : Math.floor(Math.random() * 2); if (!gem[chiCanta].vivo) chiCanta = 1 - chiCanta;
@@ -11166,7 +11218,7 @@ float rumoreC(vec3 x) { vec3 i = floor(x); vec3 f = fract(x); f = f * f * (3.0 -
         if (k === 2 && !auraChi && yP < 3 && !umani().some(u => !u.morto && Math.hypot(u.pos.x - REL.x, u.pos.z - REL.z) < 6)) { b.meta = { x: REL.x, z: REL.z, corri: 1 }; E.corriere = b; return; }
         if (auraChi && !auraChi.io) b.meta = null; else b.meta = null;
       });
-      onda -= dt; if (onda <= 0) { onda = 12 * D.int; spawnLato(['schiavo', 'schiavo', 'accolito'], [-22, 22], [-6, 10]); }
+      RG.ferma = canto > 0; RG.agg(dt);
       aggVis(dt);
     };
     E.miraBot = b => canto > 0 && gem[chiCanta] && gem[chiCanta].vivo ? gem[chiCanta] : null;
@@ -11192,14 +11244,15 @@ float rumoreC(vec3 x) { vec3 i = floor(x); vec3 f = fract(x); f = f * f * (3.0 -
     E.guida = ['Dagli <b>specchi</b> escono i <b>Riflessi</b>: copie scure della squadra. Un Riflesso è <b>immune</b> finché il suo specchio è intero.',
       'Rompi gli specchi a colpi (l\'anello a terra dice da quale specchio viene ogni Riflesso), poi finisci i Riflessi.',
       'Rotti tutti e sei arriva il <b>Riflesso del Re</b>: è protetto da tre <b>Fiamme d\'Ombra</b> che gli girano intorno. Spegnile tutte e per 10 secondi si può colpire.'];
-    let spe = [], fase = 'specchi', capo = null, fiamme = [], tSp = 4, tVul = 0, onda = 9;
+    let spe = [], fase = 'specchi', capo = null, fiamme = [], tSp = 4, tVul = 0;
+    const RG = regia({ xs: [-21, 21], zr: [-4, 8], base: ['schiavo', 'schiavo'], min: 5, pausa: 11 });
     E.costruisci = () => {
       nuovaScena(64); arena({ x0: -22, x1: 22, z0: -30, z1: 16, h: 15, tinta: '#a6aac0' });
       for (let i = 0; i < 6; i++) {
         const a = -PI / 2 + (i - 2.5) * 0.52, x = Math.cos(a) * 16, z = -7 + Math.sin(a) * 17, g = new T.Group(); g.position.set(x, 0, z); g.rotation.y = -a - PI / 2; scena.add(g);
         pz(new T.BoxGeometry(3.0, 4.4, 0.3), TM('#c9a14a'), 0, 2.4, 0, 0.03, g);
         const vetro = new T.Mesh(new T.PlaneGeometry(2.5, 3.9), new T.MeshPhongMaterial({ color: 0x9fb8d8, emissive: 0x1a2a40, shininess: 120, specular: 0xffffff })); vetro.position.set(0, 2.4, 0.17); g.add(vetro);
-        const b = bersaglio('Specchio', x, 2.4, z, 1.5, 1300, vetro, () => { scoppio(new T.Vector3(x, 2.4, z), 0xdfe8ff, 26, 6); suono('esplo'); toast('Specchio rotto: i suoi Riflessi ora si possono colpire', 'bene'); });
+        const b = bersaglio('Specchio', x, 2.4, z, 1.5, 1300, vetro, () => { scoppio(new T.Vector3(x, 2.4, z), 0xdfe8ff, 26, 6); suono('esplo'); toast('Specchio rotto: i suoi Riflessi ora si possono colpire', 'bene'); const n = spe.filter(q => !q.vivo).length; RG.forza = Math.floor(n / 2); if (n < 6) RG.ondata(['schiavo', 'schiavo', 'accolito'], { perche: 'Lo specchio rotto apre un varco' }); });
         b.x = x; b.z = z; b.i = i; spe.push(b); ostacoli.push({ x, z, r: 1.3, h: 4.4 });
       }
       [[-7, -6], [7, -6], [0, 2]].forEach(p => pilastro(p[0], p[1], 1.0, 15));
@@ -11220,14 +11273,14 @@ float rumoreC(vec3 x) { vec3 i = floor(x); vec3 f = fract(x); f = f * f * (3.0 -
       nemici.forEach(e => { if (e.specchio) e.imm = e.specchio.vivo; });
       if (fase === 'specchi') {
         tSp -= dt; if (tSp <= 0) { tSp = 6 * D.int + 2; const vivi = spe.filter(s => s.vivo); if (vivi.length && nemici.filter(e => e.specchio).length < 10) { const s = aCaso(vivi); riflesso(s); if (Math.random() < 0.5) riflesso(aCaso(vivi)); suono('sguardo'); } }
-        onda -= dt; if (onda <= 0) { onda = 12 * D.int; spawnLato(['schiavo', 'schiavo'], [-21, 21], [-4, 8]); }
+        RG.agg(dt);
         if (spe.every(s => !s.vivo) && !nemici.some(e => e.specchio)) { fase = 'capo'; capo = miniBoss('riflesso', 0, -20, 0, { imm: true }); scena.remove(capo.mesh); capo.mesh = modCavaliere(true); capo.mesh.traverse(m => { if (m.isMesh) m.material = ml(0x221c2e, 0x1a0a2a); }); scena.add(capo.mesh); fiammeOmbra(); toast('Il Riflesso del Re esce dall\'ultimo specchio! Spegni le Fiamme d\'Ombra', 'male'); suono('allarme'); }
       } else if (fase === 'capo' && capo) {
         if (!capo.vivo) { if (stato === 'gioco') { fase = 'fine'; tFine = 2.5; fiamme.forEach(f => { f.vivo = false; scena.remove(f.g); }); toast('Il Riflesso del Re va in frantumi!', 'bene'); } return; }
         fiamme.forEach(f => { if (!f.vivo) return; const a = ora * 0.9 + f.k * PI * 2 / 3; f.c.set(capo.pos.x + Math.cos(a) * 4.5, 3 + Math.sin(ora * 2 + f.k) * 0.6, capo.pos.z + Math.sin(a) * 4.5); f.g.position.copy(f.c); lampoB(f, dt, 0.55); });
-        if (tVul > 0) { tVul -= dt; capo.imm = false; if (tVul <= 0) { capo.imm = true; fiamme.forEach(f => rinasceB(f)); toast('Le Fiamme d\'Ombra si riaccendono', 'male'); } }
+        if (tVul > 0) { tVul -= dt; capo.imm = false; if (tVul <= 0) { capo.imm = true; fiamme.forEach(f => rinasceB(f)); toast('Le Fiamme d\'Ombra si riaccendono', 'male'); RG.forza++; RG.ondata(['accolito', 'schiavo', 'schiavo'], { ritardo: 1, perche: 'Il Riflesso chiama le ombre' }); } }
         else if (fiamme.every(f => !f.vivo)) { tVul = 10; capo.imm = false; toast('Fiamme spente: il Riflesso del Re si può colpire!', 'bene'); suono('ok'); }
-        onda -= dt; if (onda <= 0) { onda = 10 * D.int; spawnLato(['schiavo', 'accolito'], [-21, 21], [-4, 8]); }
+        RG.base = ['schiavo', 'accolito']; RG.agg(dt);
       }
     };
     E.miraBot = b => fase === 'specchi' ? spe.filter(s => s.vivo).sort((p, q) => p.c.distanceTo(b.pos) - q.c.distanceTo(b.pos))[0] || null : (tVul > 0 ? capo : fiamme.find(f => f.vivo) || null);
@@ -11247,7 +11300,8 @@ float rumoreC(vec3 x) { vec3 i = floor(x); vec3 f = fract(x); f = f * f * (3.0 -
       'Le <b>Pietre Fredde</b> (azzurre) compaiono ai bordi: prendine una e portala nel crogiolo più caldo. Chi porta una pietra non può sparare.',
       'Resisti finché il Forno si spegne (la barra in alto), poi esce il <b>Fornaio</b>. Non stare vicino ai crogioli roventi: scottano.'];
     const CRO = [[-12, -10], [12, -10], [0, -22]], DURA = 100;
-    let cro = [], pietre = [], fase = 'forno', capo = null, tF = DURA, tP = 3, onda = 6;
+    let cro = [], pietre = [], fase = 'forno', capo = null, tF = DURA, tP = 3, quarto = 0;
+    const RG = regia({ xs: [-21, 21], zr: [-20, 6], min: 7, pausa: 8 });
     E.costruisci = () => {
       nuovaScena(60); arena({ x0: -22, x1: 22, z0: -30, z1: 16, h: 15, tinta: '#b07a5a' });
       cro = CRO.map(([x, z], i) => {
@@ -11273,7 +11327,7 @@ float rumoreC(vec3 x) { vec3 i = floor(x); vec3 f = fract(x); f = f * f * (3.0 -
         if (c.caldo < 70) c.avv = false;
       });
       if (stato !== 'gioco') return;
-      tP -= dt; if (tP <= 0 && pietre.filter(o => !o.chi).length < 2) { tP = 7; const a = rnd(0, PI * 2); pietre.push(portabile('pietra', Math.cos(a) * 17, -7 + Math.sin(a) * 17, 0x9fe8ff)); toast('Una Pietra Fredda è comparsa sul bordo', ''); }
+      tP -= dt; if (tP <= 0 && pietre.filter(o => !o.chi).length < 2) { tP = 7; const a = rnd(0, PI * 2); pietre.push(portabile('pietra', Math.cos(a) * 17, -7 + Math.sin(a) * 17, 0x9fe8ff)); toast('Una Pietra Fredda è comparsa sul bordo', ''); if (fase === 'forno') RG.ondata(['schiavo', 'maledetto'], { lato: Math.cos(a) < 0 ? 0 : 1, perche: 'La Pietra Fredda attira gli Striscianti' }); }
       bots.forEach(b => { if (!b.remoto) b.meta = null; });
       const caldo = cro.slice().sort((p, q) => q.caldo - p.caldo)[0];
       for (let i = pietre.length - 1; i >= 0; i--) {
@@ -11287,11 +11341,12 @@ float rumoreC(vec3 x) { vec3 i = floor(x); vec3 f = fract(x); f = f * f * (3.0 -
         vediP(o);
       }
       if (fase === 'forno') {
-        tF -= dt; onda -= dt; if (onda <= 0) { onda = 8 * D.int; spawnLato(['schiavo', 'schiavo', 'accolito', 'maledetto'], [-21, 21], [-20, 6]); }
+        tF -= dt; RG.agg(dt);
+        const q = Math.floor((DURA - tF) / 25); if (q > quarto && q < 4) { quarto = q; RG.forza = q; RG.ondata(['schiavo', 'schiavo', 'accolito', 'maledetto'], { perche: 'Il Forno ruggisce' }); }
         if (tF <= 0) { fase = 'capo'; capo = miniBoss('fornaio', 0, -14); toast('Il Forno si spegne... ed esce il Fornaio!', 'male'); suono('allarme'); }
       } else if (fase === 'capo' && capo) {
         if (capo.vivo && Math.random() < dt * 0.4) { const u = aCaso(squadra.filter(v => !v.morto)); if (u) attaccoArea(u.pos.x, u.pos.z, u.pos.y, 2.6, 1.5, 30, 'fiamma del Fornaio', 0xff8a3a); }
-        onda -= dt; if (onda <= 0) { onda = 12 * D.int; spawnLato(['schiavo', 'accolito'], [-21, 21], [-20, 6]); }
+        RG.base = ['schiavo', 'accolito']; RG.agg(dt);
         if (!capo.vivo) { fase = 'fine'; tFine = 2.5; toast('Il Fornaio è caduto: il Forno delle Stelle si spegne', 'bene'); }
       }
       aggCro(dt);
@@ -11319,7 +11374,8 @@ float rumoreC(vec3 x) { vec3 i = floor(x); vec3 f = fract(x); f = f * f * (3.0 -
       'Quando il Re alza la <b>Mano</b> (la scritta in alto conta i secondi), <b>qualcuno deve stare in ogni bomba</b>: alla fine esplodono e, se esplodono tutte, il Re cade in ginocchio. Allora colpite il suo <b>cuore</b>.',
       'Se resta una bomba vuota, la Mano del Re colpisce tutta la squadra. Dopo la sesta Mano il Re divora la luce di tutti.'];
     const PIA = [[-16, 0], [16, 0], [-16, -18], [16, -18]], CEN = { x: 0, z: -9 };
-    let re, cuore, pia = [], bombe = [], fase = 'piastre', ft = 0, mani = 0, onda = 9, cdO = 4, chiamati = [];
+    let re, cuore, pia = [], bombe = [], fase = 'piastre', ft = 0, mani = 0, cdO = 4, chiamati = [];
+    const RG = regia({ xs: [-25, 25], zr: [-4, 12], pausa: 11, calma: 9 });
     E.costruisci = () => {
       nuovaScena(76); arena({ x0: -26, x1: 26, z0: -34, z1: 18, h: 22, tinta: '#6a5a7a', mosaicoZ: -2 });
       // il trono di luce rubata: gradini, schienale e cristalli di Starlight
@@ -11368,13 +11424,13 @@ float rumoreC(vec3 x) { vec3 i = floor(x); vec3 f = fract(x); f = f * f * (3.0 -
       } else if (fase === 'mano' && ft <= 0) {
         mani++; const piene = bombe.filter(inBomba), tutte = bombe.length >= 3 && piene.length === bombe.length;
         piene.forEach(b => { scoppio(new T.Vector3(b.x, 1, b.z), 0xffd27a, 30, 8); anello(b.x, b.z, 0xffd27a, 6); }); suono('esplo'); scuoti = 0.5;
-        bombe.forEach(b => scena.remove(b.m)); bombe = [];
+        bombe.forEach(b => scena.remove(b.m)); bombe = []; RG.forza = mani;
         if (tutte) { fase = 'cuore'; ft = 14; toast('Il Re cade in ginocchio: colpite il CUORE!', 'bene'); suono('vittoria'); }
-        else { squadra.forEach(u => ferisci(u, 70, 'Mano del Re')); toast('Bombe vuote: la Mano del Re vi colpisce', 'male'); if (mani >= 6) return wipe('Il Re senza Luce ha divorato la luce di tutti.'); fase = 'piastre'; ft = 0; chiamati = []; }
-      } else if (fase === 'cuore' && ft <= 0) { if (mani >= 6) return wipe('Il Re senza Luce ha divorato la luce di tutti.'); fase = 'piastre'; ft = 0; chiamati = []; toast('Il Re si rialza: di nuovo alle piastre', 'male'); }
+        else { squadra.forEach(u => ferisci(u, 70, 'Mano del Re')); toast('Bombe vuote: la Mano del Re vi colpisce', 'male'); if (mani >= 6) return wipe('Il Re senza Luce ha divorato la luce di tutti.'); fase = 'piastre'; ft = 0; chiamati = []; RG.ondata(['schiavo', 'schiavo', 'accolito'], { ritardo: 1, perche: 'La Mano del Re ha colpito' }); }
+      } else if (fase === 'cuore' && ft <= 0) { if (mani >= 6) return wipe('Il Re senza Luce ha divorato la luce di tutti.'); fase = 'piastre'; ft = 0; chiamati = []; toast('Il Re si rialza: di nuovo alle piastre', 'male'); RG.ondata(['accolito', 'accolito', 'schiavo'], { perche: 'Il Re si rialza e chiama la corte' }); }
       // il Re lancia ombre
       cdO -= dt; if (cdO <= 0 && fase !== 'cuore') { cdO = fase === 'mano' ? 2.4 : 3.6; const u = aCaso(squadra.filter(v => !v.morto)); if (u) { anima(re, 'lancio'); for (let k = 0; k < 3; k++) proiettile(new T.Vector3(re.pos.x, 7, re.pos.z), centro(u).clone(), 13, 15, 0x9a6bff, 0.36, 1.2); } }
-      onda -= dt; if (onda <= 0) { onda = 13 * D.int; spawnLato(['schiavo', 'schiavo', 'accolito'], [-25, 25], [-4, 12]); }
+      RG.ferma = fase === 'mano' || fase === 'cuore'; RG.agg(dt);
       // bot: nelle fasi giuste vanno alle piastre o nelle bombe
       const liberi = bots.filter(b => !b.remoto && !b.morto);
       liberi.forEach((b, k) => {
