@@ -4,10 +4,13 @@
    Portatori: entrando in ogni sala una delle due pronuncia il titolo della sala
    in modo malvagio e l'altra aggiunge una frase. Parlano anche quando la squadra
    cade e quando si riprova la stessa sala.
-   Solo audio, niente scritte (lo schermo resta pulito). La voce e' quella del
-   telefono (sintesi vocale), resa piu' bassa e lenta, con sotto un rintocco,
-   un ronzio cupo e un sussurro generati dal codice. Si spengono con il tasto
-   degli effetti o con "Voci" in Pausa (B3.CriptaVoci).
+   Solo audio, niente scritte (lo schermo resta pulito).
+   VOCI REGISTRATE: ogni scena ha un file in voci/gemelle/<nome>.mp3 (accanto a
+   index.html), con le due sorelle che parlano e ridono alla fine. I file si
+   fanno con una voce IA seguendo il copione in voci/gemelle/COPIONE.md (si
+   rigenera con node strumenti/copione-gemelle.mjs). Se un file manca si usa la
+   voce del telefono, resa piu' bassa e lenta. Sotto c'e' sempre un rintocco con
+   un ronzio cupo. Si spengono con il tasto degli effetti o con "Voci" in Pausa.
    ===================================================================== */
 (function () {
   'use strict';
@@ -88,10 +91,10 @@
       o.connect(g); g.connect(mst); o.start(t); o.stop(t + d + 0.1);
     });
   }
-  function accendiLetto() {
+  function accendiLetto(vera) {
     if (!audio()) return; spegniLetto(0.05); const t = ac.currentTime;
     rintocco(t);
-    const g = ac.createGain(); g.gain.setValueAtTime(0.0001, t); g.gain.linearRampToValueAtTime(1, t + 0.6); g.connect(mst);
+    const g = ac.createGain(); g.gain.setValueAtTime(0.0001, t); g.gain.linearRampToValueAtTime(vera ? 0.6 : 1, t + 0.6); g.connect(mst);
     const lp = ac.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 280; lp.connect(g);
     const o1 = ac.createOscillator(), o2 = ac.createOscillator(), og = ac.createGain(); o1.type = o2.type = 'sawtooth'; o1.frequency.value = 55; o2.frequency.value = 58.3; og.gain.value = 0.05;
     o1.connect(og); o2.connect(og); og.connect(lp);
@@ -100,7 +103,7 @@
     ng.gain.value = 0.035; n.connect(bp); bp.connect(ng); ng.connect(g);
     [o1, o2, n, lfo].forEach(x => x.start(t));
     letto = { g, nodi: [o1, o2, n, lfo] };
-    clearTimeout(accendiLetto.sicura); accendiLetto.sicura = setTimeout(() => spegniLetto(1.2), 20000);   // nel caso la voce non dica quando ha finito
+    clearTimeout(accendiLetto.sicura); accendiLetto.sicura = setTimeout(() => spegniLetto(1.2), 30000);   // nel caso la voce non dica quando ha finito
   }
   function spegniLetto(dur) {
     if (!letto || !ac) return; const l = letto; letto = null; const t = ac.currentTime;
@@ -108,12 +111,45 @@
     setTimeout(() => l.nodi.forEach(x => { try { x.stop(); } catch (e) { } }), ((dur || 1) + 0.2) * 1000);
   }
 
-  /* ---------- parlare: una fila di battute [sorella, testo] ---------- */
-  let fila = 0;
-  function recita(battute) {
-    if (muti() || !battute.length) return;
+  /* ---------- le scene: ognuna ha un file registrato e le battute per la voce del telefono ----------
+     Una scena = { f: nome del file, b: [[sorella, testo], ...] }. Alla fine di ogni file le due sorelle ridono. */
+  const SCENE = {}, lettere = ['a', 'b'];
+  const scena = (f, b) => (SCENE[f] = { f, b });
+  const nn = i => String(i + 1).padStart(2, '0');
+  SALE.forEach((d, i) => { if (d.r) d.scene = d.r.map((r, k) => scena('sala' + nn(i) + '-' + lettere[k], [[d.chi, d.t], [1 - d.chi, r]])); });
+  Object.keys(PERCORSI).forEach(p => { const d = PERCORSI[p]; d.scene = d.r.map((r, k) => scena(p + '-' + lettere[k], [[d.chi, d.t], [1 - d.chi, r]])); });
+  SALE[10].scene = GEMELLE.map((b, k) => scena('sala11-' + lettere[k], b));
+  SALE[13].scene = TRONO.map((b, k) => scena('sala14-' + lettere[k], b));
+  const SC_RITORNO = RITORNO.map((t, k) => scena('ritorno-' + (k + 1), [[k % 2, t]]));
+  const SC_WIPE = WIPE.map((t, k) => scena('caduta-' + (k + 1), [[(k + 1) % 2, t]]));
+
+  /* ---------- i file registrati: si caricano quando servono; se mancano, voce del telefono ---------- */
+  const CARTELLA = 'voci/gemelle/', file = {};
+  function caricaFile(f) {
+    if (file[f]) return file[f];
+    if (typeof fetch !== 'function' || !audio()) return (file[f] = Promise.resolve(null));
+    return (file[f] = fetch(CARTELLA + f + '.mp3').then(r => r.ok ? r.arrayBuffer() : null)
+      .then(dati => dati && new Promise(ok => { try { const p = ac.decodeAudioData(dati, ok, () => ok(null)); if (p && p.catch) p.catch(() => ok(null)); } catch (e) { ok(null); } }))
+      .catch(() => null));
+  }
+
+  /* ---------- recitare una scena ---------- */
+  let fila = 0, sorgente = null;
+  function recita(sc) {
+    if (muti() || !sc) return;
     zitte(); const mia = ++fila;
-    accendiLetto();
+    caricaFile(sc.f).then(buf => {
+      if (mia !== fila || muti()) return;
+      accendiLetto(!!buf);
+      if (buf) {                                           // la registrazione vera
+        const s = ac.createBufferSource(), g = ac.createGain(); s.buffer = buf; g.gain.value = 1.6; s.connect(g); g.connect(mst);
+        s.onended = () => { if (mia === fila) { sorgente = null; spegniLetto(1.2); } };
+        s.start(ac.currentTime + 0.25); sorgente = s; return;
+      }
+      parlaTelefono(sc.b, mia);
+    });
+  }
+  function parlaTelefono(battute, mia) {
     if (!SS) { setTimeout(() => spegniLetto(1.5), 3000); return; }     // senza sintesi vocale resta solo il sottofondo
     if (!voci[0]) scegliVoci();
     battute.forEach(([chi, testo], k) => {
@@ -124,7 +160,11 @@
       SS.speak(u);
     });
   }
-  function zitte() { fila++; if (SS) try { SS.cancel(); } catch (e) { } spegniLetto(0.3); }
+  function zitte() {
+    fila++; if (SS) try { SS.cancel(); } catch (e) { }
+    if (sorgente) { try { sorgente.stop(); } catch (e) { } sorgente = null; }
+    spegniLetto(0.3);
+  }
 
   /* ---------- quello che usa gioco.js ---------- */
   let ultima = null;
@@ -132,24 +172,21 @@
     // entrando in una sala (i = 0..13) o nel percorso che la precede (perc = nome del percorso)
     sala(i, perc) {
       const chiave = perc ? 'p:' + perc : 's:' + i, ritorno = chiave === ultima; ultima = chiave;
-      const d = perc ? PERCORSI[perc] : SALE[i]; if (!d) return;
-      if (d.gemelle || d.trono) {
-        const s = caso(d.gemelle ? GEMELLE : TRONO);
-        recita(ritorno ? [s[0], s[1], [s[0][0], caso(RITORNO)]] : s); return;
-      }
-      recita([[d.chi, d.t], [1 - d.chi, ritorno ? caso(RITORNO) : caso(d.r)]]);
+      const d = perc ? PERCORSI[perc] : SALE[i]; if (!d || !d.scene) return;
+      recita(ritorno ? caso(SC_RITORNO) : caso(d.scene));
     },
     // la squadra e' caduta tutta
-    wipe() { recita([[Math.random() < 0.5 ? 0 : 1, caso(WIPE)]]); },
+    wipe() { recita(caso(SC_WIPE)); },
     // uscendo dalla Cripta o tornando alla stanza d'attesa: silenzio e si ricomincia
     zitte() { zitte(); ultima = null; },
-    // da chiamare al primo tocco (sblocca la voce su iPhone)
+    // da chiamare al primo tocco (sblocca l'audio e la voce su iPhone)
     sblocca() {
       audio();
       if (SS && !V._sbloccata) { V._sbloccata = true; try { const u = new window.SpeechSynthesisUtterance(' '); u.volume = 0; SS.speak(u); } catch (e) { } }
     },
     attive: () => attive,
     cambia() { attive = !attive; try { localStorage.setItem('theborg.cripta.voci', attive ? '1' : '0'); } catch (e) { } if (!attive) zitte(); return attive; },
-    _frasi: { SALE, PERCORSI, GEMELLE, TRONO, RITORNO, WIPE }
+    _frasi: { SALE, PERCORSI, GEMELLE, TRONO, RITORNO, WIPE },
+    _scene: SCENE, _sorelle: SORELLE, _svuota: () => { for (const k in file) delete file[k]; }
   };
 })();
