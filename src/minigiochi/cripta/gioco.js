@@ -244,8 +244,10 @@
   const matLastre = (rx, rz) => { const t = texPav.clone(); t.needsUpdate = true; t.repeat.set(rx, rz); return TMx({ map: t }); };
   const matRoccia = (rx, ry, col) => { const t = texRoccia.clone(); t.needsUpdate = true; t.repeat.set(rx, ry); return TMx({ map: t, color: new T.Color(col || '#b8b0c0'), side: T.DoubleSide }); };
 
+  // cose che fanno partire la sala quando ti avvicini (piastre, oggetti da portare, fiamme, bancarelle)
+  const interattivi = [];
   function nuovaScena(nebbia) {
-    granateVolo.length = 0; mirK = 0; statoArmi = {}; pozzeCura.length = 0; raccolte.length = 0;   // nuovo incontro: caricatori pieni (le riserve sono nello zaino)
+    interattivi.length = 0; granateVolo.length = 0; mirK = 0; statoArmi = {}; pozzeCura.length = 0; raccolte.length = 0;   // nuovo incontro: caricatori pieni (le riserve sono nello zaino)
     scena = new T.Scene(); scena.background = new T.Color(0x0e0b12); scena.fog = new T.Fog(0x0e0b12, 16, (nebbia || 80) - 4);
     scena.add(new T.HemisphereLight(0xb4b0d8, 0x3a2a22, conBorg ? 0.62 : 0.85));
     const d = new T.DirectionalLight(0xffd2a8, 0.32); d.position.set(6, 20, 10); scena.add(d);
@@ -395,7 +397,7 @@
   function formaArco(r, hc) { const sh = new T.Shape(); sh.moveTo(-r, 0); sh.lineTo(-r, hc); sh.absarc(0, hc, r, PI, 0, true); sh.lineTo(r, 0); sh.lineTo(-r, 0); return new T.ShapeGeometry(sh, 16); }
   function pilastro(x, z, r, h) { colonnaScolpita(x, z, r, h); ostacoli.push({ x, z, r: r * 1.15, h }); }
   function piastra(x, z, r, nome) {   // piastra tonda di pietra con anello d'osso e rune
-    const g = new T.Group(); g.position.set(x, 0, z); scena.add(g);
+    const g = new T.Group(); g.position.set(x, 0, z); scena.add(g); interattivi.push({ x, z, r });
     pz(new T.CylinderGeometry(r + 0.4, r + 0.55, 0.14, 32), TM(C2.pietra), 0, 0.07, 0, 0.03, g);
     const mat = TMx({ color: 0x3b4a5a, emissive: 0x0a1220, map: null }); pz(new T.CylinderGeometry(r, r, 0.12, 32), mat, 0, 0.15, 0, 0.02, g);
     pz(new T.TorusGeometry(r + 0.18, 0.07, 6, 32), TM(C2.oro), 0, 0.17, 0, 0.015, g).rotation.x = PI / 2;
@@ -735,7 +737,7 @@
     // bersaglio: lo rivede ogni mezzo secondo circa; cambiandolo ci mette un attimo a prendere la mira
     b.tMira -= dt;
     if (b.tMira <= 0 || (b.mira && b.mira.vivo === false)) {
-      let n = b.porta ? null : scegliMira(b); b.tMira = rnd(0.4, 0.7);
+      let n = b.porta || !sveglia ? null : scegliMira(b); b.tMira = rnd(0.4, 0.7);   // sala ferma: i compagni non sparano
       // come un giocatore: non salta da un bersaglio all'altro, a meno che qualcuno non gli arrivi addosso
       const cur = b.mira && b.mira.vivo !== false && !b.porta && vede(b.pos, posDi(b.mira)) && b.pos.distanceTo(posDi(b.mira)) < 46 ? b.mira : null;
       const urgente = n && n.pos && b.pos.distanceTo(n.pos) < 4 && (!cur || !cur.pos || b.pos.distanceTo(cur.pos) > 5);
@@ -940,6 +942,7 @@
       colpo = { disp: a.disp, kick: a.rinc, lato: 0 };
     }
     if (colpo) {
+      svegliati();
       if (enc && enc.sparo) enc.sparo(io);
       if (c && c.corsa) c.corsa = false;
       rinculo = Math.min(a.rinc > 0.05 ? 0.12 : 0.06, rinculo + colpo.kick); io.pitch = clamp(io.pitch + colpo.kick * 0.18, -1.35, 1.35); io.yaw += colpo.lato * 0.15;
@@ -1010,7 +1013,7 @@
     gVis.centro.material.color.setHex(g.vuoto ? 0xffc9c2 : 0xfff1c4);
   }
   function lanciaGranata(dir) {
-    if (nGranate() <= 0 || io.morto || io.porta) return;
+    if (nGranate() <= 0 || io.morto || io.porta) return; svegliati();
     const tipo = ALLENA ? 'framm' : DATI.granate.shift(); aggHud(true);
     const g = puntoGranata(dir || { dx: 0, dy: 0 });
     const m = new T.Mesh(GSF, ml(new T.Color(CD.GRANATE[tipo].col).getHex())); m.scale.setScalar(0.13); m.position.copy(g.p0); scena.add(m);
@@ -1131,7 +1134,7 @@
   const CORPO_CD = 0.9, CORPO_T = 0.3, CORPO_R = 2.8, CORPO_DANNO = 150;
   let cdCorpo = 0, tCorpo = 0, parata = false;   // parata: mirino tenuto con la spada in mano
   function corpoACorpo() {
-    if (cdCorpo > 0 || io.morto || stato !== 'gioco') return;
+    if (cdCorpo > 0 || io.morto || stato !== 'gioco') return; svegliati();
     cdCorpo = CORPO_CD; tCambio = Math.max(tCambio, 0.25);
     fendente({ r: CORPO_R, dn: CORPO_DANNO * STAT.danno, multi: 1, cono: 0.35, spinta: 1.6 });
   }
@@ -1200,7 +1203,8 @@
      rompi un bersaglio, finisce una fase), annunciata 2,5 secondi prima e da un lato solo, cosi' ci si gira.
      La pressione non cala: se in campo restano pochi nemici ne arrivano altri, e a ogni giro (G.forza)
      le ondate sono piu' grosse e piu' frequenti. All'inizio della sala qualche secondo per orientarsi. */
-  const NOME_LATO = ['sinistra', 'destra'];
+  // l'ondata in arrivo si vede come una luce rossa che pulsa sul bordo dello schermo da quel lato
+  function segnaLato(l) { const el = ui.lato && ui.lato.children[l ? 1 : 0]; if (!el) return; el.classList.remove('on'); void el.offsetWidth; el.classList.add('on'); }
   function regia(o) {
     const G = { xs: o.xs, zr: o.zr, calma: o.calma === undefined ? 7 : o.calma, pausa: o.pausa || 9, min: o.min || 6, base: o.base || ['schiavo', 'schiavo', 'accolito'],
       t: 0, ultima: -99, coda: [], forza: 0, ferma: false };
@@ -1217,7 +1221,7 @@
       if (SEGUI) return; G.t += dt;
       for (let i = G.coda.length - 1; i >= 0; i--) {
         const q = G.coda[i]; q.t -= dt;
-        if (!q.avv && q.t <= 2.5) { q.avv = true; toast((q.perche ? q.perche + ': ' : '') + 'nemici in arrivo da ' + NOME_LATO[q.lato] + '!', 'male'); }
+        if (!q.avv && q.t <= 2.5) { q.avv = true; segnaLato(q.lato); if (ON) ON.lt = [(ON.lt ? ON.lt[0] : 0) + 1, q.lato]; }
         if (q.t <= 0) { spawnLato(q.tipi, G.xs, G.zr, q.lato, q.m); G.coda.splice(i, 1); G.ultima = G.t; }
       }
       // pressione costante: pochi nemici in campo e nessuna ondata da un po' -> ne arriva un'altra
@@ -1288,7 +1292,7 @@
       });
       // piedistalli con le Fiamme dell'Anima
       fiamme = [-1, 1].map((s, lato) => {
-        const base = { x: s * 4, z: 8 };
+        const base = { x: s * 4, z: 8 }; interattivi.push({ x: base.x, z: base.z, r: 1.6 });
         pz(tornio([[0.7, 0], [0.7, 0.2], [0.45, 0.35], [0.38, 1.0], [0.55, 1.1], [0, 1.12]], 16), TM(C2.pietraC), base.x, 0, base.z, 0.03);
         ostacoli.push({ x: base.x, z: base.z, r: 0.5, h: 1.1 });
         const m = new T.Mesh(GSF, mb(0xbff7c8)); m.scale.setScalar(0.32); scena.add(m);
@@ -1435,7 +1439,7 @@
         const A = AMB({ scena, ostacoli, lim, leggera: leggera() }); ambiente = A;
         A.totem.forEach(t => { const rg = new T.Mesh(GCIL, mb(0x9fe8ff, { transparent: true, opacity: 0.55, depthWrite: false })); scena.add(rg); raggi.push({ m: rg, a: t.a, cima: t.cima }); });
         pi = [A.piastra(-12, -4.5, 2.2, 'sinistra'), A.piastra(12, -4.5, 2.2, 'destra')];
-        pret = A.piastra(PRET.x, PRET.z, 1.5, 'della Pretesa'); pret.col(0x5a4a7a, 0x140c24);
+        pret = A.piastra(PRET.x, PRET.z, 1.5, 'della Pretesa'); pret.col(0x5a4a7a, 0x140c24); interattivi.push(...pi, pret);
         porta = A.porta; runa = A.runa; E.ingressi = A.ingressi;
       } else {
       nuovaScena(64); arena({ x0: -20, x1: 20, z0: -32, z1: 18, h: 16 });
@@ -1576,7 +1580,7 @@
         nuovaScena(70); lim = { x0: -22, x1: 22, z0: -30, z1: 15 };
         const A = AMB({ scena, ostacoli, lim, piani, leggera: leggera() }); ambiente = A;
         PIL = A.pilastri; E.ingressi = A.ingressi;
-        pi = [A.piastra(-16, -12, 2, 'sinistra', 2.0), A.piastra(0, -3, 2, 'centrale'), A.piastra(16, -12, 2, 'destra', 1.2)];
+        pi = [A.piastra(-16, -12, 2, 'sinistra', 2.0), A.piastra(0, -3, 2, 'centrale'), A.piastra(16, -12, 2, 'destra', 1.2)]; interattivi.push(...pi);
       } else {
       nuovaScena(70); arena({ x0: -22, x1: 22, z0: -30, z1: 15, h: 18, tinta: '#c9b48e' });
       PIL.forEach(p => pilastro(p[0], p[1], 1.5, 18));
@@ -1797,7 +1801,7 @@
   function portabile(nome, x, z, col, y) {
     const m = new T.Mesh(GSF, mb(col)); m.scale.setScalar(0.3); scena.add(m);
     if (texPunto && !leggera()) { const al = sprite(texPunto, col, 2.4, 2.4, 0.5); m.add(al); al.scale.set(6, 6, 1); }
-    return { nome, pos: new T.Vector3(x, (y || 0) + 1.2, z), m, chi: null, chiK: null, col };
+    const o = { nome, pos: new T.Vector3(x, (y || 0) + 1.2, z), m, chi: null, chiK: null, col }; interattivi.push(o); return o;
   }
   function prendiP(o, u, tIo, tAltri) { o.chi = u; u.porta = o; if (u.io) suono('ok'); if (tIo || tAltri) avvisa(u, tIo, tAltri, 'bene'); }
   function posaP(o) { if (o.chi) o.chi.porta = null; o.chi = null; }
@@ -1962,6 +1966,7 @@
         const px = x, pzz = z + (su ? -2.6 : 2.6);
         ostacoli.push({ x, z: z + (su ? -0.9 : 0.9), r: 1.5, h: 1.0 });
         const an = new T.Mesh(new T.RingGeometry(0.9, 1.15, 32), mb(0xffd27a, { transparent: true, opacity: 0.4, side: T.DoubleSide, depthWrite: false })); an.rotation.x = -PI / 2; an.position.set(px, 0.1, pzz); scena.add(an);
+        interattivi.push({ x: px, z: pzz, r: 2.2 });
         return { i, x, z, px, pz: pzz, g, m, an, vero: veri.includes(i), st: 0, k: 0 };
       });
       [[-9, -7], [9, -7]].forEach(p => pilastro(p[0], p[1], 1.0, 14));
@@ -2778,11 +2783,24 @@
     ingresso = { zaino: Object.assign({}, DATI.zaino), granate: DATI.granate.slice() };
   }
   function ripristinaIngresso() { if (!ingresso || ALLENA) return; DATI.zaino = Object.assign({}, ingresso.zaino); DATI.granate = ingresso.granate.slice(); salvaDati(); }
+  /* ---------- la sala parte quando la fate partire voi ----------
+     Entrando non succede niente: i nemici stanno fermi e il tempo non scorre. La sala si sveglia alla prima
+     azione: un colpo (anche di un amico), il pugno, una granata, o avvicinarsi a una piastra, una fiamma,
+     un oggetto da portare o una bancarella. I percorsi di salti e l'allenamento partono subito. */
+  let sveglia = true;
+  function svegliati() { if (sveglia || SEGUI || stato !== 'gioco') return; sveglia = true; suono('allarme'); scuoti = Math.max(scuoti, 0.3); }
+  function controllaSveglia() {
+    if (sveglia) return;
+    if (umani().some(u => !u.morto && interattivi.some(o => { const p = o.pos || o; return Math.hypot(u.pos.x - p.x, u.pos.z - p.z) < (o.r || 1.4) + 0.4; }))) svegliati();
+  }
+  // il nome della sala compare solo entrando, poi sparisce
+  let tTitolo = null;
+  function mostraTitolo() { if (!ui.tit) return; ui.tit.classList.add('vedi'); clearTimeout(tTitolo); tTitolo = setTimeout(() => ui.tit && ui.tit.classList.remove('vedi'), 3500); }
   function prepara(i, perc) {
     bots.forEach(b => { if (b.remoto) { if (b.av && B.liberaAvatar) B.liberaAvatar(b.av); if (b.rr) b.rr.u = null; } }); liberaFantasmi(); prepN++;
     encI = i; ALLENA = i === ALLENAMENTO; FS = CD.scalaSala(Math.min(i, NUM_SALE - 1)); if (ALLENA) FS = CD.scalaSala(Math.max(0, Math.round((DATI.livello - 1) / 3)));
     applicaStat(); cassa = null;
-    enc = perc ? percorso(PERCORSI[SALE[i].prima], i, true) : INCONTRI[i](); enc.costruisci(); compatta(); tEnc = 0; tFine = 0; raffica = 0; tCambio = 0; ia = 0; mostraArma();
+    enc = perc ? percorso(PERCORSI[SALE[i].prima], i, true) : INCONTRI[i](); enc.costruisci(); sveglia = !!(perc || enc.percorso || enc.prima || i === ALLENAMENTO); mostraTitolo(); compatta(); tEnc = 0; tFine = 0; raffica = 0; tCambio = 0; ia = 0; mostraArma();
     for (const k in radioVisti) delete radioVisti[k];
     io.hp = io.max; io.morto = false; io.marchio = 0; io.pretesa = 0; io.porta = null; io.vy = 0; io.tRin = 0; io.invuln = 0; io.vola = false; io.lento = 0; flashDanno = 0;
     ui.toasts.innerHTML = ''; zaino(false); aggHud(true);
@@ -2927,7 +2945,10 @@
   }
 
   function intro(i) {
-    audio(); prepara(i); stato = 'intro';
+    audio(); prepara(i);
+    // si entra direttamente nella sala: niente spiegazioni a schermo (sono in Pausa → Come funziona); parte alla prima azione
+    if (i !== ALLENAMENTO) { pannello(''); stato = 'gioco'; return; }
+    stato = 'intro';
     const kick = i === ALLENAMENTO ? 'Allenamento · nessun premio' : (enc.percorso ? 'Percorso' : 'Sala ' + (i + 1) + ' di ' + NUM_SALE) + ' · ' + enc.luogo + ' · livello consigliato ' + FS.liv + (PROVA ? ' · prova' : '');
     pannello('<div class="kick">' + kick + '</div><h2>' + enc.nome + '</h2><ul>' + (enc.guida || []).map(g => '<li>' + g + '</li>').join('') + '</ul>' + (DATI.livello < FS.liv - 2 && i !== ALLENAMENTO ? '<p class="sotto"><b>Sei al livello ' + DATI.livello + ':</b> qui i nemici sono più forti di te.</p>' : '') + '<div class="pul"><button id="rd-via">' + (i === ALLENAMENTO ? 'Entra' : 'Combatti') + '</button><button class="sec" id="rd-menu">Stanza d\'attesa</button></div>');
     ui.pan.querySelector('#rd-via').onclick = () => { pannello(''); stato = 'gioco'; audio(); };
@@ -3053,8 +3074,8 @@
     if (!ui.toasts) return; if (toastRecenti[t] && ora - toastRecenti[t] < 1.5) return; toastRecenti[t] = ora;
     if (ON && !locale) { ON.toN++; ON.to.push([ON.toN, t, cls || '']); if (ON.to.length > 4) ON.to.shift(); }
     const d = document.createElement('div'); d.className = 'tst ' + (cls || ''); d.textContent = t; ui.toasts.appendChild(d);
-    while (ui.toasts.children.length > 3) ui.toasts.firstChild.remove();
-    setTimeout(() => { d.classList.add('via'); setTimeout(() => d.remove(), 400); }, 3200);
+    const basso = innerHeight <= 500; while (ui.toasts.children.length > (basso ? 2 : 3)) ui.toasts.firstChild.remove();
+    setTimeout(() => { d.classList.add('via'); setTimeout(() => d.remove(), 400); }, basso ? 2600 : 3200);
   }
   function aggHud(forza) {
     tHud -= 1 / 60; if (tHud > 0 && !forza) return; tHud = 0.1;
@@ -3082,7 +3103,10 @@
     if (C) { const vis = stato === 'gioco' && !io.morto; if (vis !== C.attivo) C.mostra(vis); }
     const el = renderer.domElement, asp = el.width / el.height; if (Math.abs(cam.aspect - asp) > 0.001) { cam.aspect = asp; cam.updateProjectionMatrix(); }
     if (stato === 'gioco' && SEGUI) { tEnc += dt; aggPiani(); aggIo(dt); aggProiettili(dt); aggCassa(dt); }   // da ospite: il resto lo rispecchia segui()
-    else if (stato === 'gioco') {
+    else if (stato === 'gioco' && !sveglia) {   // la sala aspetta la prima azione: i compagni si sistemano, nessuno spara
+      aggPiani(); aggIo(dt); controllaSveglia(); bots.forEach(b => aggBot(b, dt));
+      nemici.forEach(e => { e.c.set(e.pos.x, e.pos.y + e.hy, e.pos.z); e.mesh.position.copy(e.pos); e.mesh.rotation.y = e.yaw; });
+    } else if (stato === 'gioco') {
       tEnc += dt;
       aggPiani(); aggIo(dt); bots.forEach(b => aggBot(b, dt));
       for (let i = nemici.length - 1; i >= 0; i--) { const e = nemici[i]; if (e.vivo) { aggNemico(e, dt); if (e.mini) colpoATerra(e, dt); } }
@@ -3228,25 +3252,52 @@ body.pc #rd-hud .tasto,body.pc #rd-hud .base{display:none}
 #rd-pan ul.bott{list-style:none;padding:0;gap:7px}#rd-pan ul.bott li{background:rgba(233,225,201,.06);padding:7px 10px;border-left:2px solid var(--oro)}#rd-pan ul.bott small{opacity:.8}
 #rd-pan .rar{font-weight:800}
 @media (max-width:700px){#rd-zaino{width:100%}}
-@media (max-height:420px){#rd-obi .ln{font-size:12px;padding:3px 7px}#rd-pan ul{font-size:13px;gap:4px}#rd-pan{gap:7px}}`;
+@media (max-height:420px){#rd-obi .ln{font-size:12px;padding:3px 7px}#rd-pan ul{font-size:13px;gap:4px}#rd-pan{gap:7px}}
+/* niente scritte durante il gioco: obiettivi, avvisi e radio dei compagni non si mostrano (ognuno ricorda da se'
+   cosa fare; le regole sono in Pausa → Come funziona). Il nome della sala compare solo entrando. */
+#rd-obi,#rd-toasts,#rd-radio,#rd-sq,#rd-chips{display:none!important}
+#rd-tit{opacity:0;transition:opacity .9s}#rd-tit.vedi{opacity:1}
+#rd-lato{position:absolute;inset:0;pointer-events:none}
+#rd-lato i{position:absolute;top:0;bottom:0;width:16%;opacity:0}
+#rd-lato i:first-child{left:0;background:linear-gradient(90deg,rgba(224,87,74,.6),transparent)}
+#rd-lato i:last-child{right:0;background:linear-gradient(270deg,rgba(224,87,74,.6),transparent)}
+#rd-lato i.on{animation:rdLato 2.5s ease-out}
+@keyframes rdLato{0%,100%{opacity:0}15%,45%,75%{opacity:1}30%,60%{opacity:.3}}
+/* telefono in orizzontale: scritte piu' piccole e raccolte ai bordi, il centro resta libero per giocare */
+@media (max-height:500px){
+#rd-tit{font-size:15px;top:calc(6px + env(safe-area-inset-top,0px))}#rd-tit small{display:none}
+#rd-obi{top:calc(30px + env(safe-area-inset-top,0px));width:min(230px,28%);gap:2px;pointer-events:auto}
+#rd-obi .ln{font-size:11px;padding:2px 6px;line-height:1.2;border-left-width:2px}#rd-obi .bar{height:3px;margin-top:2px}
+#rd-obi:not(.tutto) .ln:nth-child(n+4){display:none}
+#rd-obi:not(.tutto):has(.ln:nth-child(4))::after{content:'▾ tocca per vedere tutto';font-size:10px;opacity:.65;padding-left:6px}
+#rd-obi.tutto::after{content:'▴ tocca per ridurre';font-size:10px;opacity:.65;padding-left:6px}
+#rd-boss{top:calc(6px + env(safe-area-inset-top,0px));width:min(320px,34%)}#rd-boss .bn{font-size:12px}#rd-boss .bar{height:5px}
+#rd-toasts{top:calc(40px + env(safe-area-inset-top,0px));width:min(340px,38%);gap:3px}
+#rd-toasts .tst{font-size:12px;padding:3px 8px;line-height:1.25}
+#rd-esci{top:calc(6px + env(safe-area-inset-top,0px));padding:4px 10px;font-size:12px}
+#rd-sq{top:calc(38px + env(safe-area-inset-top,0px));font-size:10px;gap:1px}#rd-sq i{width:6px;height:6px}
+#rd-radio{top:calc(122px + env(safe-area-inset-top,0px));width:min(210px,25%)}#rd-radio .rd-r{font-size:10.5px;padding:2px 6px}#rd-radio .rd-r:not(:last-child){display:none}
+}`;
     document.head.appendChild(st);
     hud = document.createElement('div'); hud.id = 'rd-hud';
     hud.innerHTML = '<div id="rd-vig"></div><div id="rd-num"></div>' + (CF ? '' : '<div class="zona" id="rd-zl"></div><div class="zona" id="rd-zr"></div><div class="base" id="rd-lb"><i></i></div>') +
       '<div id="rd-mir"></div><div id="rd-tit"></div><div id="rd-obi"></div><div id="rd-boss" hidden></div><div id="rd-sq"></div><div id="rd-radio" aria-live="polite"></div><div id="rd-toasts"></div><div id="rd-giu" hidden></div>' +
-      '<div id="rd-vita"><div id="rd-chips"></div><div id="rd-armi"></div><b class="bar"><i id="rd-hp"></i></b></div><div id="rd-racc" aria-live="polite"></div><div id="rd-zaino" hidden></div>' +
+      '<div id="rd-lato"><i></i><i></i></div><div id="rd-vita"><div id="rd-chips"></div><div id="rd-armi"></div><b class="bar"><i id="rd-hp"></i></b></div><div id="rd-racc" aria-live="polite"></div><div id="rd-zaino" hidden></div>' +
       (CF ? '' : '<div class="tasto" id="rd-salto" aria-label="Salta">▲</div><div class="tasto" id="rd-cambia" aria-label="Cambia arma">⇄</div><div class="tasto" id="rd-fuoco" aria-label="Spara">FUOCO</div>') +
       '<button id="rd-esci">Pausa</button><div id="rd-pan" hidden></div>';
     (document.getElementById('hud') || document.getElementById('app') || document.body).appendChild(hud);
-    ['zl', 'zr', 'lb', 'mir', 'tit', 'obi', 'boss', 'sq', 'radio', 'toasts', 'giu', 'chips', 'hp', 'salto', 'fuoco', 'esci', 'pan', 'vig', 'armi', 'cambia', 'num', 'racc', 'zaino'].forEach(k => { ui[k] = hud.querySelector('#rd-' + k); });
+    ['lato', 'zl', 'zr', 'lb', 'mir', 'tit', 'obi', 'boss', 'sq', 'radio', 'toasts', 'giu', 'chips', 'hp', 'salto', 'fuoco', 'esci', 'pan', 'vig', 'armi', 'cambia', 'num', 'racc', 'zaino'].forEach(k => { ui[k] = hud.querySelector('#rd-' + k); });
+    ui.obi.addEventListener('pointerdown', e => { if (innerHeight > 500) return; ui.obi.classList.toggle('tutto'); e.stopPropagation(); });   // telefono: tocca per vedere tutti gli obiettivi
     window.addEventListener('keydown', e => { if (R.attivo && (stato === 'gioco') && !e.repeat && (e.key === 'i' || e.key === 'I' || e.key === 'Tab')) { zaino(); e.preventDefault(); } });
     const pausa = () => {
       const avanti = cassa && cassa.aperta && !SEGUI && encI + 1 < NUM_SALE;
       stato = 'pausa'; sparo = false; zaino(false);
-      pannello('<div class="kick">Pausa</div><h2>' + enc.nome + '</h2><div class="pul">' + (avanti ? '<button id="rd-av2">Prossima sala</button>' : '') + '<button id="rd-ri2"' + (avanti ? ' class="sec"' : '') + '>Riprendi</button>' + (ultimaCassa && cassa && cassa.aperta ? '<button class="sec" id="rd-bt">Bottino</button>' : '') + (C ? '<button class="sec" id="rd-cmd">Comandi</button>' : '') + '<button class="sec" id="rd-menu">Stanza d\'attesa</button>' + (B.solo ? '' : '<button class="sec" id="rd-x">Esci dalla Sala</button>') + '</div>');
+      pannello('<div class="kick">Pausa</div><h2>' + enc.nome + '</h2><div class="pul">' + (avanti ? '<button id="rd-av2">Prossima sala</button>' : '') + '<button id="rd-ri2"' + (avanti ? ' class="sec"' : '') + '>Riprendi</button>' + (enc.guida ? '<button class="sec" id="rd-cf">Come funziona</button>' : '') + (ultimaCassa && cassa && cassa.aperta ? '<button class="sec" id="rd-bt">Bottino</button>' : '') + (C ? '<button class="sec" id="rd-cmd">Comandi</button>' : '') + '<button class="sec" id="rd-menu">Stanza d\'attesa</button>' + (B.solo ? '' : '<button class="sec" id="rd-x">Esci dalla Sala</button>') + '</div>');
       ui.pan.querySelector('#rd-ri2').onclick = () => { pannello(''); stato = 'gioco'; }; ui.pan.querySelector('#rd-menu').onclick = () => menu();
       const x = ui.pan.querySelector('#rd-x'); if (x) x.onclick = () => R.esci(); const cm = ui.pan.querySelector('#rd-cmd'); if (cm) cm.onclick = () => C.impostazioni(ui.pan, pausa);
       const av = ui.pan.querySelector('#rd-av2'); if (av) av.onclick = () => prossimaSala();
       const bt = ui.pan.querySelector('#rd-bt'); if (bt) bt.onclick = () => { stato = 'gioco'; pannelloCassa(ultimaCassa); };
+      const cf = ui.pan.querySelector('#rd-cf'); if (cf) cf.onclick = () => { pannello('<div class="kick">Come funziona</div><h2>' + enc.nome + '</h2><ul>' + (enc.guida || []).map(g => '<li>' + g + '</li>').join('') + '</ul><div class="pul"><button id="rd-cfx">Indietro</button></div>'); ui.pan.querySelector('#rd-cfx').onclick = pausa; };
     };
     ui.esci.addEventListener('click', () => { if (stato === 'gioco') pausa(); else if (B.solo) menu(); else R.esci(); });
     if (CF) {
@@ -3382,7 +3433,7 @@ body.pc #rd-hud .tasto,body.pc #rd-hud .base{display:none}
       const h = r.d.h; if (!Array.isArray(h)) return; let m = r.nH || 0;
       h.forEach(q => {
         if (!Array.isArray(q)) return; const n = nnum(q[0], 0); if (n <= (r.nH || 0)) return; m = Math.max(m, n);
-        if (!r.u || stato !== 'gioco') return; const dn = clamp(nnum(q[3], 0), 0, 4000);
+        if (!r.u || stato !== 'gioco') return; const dn = clamp(nnum(q[3], 0), 0, 4000); svegliati();
         if (enc && enc.colpoAmico) enc.colpoAmico(r.u);
         if (q[1] === 'e') { const e = nemici.find(x => x.id === q[2]); if (e && e.vivo) e.colpisci(dn, r.u); }
         else if (q[1] === 'b') { const s = bersagli[q[2] | 0]; if (s && s.vivo !== false) s.colpisci(dn, r.u); }
@@ -3395,7 +3446,7 @@ body.pc #rd-hud .tasto,body.pc #rd-hud .base{display:none}
     const ne = nemici.filter(e => e.vivo).sort((a, b) => (b.boss ? 1 : 0) - (a.boss ? 1 : 0)).slice(0, 26)
       .map(e => [e.id, TIPIK.indexOf(e.tipo), f2(e.pos.x), f2(e.pos.y), f2(e.pos.z), f2(e.yaw), Math.round(e.hp), e.max, e.imm ? 1 : 0, e.camm ? 1 : 0, e.anN || 0, e.anK || '']);
     const tp = {}; umani().forEach(u => { if (u.remoto && ON.tp[u.k]) tp[u.k] = ON.tp[u.k]; });
-    const o = { id: mioId, st: 'raid', g: ON.g, ru: 'h', mem: ON.mem || [], sto: stato, ei: encI, pe: enc && enc.prima ? 1 : 0, pn: prepN, lv: 2, wm: ON.wm, sq, ne, pj: ON.pj, to: ON.to, tp, ra: radioRete, fz: ON.fz || null, es: enc && enc.foto ? enc.foto() : null };
+    const o = { id: mioId, st: 'raid', g: ON.g, ru: 'h', mem: ON.mem || [], sto: stato, ei: encI, pe: enc && enc.prima ? 1 : 0, pn: prepN, lv: 2, wm: ON.wm, sq, ne, pj: ON.pj, to: ON.to, tp, ra: radioRete, fz: ON.fz || null, lt: ON.lt || null, es: enc && enc.foto ? enc.foto() : null };
     if (JSON.stringify(o).length > 3500) { o.pj = ON.pj.slice(-3); o.to = ON.to.slice(-2); o.ra = radioRete.slice(-2); o.ne = ne.slice(0, 16); }
     return o;
   }
@@ -3403,7 +3454,7 @@ body.pc #rd-hud .tasto,body.pc #rd-hud .base{display:none}
   /* ---------- ospite ---------- */
   function liberaFantasmi() { if (!SEGUI) return; SEGUI.fant.forEach(f => { scena.remove(f.mesh); if (f.av && B.liberaAvatar) B.liberaAvatar(f.av); }); SEGUI.fant.clear(); }
   function unisciti(r) {
-    SEGUI = { r, g: r.d.g, pn: -1, ei: -1, rp: -1, fant: new Map(), d: null, pan: '', pjN: maxN(r.d.pj), toN: maxN(r.d.to), tpN: maxN(r.d.tp && r.d.tp[mioId]), raN: maxN(r.d.ra), fzN: r.d.fz ? nnum(r.d.fz[0], 0) : 0, lp: io.pos.clone(), v: 0 };
+    SEGUI = { ltN: Array.isArray(r.d.lt) ? nnum(r.d.lt[0], 0) : 0, r, g: r.d.g, pn: -1, ei: -1, rp: -1, fant: new Map(), d: null, pan: '', pjN: maxN(r.d.pj), toN: maxN(r.d.to), tpN: maxN(r.d.tp && r.d.tp[mioId]), raN: maxN(r.d.ra), fzN: r.d.fz ? nnum(r.d.fz[0], 0) : 0, lp: io.pos.clone(), v: 0 };
     toast(r.nick + ' ha dato il via: si parte!', 'bene', true);
   }
   // si torna nella stanza d'attesa (la squadra resta la stessa, se non la lasci)
@@ -3488,6 +3539,7 @@ body.pc #rd-hud .tasto,body.pc #rd-hud .base{display:none}
       liberaFantasmi(); prepara(ei, !!d.pe); SEGUI.rp = -1; SEGUI.d = null; SEGUI.pan = ''; stato = 'intro';
     }
     if (SEGUI.d !== d) { SEGUI.d = d; seguiDati(d); }
+    if (Array.isArray(d.lt) && nnum(d.lt[0], 0) > (SEGUI.ltN || 0)) { SEGUI.ltN = nnum(d.lt[0], 0); segnaLato(d.lt[1] ? 1 : 0); }   // ondata in arrivo
     if (Array.isArray(d.fz) && nnum(d.fz[0], 0) > SEGUI.fzN) {
       SEGUI.fzN = nnum(d.fz[0], 0); const i = clamp(nnum(d.fz[1], 0) | 0, 0, NUM_SALE - 1), provaCapo = !!d.fz[2];
       if (provaCapo && !PROVA) toast('Il capo gioca in modalità prova: niente cassa né progressi per gli amici', '', true);
@@ -3610,8 +3662,9 @@ body.pc #rd-hud .tasto,body.pc #rd-hud .base{display:none}
       if (k !== amiciK) { amiciK = k; if (stato === 'menu' && ui.pan && ui.pan.querySelector('.lobby')) menu(); }
     }
   }
-  R._colpo = (id, dn) => { const e = nemici.find(x => x.id === id); return e ? colpoMio(e, dn) : 'no'; };   // per le prove
-  R._colpoB = (i, dn) => bersagli[i] ? colpoMio(bersagli[i], dn) : 'no';
+  R._colpo = (id, dn) => { svegliati(); const e = nemici.find(x => x.id === id); return e ? colpoMio(e, dn) : 'no'; };
+  R._sveglia = () => svegliati();   // per le prove
+  R._colpoB = (i, dn) => { svegliati(); return bersagli[i] ? colpoMio(bersagli[i], dn) : 'no'; };
   R._on = () => ({ mioId, SEGUI, ON, amici: [...amiciR.values()].map(r => ({ nick: r.nick, d: r.d })), gHit });
 
   R.avvia = function () {
