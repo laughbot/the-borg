@@ -627,6 +627,7 @@
     if (u.io && ora < (io.invuln || 0)) return;   // Mantello della Notte Chiara: appena rientrato
     d *= D.dmg * FS.dmg * (u.res || 1); if (u.io && STAT.poteri.cratere && u.hp < u.max * 0.3) d *= 0.5;   // livello, difesa dei pezzi, Corazza del Cratere
     if (u.remoto && u.crt && u.hp < u.max * 0.3) d *= 0.5;
+    if (u.io && parata) d *= 0.4;   // con la spada in parata
     u.hp -= d; u.ultimoColpo = ora; if (R._danni) R._danni[(u.io ? 'io' : u.remoto ? 'amico' : 'bot') + ':' + (causa || '?')] = (R._danni[(u.io ? 'io' : u.remoto ? 'amico' : 'bot') + ':' + (causa || '?')] || 0) + Math.round(d);   // per le prove
     if (u.io) { flashDanno = Math.min(1, flashDanno + d / 40); scuoti = Math.max(scuoti, 0.12); vibrazione(d > 18); }
     if (u.hp <= 0) abbatti(u, causa);
@@ -810,6 +811,13 @@
       razzi(g) { Cl(g, ml(0x3a3f35), 0.02, 0.06, -0.15, 0.11, 1.1); Cl(g, metallo(), 0.02, 0.06, -0.72, 0.13, 0.08); Cl(g, metallo(), 0.02, 0.06, 0.42, 0.12, 0.06); B_(g, scuro(), 0.02, -0.1, 0, 0.07, 0.18, 0.08); B_(g, scuro(), 0.02, -0.1, -0.25, 0.06, 0.15, 0.07); Cl(g, scuro(), 0.15, 0.13, -0.1, 0.04, 0.2); luce(g, 0xff7a4a, 0.15, 0.13, -0.21, 0.025); },
       mitra(g) { B_(g, scuro(), 0, 0, -0.02, 0.13, 0.17, 0.6); Cl(g, metallo(), 0, 0.02, -0.55, 0.035, 0.5); Cl(g, ml(0x3a3d3a), 0, 0.02, -0.5, 0.055, 0.3); B_(g, ml(0x3a3f35), 0.11, -0.08, -0.05, 0.12, 0.16, 0.18); B_(g, scuro(), 0, -0.15, 0.12, 0.08, 0.17, 0.09); B_(g, osso(), 0, -0.02, 0.38, 0.08, 0.15, 0.24); B_(g, metallo(), 0, 0.12, -0.15, 0.04, 0.06, 0.3); },
       stellare(g) { const cr = TMx({ color: 0x7fe8ff, emissive: 0x2a9ac0, emissiveIntensity: 0.9 }); B_(g, ml(0x1d2230), 0, 0, -0.05, 0.1, 0.14, 0.56); B_(g, cr, 0, 0.09, -0.05, 0.05, 0.03, 0.46); Cl(g, metallo(), 0, 0.01, -0.42, 0.03, 0.22); B_(g, ml(0x1d2230), 0, -0.14, 0.1, 0.07, 0.18, 0.08); B_(g, cr, 0, -0.16, -0.1, 0.05, 0.2, 0.07); B_(g, ml(0x1d2230), 0, -0.02, 0.32, 0.07, 0.14, 0.24); luce(g, 0xdff9ff, 0, 0.0, -0.22, 0.04); },
+      spada(g) {   // lama inclinata in avanti, elsa con la gemma, filo luminoso
+        const h = new T.Group(); h.rotation.x = 0.55; h.position.set(0, -0.05, 0.1); g.add(h);
+        const lama = TMx({ color: 0xd8dde6, emissive: 0x2a3440, emissiveIntensity: 0.4 });
+        B_(h, lama, 0, 0, -0.62, 0.06, 0.018, 1.0); B_(h, mbc(0xfff1c4), 0, 0.012, -0.62, 0.012, 0.012, 0.98);
+        B_(h, ml(0xc9a14a), 0, 0, -0.1, 0.34, 0.05, 0.06); luce(h, 0x9fd8ff, 0, 0.035, -0.1, 0.03);
+        Cl(h, ml(0x3a2a1e), 0, 0, 0.06, 0.03, 0.24); parte(h, GSF, ml(0xc9a14a), 0, 0, 0.2, 0.045);
+      },
       lanterna(g) { Cl(g, ml(0x2c2a35), 0.02, 0.06, -0.15, 0.1, 1.0); const vetro = parte(g, GSF, mb(0xfff1a8, { transparent: true, opacity: 0.8 }), 0.02, 0.06, -0.66, 0.12); vetro.scale.z = 1.4; for (let i = 0; i < 4; i++) { const a = i / 4 * PI * 2; B_(g, ml(COL.oro, 0x3a2405), 0.02 + Math.cos(a) * 0.11, 0.06 + Math.sin(a) * 0.11, -0.4, 0.02, 0.02, 0.6); } B_(g, ml(0x2c2a35), 0.02, -0.1, 0, 0.07, 0.18, 0.08); }
     };
   })();
@@ -903,6 +911,7 @@
     if (st) st.ris = !a.mun || ALLENA ? Infinity : DATI.zaino[a.mun];
     const mira = !!(c && c.mira && tCambio <= 0 && !(st && st.inRicarica()));
     mirK += ((mira ? 1 : 0) - mirK) * Math.min(1, dt * 14);
+    parata = !!(a.spada && mira && !io.morto);
     const fov = 72 / (1 + ((a.zoom || 1.3) - 1) * mirK); if (Math.abs(cam.fov - fov) > 0.05) { cam.fov = fov; cam.updateProjectionMatrix(); }
     ui.mir.classList.toggle('mira', mirK > 0.5);
     const scivola = corpo && corpo.scivola > 0;
@@ -918,6 +927,8 @@
     if (c && c.prendi('cambia')) cambiaArma();
     if (c && c.eventi.armaN) { const n = c.eventi.armaN - 1; c.eventi.armaN = 0; if (n < 2) cambiaArma(n); }
     if (c && c.prendi('granata')) { lanciaGranata(c.gDir); c.gDir = null; }
+    if (c && c.prendi('corpo')) corpoACorpo();
+    cdCorpo = Math.max(0, cdCorpo - dt); tCorpo = Math.max(0, tCorpo - dt);
     mostraMiraGranata(c && c.gMira && nGranate() > 0 && !io.porta ? c.gMira : null);   // tieni premuto il tasto: scia e cerchio
     const grilletto = (sparo || (c && c.sparo)) && !(c && c.corsa && !R._corsa) && tCambio <= 0 && !io.porta;
     let colpo = null;
@@ -935,7 +946,8 @@
       m.lampo.visible = true; m.lampo.rotation.z = Math.random() * 3;
       cam.updateMatrixWorld(); cam.getWorldDirection(_d0); _o.copy(cam.position);
       const bocca = new T.Vector3(0.2 * (1 - mirK), -0.18 + mirK * 0.06, -0.7).applyMatrix4(cam.matrixWorld), forte = a.cd >= 0.5, dn0 = a.dmg * moltArma(it);
-      const np = a.pallini || 1;
+      const np = a.spada ? 0 : a.pallini || 1;
+      if (a.spada) { m.lampo.visible = false; fendente({ r: a.spada.r, dn: dn0, multi: a.spada.multi, cono: a.spada.cono, spinta: 1.0, col: 0xbfe4ff }); }
       for (let p = 0; p < np; p++) {
         _d.copy(_d0); _d.x += rnd(-colpo.disp, colpo.disp); _d.y += rnd(-colpo.disp, colpo.disp); if (np > 1) _d.z += rnd(-colpo.disp, colpo.disp); _d.normalize();
         const r = lancia(_o, _d, np > 1 ? 0 : (B.touch ? 0.1 : 0.03) * a.assist * (mira ? 0.6 : 1)), fine = _o.clone().addScaledVector(_d, r.s ? r.t : Math.min(r.t, 80));
@@ -950,10 +962,11 @@
     const ricK = st && st.inRicarica() ? Math.sin(st.progresso() * Math.PI) : 0;
     const giu = (tCambio > 0 ? tCambio / 0.32 * 0.32 : 0) + ricK * 0.16;
     const corsaK = c && c.corsa ? 1 : 0;
-    arma.position.set((0.2 + Math.sin(ora * 5.5) * (L > 0.1 ? 0.01 : 0.003)) * (1 - mirK) - corsaK * 0.04, -0.2 + mirK * 0.072 + passo * 0.4 - rinculo * 0.25 - giu - corsaK * 0.04, -0.42 + mirK * 0.07 + rinculo * 0.8);
-    arma.rotation.set(rinculo * (a.rinc > 0.05 ? 2.2 : 0.6) - ricK * 0.5, corsaK * 0.5, ricK * 0.4 + (scivola ? 0.25 : 0));
+    const cK = tCorpo > 0 ? Math.sin((1 - tCorpo / CORPO_T) * PI) : 0;   // colpo corpo a corpo
+    arma.position.set((0.2 + Math.sin(ora * 5.5) * (L > 0.1 ? 0.01 : 0.003)) * (1 - mirK) - corsaK * 0.04 - cK * 0.14, -0.2 + mirK * 0.072 + passo * 0.4 - rinculo * 0.25 - giu - corsaK * 0.04 + cK * 0.05, -0.42 + mirK * 0.07 + rinculo * 0.8 - cK * 0.22);
+    arma.rotation.set(rinculo * (a.rinc > 0.05 ? 2.2 : 0.6) - ricK * 0.5 - cK * 0.35, corsaK * 0.5 + cK * 0.5, ricK * 0.4 + (scivola ? 0.25 : 0) + cK * 0.9);
     granateAgg(dt);
-    if (C) C.hud({ mun: st ? { cur: st.cur, cap: a.cap, ris: st.ris, nome: a.nome } : null, ric: st ? st.progresso() : 0, granata: { attesa: 0, n: nGranate() } });
+    if (C) C.hud({ mun: st ? { cur: st.cur, cap: a.cap, ris: st.ris, nome: a.nome } : null, ric: st ? st.progresso() : 0, granata: { attesa: 0, n: nGranate() }, corpo: { attesa: cdCorpo / CORPO_CD } });
     aggRaccolte(dt); aggPozzeCura(dt);
   }
   // fuoco automatico: il mirino e' su un nemico che si puo' colpire?
@@ -1102,13 +1115,47 @@
   // vibrazione leggera quando vieni colpito: Android usa navigator.vibrate; su iPhone (iOS 18+) si prova col trucco dell'interruttore
   let vibra = true; try { vibra = localStorage.getItem('theborg.raid.vibra') !== '0'; } catch (e) { }
   let tVibra = 0, swVibra = null;
+  let vibraDopo = 0;   // iPhone: la vibrazione funziona solo durante un tocco, quindi la si rimanda al tocco successivo
+  function vibraOra() { try { if (swVibra) swVibra.click(); } catch (e) { } }
   function vibrazione(forte) {
     if (!vibra || ora - tVibra < 0.25) return; tVibra = ora;
-    try { if (navigator.vibrate) { navigator.vibrate(forte ? [30, 40, 30] : 18); return; } } catch (e) { }
+    try { if (navigator.vibrate) { navigator.vibrate(forte ? [60, 40, 60] : 40); return; } } catch (e) { }
+    vibraDopo = ora;
     try {
       if (!swVibra) { swVibra = document.createElement('label'); swVibra.style.cssText = 'position:fixed;left:-99px;top:0;width:1px;height:1px;opacity:0;pointer-events:none'; const c = document.createElement('input'); c.type = 'checkbox'; c.setAttribute('switch', ''); swVibra.appendChild(c); document.body.appendChild(swVibra); }
       swVibra.click();
     } catch (e) { }
+  }
+  /* ---------- corpo a corpo: colpisce il nemico piu' vicino davanti (o sotto) senza mirare ----------
+     Serve quando gli Striscianti ti sono addosso e non si vedono per sparargli. Non fa rumore (vale anche nell'Ora del Silenzio). */
+  const CORPO_CD = 0.9, CORPO_T = 0.3, CORPO_R = 2.8, CORPO_DANNO = 150;
+  let cdCorpo = 0, tCorpo = 0, parata = false;   // parata: mirino tenuto con la spada in mano
+  function corpoACorpo() {
+    if (cdCorpo > 0 || io.morto || stato !== 'gioco') return;
+    cdCorpo = CORPO_CD; tCambio = Math.max(tCambio, 0.25);
+    fendente({ r: CORPO_R, dn: CORPO_DANNO * STAT.danno, multi: 1, cono: 0.35, spinta: 1.6 });
+  }
+  // un colpo da vicino: i bersagli davanti (o addosso) entro r, i piu' vicini per primi; niente mira
+  function fendente(o) {
+    tCorpo = CORPO_T;
+    const fx = -Math.sin(io.yaw), fz = -Math.cos(io.yaw), presi = [];
+    const prova = (t, p) => {
+      const dx = p.x - io.pos.x, dz = p.z - io.pos.z, d = Math.hypot(dx, dz);
+      if (d > o.r + (t.r || 0.5) * 0.5 || Math.abs(p.y - io.pos.y) > 2.6) return;
+      if (d < 1.3 || (dx * fx + dz * fz) / Math.max(d, 1e-3) > o.cono) presi.push({ t, d });   // addosso vale in ogni direzione
+    };
+    nemici.forEach(e => { if (e.vivo) prova(e, e.pos); });
+    bersagli.forEach(b => { if (b.vivo && b.c) prova(b, { x: b.c.x, y: b.c.y - 1, z: b.c.z }); });
+    if (!presi.length) { suono('cambio'); return 0; }
+    presi.sort((a, b) => a.d - b.d).slice(0, o.multi).forEach(({ t, d }, k) => {
+      const dn = o.dn * (k ? 0.7 : 1) * molt(io, t), esito = colpoMio(t, dn), p = t.pos ? t.pos.clone().setY(t.pos.y + 1.1) : t.c.clone();
+      if (!k) mirino(esito); numeroDanno(t, p, esito === 'debole' ? dn * 0.35 : dn, esito); scoppio(p, o.col || 0xfff1c4, 8, 3);
+      // spinta indietro (non i boss e i mini boss), solo per chi tiene la partita
+      if (o.spinta && !SEGUI && t.pos && !t.boss && !t.mini && esito !== 'immune') { const q = Math.max(d, 0.3); t.pos.x += (t.pos.x - io.pos.x) / q * o.spinta; t.pos.z += (t.pos.z - io.pos.z) / q * o.spinta; }
+    });
+    suono('botto'); scuoti = Math.max(scuoti, 0.08);
+    try { if (vibra && navigator.vibrate) navigator.vibrate(25); } catch (e) { }
+    return presi.length;
   }
   function mirino(esito) { ui.mir.className = esito === 'immune' ? 'imm' : esito === 'ok' ? 'hit' : ''; tMirino = 0.12; }
 
@@ -2690,7 +2737,7 @@
      niente sconosciuti. Ognuno entra nella Cripta con la sua squadra da 1; si invita o ci si unisce alla
      squadra di un amico. Si parte dall'ultima sala salvata del capo (in modalita' prova da qualsiasi stanza),
      gli altri dicono "pronto". I posti liberi (fino a 6) li prendono i Custodi bot (provvisori: col server si giochera' in 6 amici). */
-  const testoComandi = () => '<p class="com">' + (B.touch ? (CF ? 'Sinistra: muoviti (spingi in avanti fino in fondo per correre). Destra: trascina per guardare. Tasti: fuoco (anche a sinistra), mirino, salto (in aria: doppio salto o volo, se hai le scarpe giuste), accovacciati (in corsa: scivolata; tieni premuto: a terra), ricarica, granata, cambia arma. Lo zaino 🎒 è accanto alle armi. In pausa trovi Comandi per sensibilità, fuoco automatico e posizione dei tasti.' : 'Sinistra: muoviti. Destra: trascina per guardare. Tasto rosso: spara (mira assistita). Tasto ▲: salta. Tasto ⇄: cambia arma.') : '<b>WASD</b> per muoverti, <b>clic</b> per catturare il mouse, poi muovi il mouse per guardare e tieni premuto per sparare. <b>Spazio</b> salta, <b>Maiusc</b> corre, <b>Q</b> o <b>rotella</b> cambia arma, <b>I</b> apre lo zaino.' + (CF ? ' <b>Tasto destro</b> mirino, <b>R</b> ricarica, <b>G</b> granata, <b>C</b> accovacciati o scivola, <b>Z</b> a terra.' : '')) + '</p>';
+  const testoComandi = () => '<p class="com">' + (B.touch ? (CF ? 'Sinistra: muoviti (spingi in avanti fino in fondo per correre). Destra: trascina per guardare. Tasti: fuoco (anche a sinistra), mirino, salto (in aria: doppio salto o volo, se hai le scarpe giuste), accovacciati (in corsa: scivolata; tieni premuto: a terra), ricarica, granata, pugno (corpo a corpo: colpisce chi ti è addosso, anche sotto, senza mirare), cambia arma. Lo zaino 🎒 è accanto alle armi. In pausa trovi Comandi per sensibilità, fuoco automatico e posizione dei tasti.' : 'Sinistra: muoviti. Destra: trascina per guardare. Tasto rosso: spara (mira assistita). Tasto ▲: salta. Tasto ⇄: cambia arma.') : '<b>WASD</b> per muoverti, <b>clic</b> per catturare il mouse, poi muovi il mouse per guardare e tieni premuto per sparare. <b>Spazio</b> salta, <b>Maiusc</b> corre, <b>Q</b> o <b>rotella</b> cambia arma, <b>I</b> apre lo zaino.' + (CF ? ' <b>Tasto destro</b> mirino, <b>R</b> ricarica, <b>G</b> granata, <b>V</b> corpo a corpo, <b>C</b> accovacciati o scivola, <b>Z</b> a terra.' : '')) + '</p>';
   const rar = r => CD.RARITA[r];
   const nomeArmaHtml = it => '<span class="rar" style="color:' + rar(it.r).col + '">' + ARMI[it.k].nome + '</span>';
   function schedaPersonaggio() {
@@ -3009,6 +3056,8 @@
   /* ---------- comandi ---------- */
   const loc = e => B.ptE ? B.ptE(e) : [e.clientX, e.clientY];
   function creaHud() {
+    // iPhone: un colpo preso da poco vibra al primo tocco dello schermo
+    ['touchstart', 'touchend', 'pointerdown'].forEach(t => window.addEventListener(t, () => { if (vibraDopo && R.attivo && ora - vibraDopo < 1) { vibraDopo = 0; vibraOra(); } }, { capture: true, passive: true }));
     const st = document.createElement('style');
     st.textContent = `
 body.raid-attivo #barra-alto,body.raid-attivo #controlli,body.raid-attivo #btn-contesto,body.raid-attivo #chat,body.raid-attivo #minimappa-box,body.raid-attivo #joy,body.raid-attivo #tabbar{display:none!important}
@@ -3146,7 +3195,7 @@ body.pc #rd-hud .tasto,body.pc #rd-hud .base{display:none}
     ui.esci.addEventListener('click', () => { if (stato === 'gioco') pausa(); else if (B.solo) menu(); else R.esci(); });
     if (CF) {
       // comandi condivisi con gli altri sparatutto: sotto i pannelli, sopra il resto dell'HUD
-      C = CF.crea({ dove: hud, tasti: ['fuoco', 'mira', 'salto', 'giu', 'ricarica', 'granata', 'cambia'], granataMirata: true, audio, guarda: (dx, dy) => { io.yaw -= dx; io.pitch = clamp(io.pitch - dy, -1.35, 1.35); } });
+      C = CF.crea({ dove: hud, tasti: ['fuoco', 'mira', 'salto', 'giu', 'ricarica', 'granata', 'cambia', 'corpo'], granataMirata: true, audio, guarda: (dx, dy) => { io.yaw -= dx; io.pitch = clamp(io.pitch - dy, -1.35, 1.35); } });
       hud.insertBefore(C.el, ui.pan); corpo = CF.corpo(); R._riposo = () => C.riposo();
       ui.armi.addEventListener('pointerdown', e => { const s = e.target.closest('span'); if (!s) return; if (s.classList.contains('zn')) { zaino(); return; } cambiaArma([...ui.armi.children].indexOf(s)); });
       return;

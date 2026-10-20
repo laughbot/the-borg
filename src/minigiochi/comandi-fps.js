@@ -32,16 +32,17 @@
     ricarica: svg('<path d="M20 12a8 8 0 1 1-2.3-5.6"/><path d="M20 4v5h-5"/>'),
     granata: svg('<circle cx="12" cy="14" r="6"/><path d="M10 8V6h4v2M14 6l3-2"/>'),
     cambia: svg('<path d="M4 8h13l-3-3M20 16H7l3 3"/>'),
-    abilita: svg('<path d="M13 2 4 14h7l-1 8 9-12h-7z"/>')
+    abilita: svg('<path d="M13 2 4 14h7l-1 8 9-12h-7z"/>'),
+    corpo: svg('<path d="M7 11V7a1.5 1.5 0 0 1 3 0v3M10 10V6a1.5 1.5 0 0 1 3 0v4M13 10V7a1.5 1.5 0 0 1 3 0v4M16 11V9a1.5 1.5 0 0 1 3 0v4a7 7 0 0 1-7 7h-1a6 6 0 0 1-5-3l-2-3a1.5 1.5 0 0 1 2.4-1.8L7 13"/>')
   };
   // posizione di partenza dei tasti (frazioni dello schermo, misurate dal bordo destro/basso; 'sx' = dal bordo sinistro)
   const POS0 = {
     fuoco: { x: 0.095, y: 0.2, d: 86 }, mira: { x: 0.215, y: 0.12, d: 56 }, salto: { x: 0.06, y: 0.47, d: 54 },
     giu: { x: 0.165, y: 0.36, d: 54 }, ricarica: { x: 0.22, y: 0.6, d: 46 }, granata: { x: 0.285, y: 0.4, d: 50 },
-    cambia: { x: 0.29, y: 0.1, d: 46 }, abilita: { x: 0.15, y: 0.8, d: 50 },
+    cambia: { x: 0.29, y: 0.1, d: 46 }, abilita: { x: 0.15, y: 0.8, d: 50 }, corpo: { x: 0.36, y: 0.24, d: 54 },
     fuocoSx: { x: 0.07, y: 0.52, d: 58, sx: true }
   };
-  const NOMI = { fuoco: 'Fuoco', mira: 'Mirino', salto: 'Salta', giu: 'Accovacciati (tieni: a terra)', ricarica: 'Ricarica', granata: 'Granata', cambia: 'Cambia arma', abilita: 'Abilità', fuocoSx: 'Fuoco sinistro' };
+  const NOMI = { fuoco: 'Fuoco', mira: 'Mirino', salto: 'Salta', giu: 'Accovacciati (tieni: a terra)', ricarica: 'Ricarica', granata: 'Granata', cambia: 'Cambia arma', abilita: 'Abilità', corpo: 'Corpo a corpo', fuocoSx: 'Fuoco sinistro' };
 
   let css = false;
   function stile() {
@@ -190,7 +191,7 @@ body.pc .cf .cf-t,body.pc .cf .cf-base{display:none}
     }
     function aggGiu() { if (T.giu) T.giu.classList.toggle('attivo', c.giu || c.terra); }
     c.alzati = () => { c.giu = false; c.terra = false; aggGiu(); };
-    ['salto', 'ricarica', 'granata', 'cambia', 'abilita'].forEach(k => {
+    ['salto', 'ricarica', 'granata', 'cambia', 'abilita', 'corpo'].forEach(k => {
       if (!T[k] || (k === 'granata' && opz.granataMirata)) return;
       T[k].addEventListener('pointerdown', e => { if (!c.attivo) return; c.eventi[k] = true; T[k].classList.add('on'); setTimeout(() => T[k].classList.remove('on'), 120); e.preventDefault(); });
     });
@@ -222,8 +223,8 @@ body.pc .cf .cf-t,body.pc .cf .cf-base{display:none}
       T.granata.addEventListener('pointerup', fine); T.granata.addEventListener('pointercancel', e => { if (c.gMira) c.gMira.annulla = true; fine(e); });
     }
 
-    // tastiera e mouse (computer): WASD, Shift scatto, spazio salto, C accovacciati, Z a terra, R ricarica, G granata, Q cambia, F abilità, tasto destro mirino
-    const mappa = { ' ': 'salto', r: 'ricarica', g: 'granata', q: 'cambia', f: 'abilita' };
+    // tastiera e mouse (computer): WASD, Shift scatto, spazio salto, C accovacciati, Z a terra, R ricarica, G granata, Q cambia, F abilità, V corpo a corpo, tasto destro mirino
+    const mappa = { ' ': 'salto', r: 'ricarica', g: 'granata', q: 'cambia', f: 'abilita', v: 'corpo' };
     window.addEventListener('keydown', e => {
       if (!c.attivo) return; const k = e.key.toLowerCase(); kb[k] = true;
       if (!e.repeat) {
@@ -273,7 +274,7 @@ body.pc .cf .cf-t,body.pc .cf .cf-base{display:none}
       }
       const r = o.ric > 0 ? Math.round(o.ric * 20) * 5 : 0;
       if (cambia('ric', r)) { ric.hidden = !r; if (r) uRic.style.width = r + '%'; }
-      ['granata', 'abilita'].forEach(k => {
+      ['granata', 'abilita', 'corpo'].forEach(k => {
         if (!T[k] || !o[k]) return; const v = o[k], pc = Math.round(v.attesa * 20) * 5;
         if (cambia(k + 'k', pc)) { (cdEl[k] || (cdEl[k] = T[k].querySelector('.cd'))).style.setProperty('--k', pc + '%'); }
         if (cambia(k + 's', v.attesa > 0 && !v.n)) T[k].classList.toggle('spento', v.attesa > 0 && !v.n);
