@@ -373,6 +373,7 @@
     }
 
     /* ---------- accessori ---------- */
+    const nCap0 = capelli.children.length, nTes0 = testa.children.length;   // per segnare gli accessori (il casco della Cripta li nasconde)
     const acc = p.accessorio;
     if (acc === 0) {                                                   // molletta a mezzaluna
       const mo = new T.Mesh(new T.TorusGeometry(0.075, 0.02, 8, 18, 4.4), M(p.trim, { emissive: new T.Color(p.trim), emissiveIntensity: 0.55 }));
@@ -435,6 +436,7 @@
       });
     }
 
+    capelli.children.slice(nCap0).forEach(o => { o.userData.accessorio = 1; }); testa.children.slice(nTes0).forEach(o => { o.userData.accessorio = 1; });
     corpo.traverse(o => { if (o.isMesh && o.castShadow !== false) o.castShadow = true; });
 
     /* area invisibile per toccare l'avatar */
