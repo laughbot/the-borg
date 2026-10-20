@@ -116,11 +116,11 @@
     const busto = new T.Group(); busto.position.y = 0.55; corpo.add(busto);
     const t = mesh(new T.CylinderGeometry(0.235, 0.255, 0.46, 18), ab === 4 ? M(p.trim) : giacca, { y: 0.27, l: 0.022 }); t.scale.z = 0.82; busto.add(t);
     if (lung) {
-      const g2 = mesh(new T.CylinderGeometry(0.27, 0.38, 0.4, 20), giacca, { y: -0.1, l: 0.02 }); g2.scale.z = 0.88; busto.add(g2);
-      const o2 = mesh(new T.CylinderGeometry(0.382, 0.388, 0.03, 20), trim, { y: -0.285 }); o2.scale.z = 0.88; busto.add(o2);
+      const g2 = mesh(new T.CylinderGeometry(0.27, 0.38, 0.4, 20), giacca, { y: -0.1, l: 0.02 }); g2.scale.z = 0.88; g2.userData.gonna = 1; busto.add(g2);
+      const o2 = mesh(new T.CylinderGeometry(0.382, 0.388, 0.03, 20), trim, { y: -0.285 }); o2.scale.z = 0.88; o2.userData.gonna = 1; busto.add(o2);
     } else if (ab < 4) {
-      const gonna = mesh(new T.CylinderGeometry(0.265, ab === 2 ? 0.27 : 0.31, ab === 2 ? 0.08 : 0.12, 18), giacca, { y: ab === 2 ? 0.04 : 0.07, l: 0.02 }); gonna.scale.z = 0.86; busto.add(gonna);
-      if (ab === 0) { const orlo = mesh(new T.CylinderGeometry(0.288, 0.3, 0.025, 18), trim, { y: 0.012 }); orlo.scale.z = 0.86; busto.add(orlo); }
+      const gonna = mesh(new T.CylinderGeometry(0.265, ab === 2 ? 0.27 : 0.31, ab === 2 ? 0.08 : 0.12, 18), giacca, { y: ab === 2 ? 0.04 : 0.07, l: 0.02 }); gonna.scale.z = 0.86; gonna.userData.gonna = 1; busto.add(gonna);
+      if (ab === 0) { const orlo = mesh(new T.CylinderGeometry(0.288, 0.3, 0.025, 18), trim, { y: 0.012 }); orlo.scale.z = 0.86; orlo.userData.gonna = 1; busto.add(orlo); }
     }
     if (ab === 0 || ab === 3) {                                  // camicia e bordi ambra
       busto.add(mesh(new T.BoxGeometry(0.2, 0.42, 0.03), M(p.camicia), { y: 0.27, z: 0.205, l: 0.012 }));
@@ -143,8 +143,8 @@
       busto.add(mesh(new T.BoxGeometry(0.1, 0.07, 0.03), M(mixa(p.giacca, '#000000', 0.2)), { y: 0.38, z: 0.228 }));
     }
     if (ab === 5) {                                              // vestito svasato
-      const ve = mesh(new T.CylinderGeometry(0.262, 0.46, 0.42, 24), giacca, { y: -0.04, l: 0.02 }); ve.scale.z = 0.9; busto.add(ve);
-      const orl = mesh(new T.CylinderGeometry(0.462, 0.468, 0.04, 24), trim, { y: -0.245 }); orl.scale.z = 0.9; busto.add(orl);
+      const ve = mesh(new T.CylinderGeometry(0.262, 0.46, 0.42, 24), giacca, { y: -0.04, l: 0.02 }); ve.scale.z = 0.9; ve.userData.gonna = 1; busto.add(ve);
+      const orl = mesh(new T.CylinderGeometry(0.462, 0.468, 0.04, 24), trim, { y: -0.245 }); orl.scale.z = 0.9; orl.userData.gonna = 1; busto.add(orl);
       const cn = mesh(new T.CylinderGeometry(0.262, 0.262, 0.05, 18), trim, { y: 0.15, l: 0.012 }); cn.scale.z = 0.84; busto.add(cn);
       const fi = new T.Group(); fi.position.set(0, 0.15, -0.24); busto.add(fi);
       [-1, 1].forEach(sg => { const a = mesh(new T.ConeGeometry(0.1, 0.2, 10), trim, { l: 0.012, x: sg * 0.1 }); a.rotation.z = -sg * PI / 2; fi.add(a); }); fi.add(mesh(new T.SphereGeometry(0.045, 10, 8), trim, { l: 0.01 }));
@@ -156,7 +156,7 @@
       busto.add(mesh(new T.BoxGeometry(0.04, 0.04, 0.03), trim, { y: 0.42, z: 0.22 }));
     }
     if (ab === 7) {                                              // uniforme: blazer, cravatta, gonna a pieghe
-      const go = mesh(new T.CylinderGeometry(0.262, 0.4, 0.2, 20), pant, { y: -0.04, l: 0.02 }); go.scale.z = 0.9; busto.add(go);
+      const go = mesh(new T.CylinderGeometry(0.262, 0.4, 0.2, 20), pant, { y: -0.04, l: 0.02 }); go.scale.z = 0.9; go.userData.gonna = 1; busto.add(go);
       busto.add(mesh(new T.BoxGeometry(0.17, 0.4, 0.03), M(p.camicia), { y: 0.29, z: 0.208, l: 0.012 }));
       [-1, 1].forEach(sg => { const r = mesh(new T.BoxGeometry(0.07, 0.3, 0.035), giaccaL, { x: sg * 0.1, y: 0.33, z: 0.212, l: 0.012 }); r.rotation.z = -sg * 0.28; busto.add(r); });
       busto.add(mesh(new T.BoxGeometry(0.05, 0.3, 0.03), trim, { y: 0.31, z: 0.232, l: 0.01 }));

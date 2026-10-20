@@ -2,7 +2,7 @@
 <html lang="it">
 <head>
   <meta charset="utf-8">
-  <meta name="versione" content="80842f7499da">
+  <meta name="versione" content="42a178f38cd9">
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="mobile-web-app-capable" content="yes">
@@ -1278,11 +1278,11 @@ window.CONFIG = {
     const busto = new T.Group(); busto.position.y = 0.55; corpo.add(busto);
     const t = mesh(new T.CylinderGeometry(0.235, 0.255, 0.46, 18), ab === 4 ? M(p.trim) : giacca, { y: 0.27, l: 0.022 }); t.scale.z = 0.82; busto.add(t);
     if (lung) {
-      const g2 = mesh(new T.CylinderGeometry(0.27, 0.38, 0.4, 20), giacca, { y: -0.1, l: 0.02 }); g2.scale.z = 0.88; busto.add(g2);
-      const o2 = mesh(new T.CylinderGeometry(0.382, 0.388, 0.03, 20), trim, { y: -0.285 }); o2.scale.z = 0.88; busto.add(o2);
+      const g2 = mesh(new T.CylinderGeometry(0.27, 0.38, 0.4, 20), giacca, { y: -0.1, l: 0.02 }); g2.scale.z = 0.88; g2.userData.gonna = 1; busto.add(g2);
+      const o2 = mesh(new T.CylinderGeometry(0.382, 0.388, 0.03, 20), trim, { y: -0.285 }); o2.scale.z = 0.88; o2.userData.gonna = 1; busto.add(o2);
     } else if (ab < 4) {
-      const gonna = mesh(new T.CylinderGeometry(0.265, ab === 2 ? 0.27 : 0.31, ab === 2 ? 0.08 : 0.12, 18), giacca, { y: ab === 2 ? 0.04 : 0.07, l: 0.02 }); gonna.scale.z = 0.86; busto.add(gonna);
-      if (ab === 0) { const orlo = mesh(new T.CylinderGeometry(0.288, 0.3, 0.025, 18), trim, { y: 0.012 }); orlo.scale.z = 0.86; busto.add(orlo); }
+      const gonna = mesh(new T.CylinderGeometry(0.265, ab === 2 ? 0.27 : 0.31, ab === 2 ? 0.08 : 0.12, 18), giacca, { y: ab === 2 ? 0.04 : 0.07, l: 0.02 }); gonna.scale.z = 0.86; gonna.userData.gonna = 1; busto.add(gonna);
+      if (ab === 0) { const orlo = mesh(new T.CylinderGeometry(0.288, 0.3, 0.025, 18), trim, { y: 0.012 }); orlo.scale.z = 0.86; orlo.userData.gonna = 1; busto.add(orlo); }
     }
     if (ab === 0 || ab === 3) {                                  // camicia e bordi ambra
       busto.add(mesh(new T.BoxGeometry(0.2, 0.42, 0.03), M(p.camicia), { y: 0.27, z: 0.205, l: 0.012 }));
@@ -1305,8 +1305,8 @@ window.CONFIG = {
       busto.add(mesh(new T.BoxGeometry(0.1, 0.07, 0.03), M(mixa(p.giacca, '#000000', 0.2)), { y: 0.38, z: 0.228 }));
     }
     if (ab === 5) {                                              // vestito svasato
-      const ve = mesh(new T.CylinderGeometry(0.262, 0.46, 0.42, 24), giacca, { y: -0.04, l: 0.02 }); ve.scale.z = 0.9; busto.add(ve);
-      const orl = mesh(new T.CylinderGeometry(0.462, 0.468, 0.04, 24), trim, { y: -0.245 }); orl.scale.z = 0.9; busto.add(orl);
+      const ve = mesh(new T.CylinderGeometry(0.262, 0.46, 0.42, 24), giacca, { y: -0.04, l: 0.02 }); ve.scale.z = 0.9; ve.userData.gonna = 1; busto.add(ve);
+      const orl = mesh(new T.CylinderGeometry(0.462, 0.468, 0.04, 24), trim, { y: -0.245 }); orl.scale.z = 0.9; orl.userData.gonna = 1; busto.add(orl);
       const cn = mesh(new T.CylinderGeometry(0.262, 0.262, 0.05, 18), trim, { y: 0.15, l: 0.012 }); cn.scale.z = 0.84; busto.add(cn);
       const fi = new T.Group(); fi.position.set(0, 0.15, -0.24); busto.add(fi);
       [-1, 1].forEach(sg => { const a = mesh(new T.ConeGeometry(0.1, 0.2, 10), trim, { l: 0.012, x: sg * 0.1 }); a.rotation.z = -sg * PI / 2; fi.add(a); }); fi.add(mesh(new T.SphereGeometry(0.045, 10, 8), trim, { l: 0.01 }));
@@ -1318,7 +1318,7 @@ window.CONFIG = {
       busto.add(mesh(new T.BoxGeometry(0.04, 0.04, 0.03), trim, { y: 0.42, z: 0.22 }));
     }
     if (ab === 7) {                                              // uniforme: blazer, cravatta, gonna a pieghe
-      const go = mesh(new T.CylinderGeometry(0.262, 0.4, 0.2, 20), pant, { y: -0.04, l: 0.02 }); go.scale.z = 0.9; busto.add(go);
+      const go = mesh(new T.CylinderGeometry(0.262, 0.4, 0.2, 20), pant, { y: -0.04, l: 0.02 }); go.scale.z = 0.9; go.userData.gonna = 1; busto.add(go);
       busto.add(mesh(new T.BoxGeometry(0.17, 0.4, 0.03), M(p.camicia), { y: 0.29, z: 0.208, l: 0.012 }));
       [-1, 1].forEach(sg => { const r = mesh(new T.BoxGeometry(0.07, 0.3, 0.035), giaccaL, { x: sg * 0.1, y: 0.33, z: 0.212, l: 0.012 }); r.rotation.z = -sg * 0.28; busto.add(r); });
       busto.add(mesh(new T.BoxGeometry(0.05, 0.3, 0.03), trim, { y: 0.31, z: 0.232, l: 0.01 }));
@@ -6602,7 +6602,7 @@ body.pb-attivo #pb-hud{display:block}
     portatore(g, S, r) {
       const met = MAT(S.met, S.cristallo ? 0.25 : 0), bordo = MAT(S.bordo, S.luce * 0.6);
       piastre(g, S, met, bordo, 3);
-      [-1, 1].forEach(s => { const sp = add(g, mesh(new T.SphereGeometry(0.14, 16, 10, 0, PI * 2, 0, PI * 0.55), met, { x: s * 0.3, y: 0.5, l: 0.018 })); sp.scale.set(1.15, 0.85, 1); anello(g, bordo, 0.14, 0.016, s * 0.3, 0.5, 0); });
+      [-1, 1].forEach(s => { const sp = add(g, mesh(new T.SphereGeometry(0.17, 16, 10, 0, PI * 2, 0, PI * 0.55), met, { x: s * 0.32, y: 0.5, l: 0.018 })); sp.scale.set(1.2, 0.85, 1.05); anello(g, bordo, 0.17, 0.018, s * 0.32, 0.5, 0); box(g, met, 0.2, 0.05, 0.24, s * 0.34, 0.41, 0, 0.012); });
       emblemaLanterna(g, S, 0.27);
       add(g, mesh(new T.CylinderGeometry(0.3, 0.3, 0.05, 20), MAT('#5a3a22'), { y: 0.08 })).scale.z = 0.86;   // cintura
       if (r >= 2) lanterna(g, S, 0.24, 0.0, 0.14, 0.8);                                                    // lanterna alla cintura
@@ -6630,8 +6630,10 @@ body.pb-attivo #pb-hud{display:block}
     },
     oracolo(g, S, r) {   // veste lunga con collo alto e fascia di rune
       const st = TELA(STOFFA.oracolo[r]), met = MAT(S.met, S.cristallo ? 0.25 : 0), bordo = MAT(S.bordo, S.luce * 0.6);
-      const ve = add(g, new T.Mesh(new T.CylinderGeometry(0.27, 0.46, 0.7, 24, 1, true), st)); ve.position.y = 0.12; ve.scale.z = 0.9; ve.castShadow = true;
-      anello(g, bordo, 0.46, 0.02, 0, -0.23, 0).scale.y = 0.9;
+      const ve = add(g, mesh(new T.CylinderGeometry(0.27, 0.285, 0.42, 20), MAT(STOFFA.oracolo[r]), { y: 0.28, l: 0.018 })); ve.scale.z = 0.86;
+      const fa = box(g, MAT(S.bordo, S.luce * 0.4), 0.08, 0.6, 0.02, 0, 0.28, 0.25); fa.rotation.z = 0.55;   // fascia di traverso
+      add(g, mesh(new T.CylinderGeometry(0.295, 0.295, 0.06, 20), MAT('#3a2418'), { y: 0.09 })).scale.z = 0.86;   // cintura
+      const li = box(g, MAT('#4a2a1a'), 0.12, 0.15, 0.06, 0.26, 0.0, 0.1, 0.012); li.rotation.y = 0.5; box(g, MAT(S.bordo, S.luce * 0.5), 0.13, 0.02, 0.065, 0.26, 0.0, 0.1).rotation.y = 0.5;   // libro alla cintura
       const co = add(g, mesh(new T.CylinderGeometry(0.2, 0.27, 0.18, 18, 1, true), met, { y: 0.55, l: 0.014 })); co.scale.z = 0.86;
       box(g, met, 0.12, 0.62, 0.03, 0, 0.18, 0.27, 0.01);
       rune(g, S, [[0, 0.42, 0.29, 0.06, 0.03], [0, 0.3, 0.29, 0.06, 0.03], [0, 0.18, 0.29, 0.06, 0.03], [0, 0.06, 0.29, 0.06, 0.03]]);
@@ -6660,7 +6662,7 @@ body.pb-attivo #pb-hud{display:block}
      GUANTI (avambraccio e mano, su tutte e due le braccia)
      ===================================================================== */
   const GUANTI = {
-    portatore(g, S, r) { const met = MAT(S.met, S.cristallo ? 0.25 : 0), bordo = MAT(S.bordo, S.luce * 0.6); cil(g, met, 0.082, 0.076, 0.1, 0, -0.06, 0, 0.014, 12); anello(g, bordo, 0.084, 0.012, 0, -0.012, 0); sfera(g, met, 0.076, 0, -0.14, 0, 0.016); gemma(g, S, 0, -0.06, 0.085, 0.028); },
+    portatore(g, S, r) { const met = MAT(S.met, S.cristallo ? 0.25 : 0), bordo = MAT(S.bordo, S.luce * 0.6); cil(g, met, 0.095, 0.085, 0.11, 0, -0.06, 0, 0.014, 8); anello(g, bordo, 0.084, 0.012, 0, -0.012, 0); sfera(g, met, 0.076, 0, -0.14, 0, 0.016); gemma(g, S, 0, -0.06, 0.085, 0.028); },
     sentinella(g, S, r) { const met = MAT(S.met, S.cristallo ? 0.25 : 0), bordo = MAT(S.bordo, S.luce * 0.6); box(g, met, 0.17, 0.13, 0.17, 0, -0.06, 0, 0.016); box(g, met, 0.16, 0.1, 0.16, 0, -0.15, 0, 0.016); box(g, bordo, 0.18, 0.02, 0.18, 0, 0.0, 0); [-0.05, 0, 0.05].forEach(x => box(g, bordo, 0.025, 0.03, 0.03, x, -0.14, 0.085)); gemma(g, S, 0, -0.06, 0.09, 0.03); },
     viandante(g, S, r) { const fa = MAT(STOFFA.viandante[r]), cuoio = MAT('#5a3a22'); for (let i = 0; i < 3; i++) { const b = add(g, mesh(new T.TorusGeometry(0.074, 0.02, 6, 16), fa, { y: -0.03 - i * 0.04, cast: false })); b.rotation.x = PI / 2 + (i - 1) * 0.15; } sfera(g, cuoio, 0.072, 0, -0.14, 0, 0.014); if (r >= 2) { const la = cono(g, MAT(S.bordo, S.luce * 0.6), 0.02, 0.14, 0, -0.06, 0.09, 4); la.rotation.x = PI / 2; } gemma(g, S, 0, -0.07, 0.08, 0.025); },
     oracolo(g, S, r) { const met = MAT(S.met, S.cristallo ? 0.25 : 0); sfera(g, MAT(STOFFA.oracolo[r]), 0.072, 0, -0.14, 0, 0.014); anello(g, met, 0.08, 0.015, 0, -0.03, 0); anello(g, met, 0.075, 0.015, 0, -0.08, 0); if (S.rune) { const o = anello(g, LUCE(S.bordo, 0.5 + S.luce * 0.5), 0.13, 0.008, 0, -0.06, 0); o.userData.gira = 1; } gemma(g, S, 0, -0.14, 0.08, 0.025); }
@@ -6673,15 +6675,15 @@ body.pb-attivo #pb-hud{display:block}
   /* =====================================================================
      SCARPE (stinco e piede)
      ===================================================================== */
-  function stivale(g, mat, bordo, alt) {
-    cil(g, mat, 0.114, 0.12, alt || 0.17, 0, -0.12, 0, 0.016);
-    const pu = sfera(g, mat, 0.11, 0, -0.2, 0.08, 0.016); pu.scale.set(1.02, 0.66, 1.3);
-    cil(g, bordo, 0.124, 0.124, 0.03, 0, -0.03, 0, 0, 14);
+  function stivale(g, mat, bordo, alt) {   // stivale alto e robusto
+    cil(g, mat, 0.124, 0.13, alt || 0.19, 0, -0.12, 0, 0.016, 10);
+    const pu = box(g, mat, 0.23, 0.1, 0.34, 0, -0.215, 0.07, 0.016);
+    cil(g, bordo, 0.136, 0.136, 0.035, 0, -0.025, 0, 0, 10);
   }
   const SCARPE = {
     portatore(g, S, r) { const met = MAT(S.met, S.cristallo ? 0.25 : 0), bordo = MAT(S.bordo, S.luce * 0.6); stivale(g, met, bordo); box(g, bordo, 0.06, 0.08, 0.03, 0, -0.11, 0.12); gemma(g, S, 0, -0.11, 0.135, 0.025); },
     sentinella(g, S, r) { const met = MAT(S.met, S.cristallo ? 0.25 : 0), bordo = MAT(S.bordo, S.luce * 0.6); stivale(g, met, bordo, 0.2); box(g, met, 0.2, 0.18, 0.06, 0, -0.1, 0.11, 0.014); box(g, met, 0.24, 0.07, 0.3, 0, -0.24, 0.05, 0.014); gemma(g, S, 0, -0.1, 0.145, 0.03); },
-    viandante(g, S, r) { const cuoio = MAT('#5a3a22'), fa = MAT(STOFFA.viandante[r]); stivale(g, cuoio, MAT(S.met)); for (let i = 0; i < 2; i++) { const b = add(g, mesh(new T.TorusGeometry(0.118, 0.018, 6, 16), fa, { y: -0.08 - i * 0.06, cast: false })); b.rotation.x = PI / 2; } if (r >= 2) [-1, 1].forEach(s => { for (let i = 0; i < 2; i++) { const al = box(g, MAT(S.bordo, S.luce * 0.6), 0.018, 0.05, 0.2 - i * 0.06, s * 0.14, -0.07 + i * 0.05, -0.05); al.rotation.set(-0.6, 0, -s * 0.45); } }); gemma(g, S, 0, -0.08, 0.125, 0.022); },
+    viandante(g, S, r) { const cuoio = MAT('#5a3a22'), fa = MAT(STOFFA.viandante[r]); stivale(g, cuoio, MAT(S.met)); for (let i = 0; i < 2; i++) { const b = add(g, mesh(new T.TorusGeometry(0.138, 0.018, 6, 16), fa, { y: -0.08 - i * 0.06, cast: false })); b.rotation.x = PI / 2; } if (r >= 2) [-1, 1].forEach(s => { for (let i = 0; i < 2; i++) { const al = box(g, MAT(S.bordo, S.luce * 0.6), 0.018, 0.05, 0.2 - i * 0.06, s * 0.14, -0.07 + i * 0.05, -0.05); al.rotation.set(-0.6, 0, -s * 0.45); } }); gemma(g, S, 0, -0.08, 0.125, 0.022); },
     oracolo(g, S, r) { const st = MAT(STOFFA.oracolo[r]), met = MAT(S.met, S.cristallo ? 0.25 : 0); stivale(g, st, met); if (S.rune) { const o = anello(g, LUCE(S.bordo, 0.4 + S.luce * 0.6), 0.16, 0.01, 0, -0.27, 0.03); o.userData.gira = 1; } gemma(g, S, 0, -0.06, 0.125, 0.025); }
   };
   const SCARPE_STELLARI = {
@@ -6706,14 +6708,16 @@ body.pb-attivo #pb-hud{display:block}
   /* =====================================================================
      MANTELLO (sulla schiena)
      ===================================================================== */
-  function telo(g, col, lun, larg, luce, colLuce, bordoCol, bordoLuce) {
-    const geo = new T.CylinderGeometry(0.3, larg, lun, 20, 4, true, PI * 0.6, PI * 0.8);
-    const t = add(g, new T.Mesh(geo, TELA(col, luce, colLuce))); t.position.y = -lun / 2 + 0.02; t.castShadow = true;
-    const o = add(g, new T.Mesh(new T.CylinderGeometry(larg, larg, 0.03, 20, 1, true, PI * 0.6, PI * 0.8), TELA(bordoCol, bordoLuce))); o.position.y = -lun + 0.03;
+  function telo(g, col, lun, larg, luce, colLuce, bordoCol, bordoLuce) {   // mantello dritto da cavaliere: largo di spalle, scende quasi diritto
+    larg = Math.min(larg, 0.36);
+    const geo = new T.CylinderGeometry(0.33, larg, lun, 14, 4, true, PI * 0.64, PI * 0.72);
+    const t = add(g, new T.Mesh(geo, TELA(col, luce, colLuce))); t.position.y = -lun / 2 + 0.02; t.scale.z = 0.8; t.castShadow = true;
+    const o = add(g, new T.Mesh(new T.CylinderGeometry(larg, larg, 0.04, 14, 1, true, PI * 0.64, PI * 0.72), TELA(bordoCol, bordoLuce))); o.position.y = -lun + 0.03; o.scale.z = 0.8;
+    [-1, 1].forEach(s => box(g, MAT(bordoCol, bordoLuce), 0.14, 0.05, 0.1, s * 0.25, 0.01, 0.18));   // fibbie sulle spalle
     return t;
   }
   const MANTELLI = {
-    portatore(g, S, r) { telo(g, STOFFA.portatore[r], 0.75 + r * 0.05, 0.42, 0, null, S.bordo, S.luce * 0.6); lanterna(g, S, 0, -0.3, -0.37, 0.9); add(g, mesh(new T.CylinderGeometry(0.06, 0.06, 0.04, 12), MAT(S.bordo, S.luce * 0.6), { z: 0.42 })).rotation.x = PI / 2; },
+    portatore(g, S, r) { telo(g, STOFFA.portatore[r], 0.7 + r * 0.04, 0.36, 0, null, S.bordo, S.luce * 0.6); lanterna(g, S, 0, -0.3, -0.3, 0.9); add(g, mesh(new T.CylinderGeometry(0.06, 0.06, 0.04, 12), MAT(S.bordo, S.luce * 0.6), { z: 0.42 })).rotation.x = PI / 2; },
     sentinella(g, S, r) {   // stendardo corto: due drappi squadrati
       [-1, 1].forEach(s => { const d = add(g, new T.Mesh(new T.PlaneGeometry(0.22, 0.6), TELA(STOFFA.sentinella[r]))); d.position.set(s * 0.12, -0.3, -0.06); d.rotation.y = PI; anello(g, MAT(S.bordo, S.luce * 0.6), 0.03, 0.01, s * 0.12, -0.6, -0.06, 0); });
       box(g, MAT(S.met), 0.5, 0.06, 0.06, 0, 0.0, -0.04, 0.012); gemma(g, S, 0, -0.2, -0.08, 0.04);
@@ -6730,12 +6734,12 @@ body.pb-attivo #pb-hud{display:block}
   };
   const MANTELLI_STELLARI = {
     notte(g, S) {   // Mantello della Notte Chiara: cielo stellato
-      telo(g, '#121a3a', 0.95, 0.5, 0.35, '#2a3a8a', '#bff7ff', 0.8);
-      for (let i = 0; i < 14; i++) { const a = PI * 0.6 + ((i * 37) % 100) / 100 * PI * 0.8, y = -0.12 - ((i * 53) % 100) / 100 * 0.78, rr = 0.33 + (-y) * 0.2; const st = add(g, mesh(new T.OctahedronGeometry(0.018 + (i % 3) * 0.006, 0), LUCE('#ffffff', 1.5), { x: Math.sin(a) * (rr + 0.01), y, z: Math.cos(a) * (rr + 0.01), cast: false })); st.userData.stella = i; }
+      telo(g, '#121a3a', 0.85, 0.36, 0.35, '#2a3a8a', '#bff7ff', 0.8);
+      for (let i = 0; i < 14; i++) { const a = PI * 0.66 + ((i * 37) % 100) / 100 * PI * 0.68, y = -0.12 - ((i * 53) % 100) / 100 * 0.7, rr = 0.335 + (-y) * 0.035; const st = add(g, mesh(new T.OctahedronGeometry(0.018 + (i % 3) * 0.006, 0), LUCE('#ffffff', 1.5), { x: Math.sin(a) * (rr + 0.012), y, z: Math.cos(a) * (rr + 0.012) * 0.8, cast: false })); st.userData.stella = i; }
     },
     velo(g, S) {   // Velo dell'Invisibile: telo trasparente che sfuma
-      const geo = new T.CylinderGeometry(0.3, 0.5, 0.95, 20, 4, true, PI * 0.6, PI * 0.8);
-      const t = add(g, new T.Mesh(geo, new T.MeshToonMaterial({ color: new T.Color('#b8a8ff'), transparent: true, opacity: 0.45, side: T.DoubleSide, gradientMap: M('#fff').gradientMap, emissive: new T.Color('#6a5aff'), emissiveIntensity: 0.4, depthWrite: false }))); t.position.y = -0.46; t.userData.velo = 1;
+      const geo = new T.CylinderGeometry(0.33, 0.36, 0.85, 14, 4, true, PI * 0.64, PI * 0.72);
+      const t = add(g, new T.Mesh(geo, new T.MeshToonMaterial({ color: new T.Color('#b8a8ff'), transparent: true, opacity: 0.45, side: T.DoubleSide, gradientMap: M('#fff').gradientMap, emissive: new T.Color('#6a5aff'), emissiveIntensity: 0.4, depthWrite: false }))); t.position.y = -0.41; t.scale.z = 0.8; t.userData.velo = 1;
     },
     stendardo(g, S) {   // Stendardo del Borgo: asta sulla schiena con bandiera della lanterna (aiuta la squadra)
       const asta = cil(g, MAT('#5a3a22'), 0.022, 0.022, 1.7, 0.18, 0.35, -0.1, 0.008, 8); asta.rotation.z = -0.18;
@@ -6771,6 +6775,16 @@ body.pb-attivo #pb-hud{display:block}
     guanti: av => [av.parti.bL.userData.go, av.parti.bR.userData.go], scarpe: av => [av.parti.gL.userData.gin, av.parti.gR.userData.gin]
   };
   const FORME = { casco: [CASCHI, CASCHI_STELLARI], armatura: [ARMATURE, ARMATURE_STELLARI], guanti: [GUANTI, GUANTI_STELLARI], scarpe: [SCARPE, SCARPE_STELLARI], mantello: [MANTELLI, MANTELLI_STELLARI] };
+  function cosciali(av, slot, S, set, r) {
+    const gs = [], met = MAT(S.met, S.cristallo ? 0.25 : 0), bordo = MAT(S.bordo, S.luce * 0.6), stoffa = MAT((STOFFA[set] || STOFFA.portatore)[r]);
+    [av.parti.gL, av.parti.gR].forEach((an, i) => {
+      const g = new T.Group(); an.add(g); gs.push(g); const s = i ? -1 : 1;
+      cil(g, set === 'viandante' || set === 'oracolo' ? stoffa : MAT('#2a2430'), 0.125, 0.115, 0.22, 0, -0.11, 0, 0.016, 10);   // pantalone rinforzato
+      if (set === 'viandante') { for (let k = 0; k < 2; k++) anello(g, MAT('#5a3a22'), 0.128, 0.015, 0, -0.06 - k * 0.09, 0); }
+      else { const pl = box(g, met, 0.2, 0.18, 0.08, s * 0.02, -0.07, 0.09, 0.014); pl.rotation.x = -0.15; box(g, bordo, 0.21, 0.02, 0.085, s * 0.02, 0.02, 0.095); if (set === 'sentinella') box(g, met, 0.08, 0.16, 0.2, s * 0.13, -0.07, 0, 0.014); }
+    });
+    return gs;
+  }
   const norm = v => v === null || v === undefined ? null : typeof v === 'number' ? (v < 0 ? null : { r: v, set: 'portatore' }) : v;
   function veste(av, equip) {
     if (!av || !av.parti) return { togli() { }, anima() { } };
@@ -6784,6 +6798,10 @@ body.pb-attivo #pb-hud{display:block}
         dove.add(g); f(g, S, r); gruppi.push(g);
       });
     });
+    // con l'armatura gonne e vestiti dell'editor spariscono e al loro posto ci sono i cosciali
+    const ea = norm(equip && equip.armatura), gonne = ea ? av.parti.busto.children.filter(o => o.userData.gonna) : [];
+    gonne.forEach(o => { o.userData.vis = o.visible; o.visible = false; });
+    if (ea) gruppi.push(...cosciali(av, 'armatura', STILI[Math.max(0, Math.min(4, ea.r | 0))], ea.k ? 'sentinella' : ea.set || 'portatore', Math.max(0, Math.min(4, ea.r | 0))));
     // il casco copre i capelli e gli accessori della testa: i capelli si stringono un po', gli accessori si nascondono
     const conCasco = !!norm(equip && equip.casco), cap = conCasco ? av.testa.children.filter(c => c.name === 'capelli') : [];
     const acc = conCasco ? [...av.testa.children, ...cap.flatMap(c => c.children)].filter(o => o.userData.accessorio) : [];
@@ -6791,7 +6809,7 @@ body.pb-attivo #pb-hud{display:block}
     acc.forEach(o => { o.userData.vis = o.visible; o.visible = false; });
     let t = 0;
     return {
-      togli() { gruppi.forEach(g => g.parent && g.parent.remove(g)); cap.forEach(c => c.scale.setScalar(c.userData.sc || 1)); acc.forEach(o => { o.visible = o.userData.vis !== false; }); },
+      togli() { gruppi.forEach(g => g.parent && g.parent.remove(g)); gonne.forEach(o => { o.visible = o.userData.vis !== false; }); cap.forEach(c => c.scale.setScalar(c.userData.sc || 1)); acc.forEach(o => { o.visible = o.userData.vis !== false; }); },
       anima(dt) {   // aureole che girano, fiamme che tremano, nuclei che pulsano, stelle e code
         t += dt;
         gruppi.forEach(g => g.traverse(o => {
