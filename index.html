@@ -2,7 +2,7 @@
 <html lang="it">
 <head>
   <meta charset="utf-8">
-  <meta name="versione" content="f652eab3919b">
+  <meta name="versione" content="bbedd0b920ed">
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="mobile-web-app-capable" content="yes">
@@ -9952,6 +9952,8 @@ float rumoreC(vec3 x) { vec3 i = floor(x); vec3 f = fract(x); f = f * f * (3.0 -
     arma.position.set((0.2 + Math.sin(ora * 5.5) * (L > 0.1 ? 0.01 : 0.003)) * (1 - mirK) - corsaK * 0.04 - cK * 0.14, -0.2 + mirK * 0.072 + passo * 0.4 - rinculo * 0.25 - giu - corsaK * 0.04 + cK * 0.05, -0.42 + mirK * 0.07 + rinculo * 0.8 - cK * 0.22);
     arma.rotation.set(rinculo * (a.rinc > 0.05 ? 2.2 : 0.6) - ricK * 0.5 - cK * 0.35, corsaK * 0.5 + cK * 0.5, ricK * 0.4 + (scivola ? 0.25 : 0) + cK * 0.9);
     granateAgg(dt);
+    if (ui.mun && st) { const ris = a.mun ? (ALLENA ? '∞' : DATI.zaino[a.mun]) : '∞', tipo = a.mun ? CD.MUN[a.mun].nome.toLowerCase() : 'infinite', txt = st.cur + '|' + ris + '|' + tipo;
+      if (txt !== ui.mun.dataset.v) { ui.mun.dataset.v = txt; ui.mun.className = st.cur <= Math.ceil(a.cap * 0.25) ? 'poco' : ''; ui.mun.innerHTML = st.cur + '<small>/ ' + ris + '</small><em>' + tipo + '</em>'; } }
     if (C) C.hud({ mun: st ? { cur: st.cur, cap: a.cap, ris: st.ris, nome: a.nome } : null, ric: st ? st.progresso() : 0, granata: { attesa: 0, n: nGranate() }, corpo: { attesa: cdCorpo / CORPO_CD } });
     aggRaccolte(dt); aggPozzeCura(dt);
   }
@@ -10229,7 +10231,7 @@ float rumoreC(vec3 x) { vec3 i = floor(x); vec3 f = fract(x); f = f * f * (3.0 -
      vanno posate INSIEME (entro 4 secondi): se no si spengono e tornano sul piedistallo.
      Dopo la terza coppia si apre il Portale delle Anime. */
   function soglia() {
-    const E = { nome: 'La Soglia delle Lanterne', luogo: 'L\'Atrio delle Anime', rinascita: { x: 0, z: 12 } };
+    const E = { nome: 'La Soglia delle Lanterne', luogo: 'L\'Atrio delle Anime', rinascita: { x: 0, z: 12 }, uscita: { x: 0, z: -24 } };
     E.guida = ['Il Portale delle Anime si apre accendendo le <b>sei lanterne</b>, due alla volta. Le lanterne da accendere hanno l\'anello acceso.',
       'Sui piedistalli vicino all\'ingresso ci sono due <b>Fiamme dell\'Anima</b>: passaci sopra per prenderne una. Chi porta una fiamma va più piano e <b>non può sparare</b>.',
       'Ogni lanterna è chiusa da un <b>Velo d\'Ombra</b>: abbattilo a colpi, poi entra con la fiamma. Le due fiamme vanno posate <b>insieme</b>, entro 4 secondi l\'una dall\'altra.',
@@ -10409,7 +10411,7 @@ float rumoreC(vec3 x) { vec3 i = floor(x); vec3 f = fract(x); f = f * f * (3.0 -
 
   /* ---------- 1. APERTURA ---------- */
   function apertura() {
-    const E = { nome: 'Il Portale Sigillato', luogo: 'La Sala dei Sigilli', rinascita: { x: 0, z: 12 } };
+    const E = { nome: 'Il Portale Sigillato', luogo: 'La Sala dei Sigilli', rinascita: { x: 0, z: 12 }, uscita: { x: 0, z: -28 } };
     E.guida = ['Il portale è sigillato. Le due <b>piastre</b> davanti ai totem caricano il sigillo, ma solo se sono occupate <b>tutte e due</b>.',
       'Una piastra la tiene solo chi ha la <b>Pretesa</b>: la prendi sulla piastra piccola al centro, tra i totem, e dura 10 secondi.',
       'Chi tiene una piastra accumula <b>Cenere</b>: a 10 cumuli muore. I compagni si danno il cambio da soli. Ogni 10 secondi i totem lanciano un <b>impulso</b>: se una piastra è scoperta, colpisce tutta la squadra. Se succede, prendi la Pretesa e coprila tu.',
@@ -11783,6 +11785,8 @@ float rumoreC(vec3 x) { vec3 i = floor(x); vec3 f = fract(x); f = f * f * (3.0 -
   let tTitolo = null;
   function mostraTitolo() { if (!ui.tit) return; ui.tit.classList.add('vedi'); clearTimeout(tTitolo); tTitolo = setTimeout(() => ui.tit && ui.tit.classList.remove('vedi'), 3500); }
   function prepara(i, perc) {
+    if (cassa && !cassa.aperta) apriCassa(true);   // non l'hai aperta: il bottino finisce comunque nello zaino
+    drop.length = 0; portale = null;
     bots.forEach(b => { if (b.remoto) { if (b.av && B.liberaAvatar) B.liberaAvatar(b.av); if (b.rr) b.rr.u = null; } }); liberaFantasmi(); prepN++;
     encI = i; ALLENA = i === ALLENAMENTO; FS = CD.scalaSala(Math.min(i, NUM_SALE - 1)); if (ALLENA) FS = CD.scalaSala(Math.max(0, Math.round((DATI.livello - 1) / 3)));
     applicaStat(); cassa = null;
@@ -11973,20 +11977,84 @@ float rumoreC(vec3 x) { vec3 i = floor(x); vec3 f = fract(x); f = f * f * (3.0 -
     const pl = new T.PointLight(0xffd27a, 1.6, 12); pl.position.y = 1.6; g.add(pl);
     cassa = { x: p.x, y: p.y || 0, z: p.z, g, cop, luce, aperta: false, liv: r, t };
     anello(p.x, p.z, 0xffd27a, 3); scoppio(new T.Vector3(p.x, (p.y || 0) + 1, p.z), 0xffd27a, 20, 5); suono('vittoria');
-    toast((encI === NUM_SALE - 1 ? 'Il Re è caduto! ' : 'Sala superata' + (t ? ' in ' + t : '') + '! ') + 'Apri la cassa', 'bene', true);
+    if (ui.apri) ui.apri.hidden = true;
   }
+  /* La cassa: avvicinati e premi APRI (al computer E). Il bottino cade a terra davanti alla cassa: passaci sopra
+     per raccoglierlo. Poi si apre il portale: entrandoci si va avanti (lo decide il capo squadra). Il gioco non si ferma. */
+  const drop = [];
+  let portale = null;
+  function vicinoCassa() { return cassa && !cassa.aperta && !io.morto && stato === 'gioco' && Math.hypot(io.pos.x - cassa.x, io.pos.z - cassa.z) < 3.6 && Math.abs(io.pos.y - cassa.y) < 2; }
   function aggCassa(dt) {
+    if (ui.apri) { const v = vicinoCassa(); if (ui.apri.hidden === v) ui.apri.hidden = !v; }
     if (!cassa) return;
     cassa.luce.material.opacity = 0.45 + Math.sin(ora * 3) * 0.15;
-    if (cassa.aperta) { cassa.cop.rotation.x = Math.max(-1.9, cassa.cop.rotation.x - dt * 4); return; }
-    if (!io.morto && Math.hypot(io.pos.x - cassa.x, io.pos.z - cassa.z) < 2.4 && Math.abs(io.pos.y - cassa.y) < 2) apriCassa();
+    if (cassa.aperta) cassa.cop.rotation.x = Math.max(-1.9, cassa.cop.rotation.x - dt * 4);
+    // bottino a terra: galleggia e si raccoglie passandoci sopra
+    for (let i = drop.length - 1; i >= 0; i--) {
+      const d = drop[i]; d.t += dt;
+      const k = Math.min(1, d.t / 0.5); d.g.position.set(d.x0 + (d.x - d.x0) * k, d.y + Math.sin(k * PI) * 1.4 + (k >= 1 ? 0.35 + Math.sin(ora * 3 + i) * 0.08 : 0.35), d.z0 + (d.z - d.z0) * k); d.g.rotation.y += dt * 1.5;
+      if (k >= 1 && !io.morto && Math.hypot(io.pos.x - d.x, io.pos.z - d.z) < 1.4 && Math.abs(io.pos.y - d.y) < 2) { raccolto(d.testo, d.col); suono('ok'); scena.remove(d.g); drop.splice(i, 1); }
+    }
+    if (portale) {
+      portale.anello.rotation.z += dt * 0.8; portale.disco.material.opacity = 0.45 + Math.sin(ora * 4) * 0.15; portale.k = Math.min(1, portale.k + dt * 1.5); portale.g.scale.setScalar(0.2 + portale.k * 0.8);
+      if (!SEGUI && portale.k >= 1 && umani().some(u => !u.morto && Math.hypot(u.pos.x - portale.x, u.pos.z - portale.z) < 1.5 && Math.abs(u.pos.y - portale.y) < 2.5)) attraversa();
+    }
   }
-  function apriCassa() {
-    cassa.aperta = true; suono('ok'); scoppio(new T.Vector3(cassa.x, cassa.y + 1.2, cassa.z), 0xffe9a8, 24, 6);
+  function attraversa() {
+    if (!portale) return; portale = null; suono('vittoria');
+    drop.forEach(d => { raccolto(d.testo, d.col); scena.remove(d.g); }); drop.length = 0;   // quello rimasto a terra lo raccogli passando
+    if (encI + 1 >= NUM_SALE) return fineCripta();
+    prossimaSala();
+  }
+  function lasciaACasso(testo, col, x0, z0, a, dist, y) {
+    const g = new T.Group(); scena.add(g);
+    const m = new T.Mesh(new T.OctahedronGeometry(0.28, 0), mbc(new T.Color(col).getHex())); g.add(m);
+    if (texPunto) g.add(sprite(texPunto, new T.Color(col).getHex(), 2.2, 2.2, 0.55));
+    if (B.etichetta) { const et = B.etichetta(testo, { sfondo: '#14110d', colore: col, altezza: 0.16 }); et.position.y = 0.75; g.add(et); }
+    const x = x0 + Math.sin(a) * dist, z = z0 + Math.cos(a) * dist;
+    drop.push({ g, x, z, x0, z0, y, t: 0, testo, col });
+  }
+  function apriPortale() {
+    if (portale || !cassa) return;
+    const p = enc.uscita ? { x: enc.uscita.x, z: enc.uscita.z } : { x: cassa.x, z: cassa.z - 5 };
+    p.x = clamp(p.x, lim.x0 + 2, lim.x1 - 2); p.z = clamp(p.z, lim.z0 + 2, lim.z1 - 2);
+    // se c'e' una statua o un pilastro, il portale si sposta verso la cassa finche' non e' libero
+    const occupato = () => (enc.evita && enc.evita(p)) || ostacoli.some(o => !o.rialzo && o.h > 0.5 && Math.hypot(p.x - o.x, p.z - o.z) < o.r + 1.8);
+    for (let k = 0; k < 40 && occupato(); k++) { const dx = cassa.x - p.x, dz = cassa.z - p.z, d = Math.hypot(dx, dz) || 1; if (d < 3) break; p.x += dx / d * 0.5; p.z += dz / d * 0.5; }
+    const y = enc.uscita ? suolo(p.x, p.z) : cassa.y, g = new T.Group(); g.position.set(p.x, y + 1.7, p.z); scena.add(g);
+    const anello = new T.Mesh(new T.TorusGeometry(1.5, 0.12, 10, 40), mbc(0xffd27a)); g.add(anello);
+    const disco = new T.Mesh(new T.CircleGeometry(1.42, 40), mb(0xfff1c4, { transparent: true, opacity: 0.5, side: T.DoubleSide, depthWrite: false })); g.add(disco);
+    if (texPunto) g.add(sprite(texPunto, 0xffd27a, 6, 6, 0.5));
+    const pl = new T.PointLight(0xffd27a, 2, 14); g.add(pl);
+    portale = { g, anello, disco, x: p.x, z: p.z, y, k: 0 };
+  }
+  function apriCassa(silenzioso) {
+    if (!cassa || cassa.aperta) return;
+    cassa.aperta = true; if (ui.apri) ui.apri.hidden = true;
     const prova = PROVA || !!cassa.prova;
     const R = CD.apriCassa(DATI, { boss: !!SALE[encI].boss, sala: encI, prova, premio: m => B.Eco && B.Eco.premioGioco ? B.Eco.premioGioco('cripta', m * 1.5) : 0, dona: q => { if (B.Eco) B.Eco.add(q, 'minigiochi'); } });
-    salvaDati(); applicaStat(true); pannelloCassa(R);
+    salvaDati(); applicaStat(true); ultimaCassa = R;
+    if (silenzioso) return;
+    suono('ok'); scoppio(new T.Vector3(cassa.x, cassa.y + 1.2, cassa.z), 0xffe9a8, 24, 6);
+    // il bottino cade a terra davanti alla cassa, verso chi l'ha aperta
+    const verso = Math.atan2(io.pos.x - cassa.x, io.pos.z - cassa.z), cose = [];
+    R.oggetti.forEach(o => { const r = rar(o.r); cose.push([CD.nomeOggetto(o) + (o.doppione ? ' → Starlight' : ''), r.col]); });
+    R.granate.forEach(g => cose.push(['Granata: ' + CD.GRANATE[g].nome, CD.GRANATE[g].col]));
+    CD.TIPI_MUN.forEach(t => { if (R.mun[t]) cose.push(['+' + R.mun[t] + ' ' + CD.MUN[t].nome.toLowerCase(), CD.MUN[t].col]); });
+    if (R.stelle || R.doppioni) cose.push(['+' + ((R.stelle || 0) + (prova ? 0 : R.doppioni || 0)) + ' Starlight', '#ffe9a8']);
+    cose.forEach((c, k) => lasciaACasso(c[0], c[1], cassa.x, cassa.z, verso + (k - (cose.length - 1) / 2) * 0.55, 2.2 + (k % 2) * 0.6, cassa.y));
+    const lv = cassa.liv;
+    if (lv && lv.dopo > lv.prima) raccolto('Livello ' + lv.prima + ' → ' + lv.dopo, '#e2b24f');
+    if (R.medaglia) raccolto('🏅 Medaglietta: ' + NOMI_INC[encI], '#e2b24f');
+    apriPortale();
   }
+  // dopo il Re: si torna al borgo (unico pannello, il gioco e' finito)
+  function fineCripta() {
+    stato = 'fatto'; sparo = false;
+    pannello('<div class="kick bene">La luce torna nel borgo' + (PROVA ? ' · prova' : '') + '</div><h2>Il Re senza Luce è caduto</h2><p class="sotto">Gli Starlight rubati tornano su dal Cratere: i lampioni si riaccendono e la cometa torna calda. I Portatori di Lanterna ce l\'hanno fatta.</p><div class="pul"><button id="rd-menu">Stanza d\'attesa</button></div>');
+    ui.pan.querySelector('#rd-menu').onclick = () => menu();
+  }
+  // il bottino dell'ultima cassa (Pausa → Bottino)
   function pannelloCassa(R) {
     const ultimo = encI === NUM_SALE - 1, lv = cassa && cassa.liv;
     const ogg = R.oggetti.map(o => { const n = CD.nomeOggetto(o), r = rar(o.r); return '<li><b style="color:' + r.col + '">' + n + '</b> <small>' + r.nome + (o.k ? ' · ' + ARMI[o.k].tipo : ' · ' + CD.EQUIP[o.s].nome.toLowerCase()) + (o.doppione ? ' · già ce l\'hai: diventa Starlight' : '') + '</small></li>'; }).join('');
@@ -11997,20 +12065,9 @@ float rumoreC(vec3 x) { vec3 i = floor(x); vec3 f = fract(x); f = f * f * (3.0 -
     if (R.medaglia) extra.push('<li>🏅 Medaglietta: <b>' + NOMI_INC[encI] + '</b></li>');
     if (lv && lv.dopo > lv.prima) extra.push('<li>Livello <b>' + lv.prima + ' → ' + lv.dopo + '</b>: più vita, resistenza e danno</li>');
     else if (lv && DATI.livello >= CD.livMaxSala(encI)) extra.push('<li><small>Livello ' + DATI.livello + ': in questa sala non si sale oltre</small></li>');
-    const capo = !SEGUI;
-    const pul = capo
-      ? (ultimo ? '<button id="rd-menu">Stanza d\'attesa</button>' : '<button id="rd-avanti">Prossima sala</button><button class="sec" id="rd-menu">Stanza d\'attesa</button>')
-      : '<span class="sotto">Aspetta che ' + esc(SEGUI.r.nick) + ' vada avanti.</span>';
-    pannello('<div class="kick bene">' + (ultimo ? 'La luce torna nel borgo' : 'Cassa della sala ' + (encI + 1)) + (PROVA ? ' · prova' : '') + '</div><h2>' + (ultimo ? 'Il Re senza Luce è caduto' : NOMI_INC[encI]) + '</h2>' +
-      (ultimo ? '<p class="sotto">Gli Starlight rubati tornano su dal Cratere: i lampioni si riaccendono e la cometa torna calda. I Portatori di Lanterna ce l\'hanno fatta.</p>' : '') +
-      '<ul class="bott">' + (ogg || '<li>Nessun oggetto</li>') + extra.join('') + '</ul>' +
-      '<div class="pul">' + pul + '<button class="sec" id="rd-zn2">Zaino</button><button class="sec" id="rd-giro">Guardati intorno</button></div>');
-    const on = (id, f) => { const b = ui.pan.querySelector(id); if (b) b.onclick = f; };
-    on('#rd-avanti', () => prossimaSala());
-    on('#rd-menu', () => menu());
-    on('#rd-zn2', () => { pannello(''); zaino(true); });
-    on('#rd-giro', () => { pannello(''); toast(capo && !ultimo ? 'Quando sei pronto: Pausa → Prossima sala' : 'Quando vuoi: Pausa → Stanza d\'attesa', '', true); });
-    R.visto = 1; ultimaCassa = R;
+    pannello('<div class="kick bene">Bottino della sala ' + (encI + 1) + (PROVA ? ' · prova' : '') + '</div><h2>' + NOMI_INC[encI] + '</h2>' +
+      '<ul class="bott">' + (ogg || '<li>Nessun oggetto</li>') + extra.join('') + '</ul><div class="pul"><button id="rd-ok">Riprendi</button></div>');
+    ui.pan.querySelector('#rd-ok').onclick = () => { pannello(''); stato = 'gioco'; };
   }
   let ultimaCassa = null;
   function prossimaSala() { if (encI + 1 >= NUM_SALE) return menu(); avviaSala(encI + 1); }
@@ -12245,6 +12302,14 @@ body.pc #rd-hud .tasto,body.pc #rd-hud .base{display:none}
 #rd-obi,#rd-toasts,#rd-radio,#rd-sq,#rd-chips{display:none!important}
 #rd-tit{opacity:0;transition:opacity .9s}#rd-tit.vedi{opacity:1}
 #rd-lato{position:absolute;inset:0;pointer-events:none}
+/* barra in basso (munizioni, armi, zaino) sopra le zone invisibili per guardare: cosi' si tocca */
+#rd-vita{z-index:6}.cf .cf-mun{display:none!important}
+#rd-mun{text-align:center;font:800 20px/1 system-ui,sans-serif;font-variant-numeric:tabular-nums;text-shadow:0 1px 3px #000;margin-bottom:4px}
+#rd-mun small{font-size:13px;opacity:.75;font-weight:700;margin-left:3px}#rd-mun.poco{color:#ff9a8a}
+#rd-mun em{font-style:normal;font-size:11px;font-weight:700;letter-spacing:.06em;opacity:.8;margin-left:8px}
+#rd-armi .zn{opacity:1;font-size:16px;padding:2px 12px}
+#rd-apri{position:absolute;left:50%;bottom:32%;transform:translateX(-50%);z-index:9;pointer-events:auto;font:800 18px system-ui,sans-serif;letter-spacing:.12em;text-transform:uppercase;padding:12px 34px;border-radius:999px;border:2px solid #fff1c4;background:linear-gradient(#e2b24f,#b8862e);color:#1b1407;box-shadow:0 0 24px rgba(255,210,122,.7)}
+#rd-racc{right:auto!important;left:50%!important;transform:translateX(-50%);bottom:calc(96px + env(safe-area-inset-bottom,0px))!important;align-items:center!important;z-index:5}
 #rd-dir{position:absolute;left:50%;top:50%;width:0;height:0;pointer-events:none}
 #rd-dir i{position:absolute;left:-60px;top:-60px;width:120px;height:120px;border-radius:50%;border-top:6px solid rgba(235,70,55,.9);filter:drop-shadow(0 0 6px rgba(235,70,55,.8));animation:rdDir .9s ease-out forwards}
 @keyframes rdDir{0%{opacity:1}100%{opacity:0}}
@@ -12272,21 +12337,23 @@ body.pc #rd-hud .tasto,body.pc #rd-hud .base{display:none}
     hud = document.createElement('div'); hud.id = 'rd-hud';
     hud.innerHTML = '<div id="rd-vig"></div><div id="rd-num"></div>' + (CF ? '' : '<div class="zona" id="rd-zl"></div><div class="zona" id="rd-zr"></div><div class="base" id="rd-lb"><i></i></div>') +
       '<div id="rd-mir"></div><div id="rd-tit"></div><div id="rd-obi"></div><div id="rd-boss" hidden></div><div id="rd-sq"></div><div id="rd-radio" aria-live="polite"></div><div id="rd-toasts"></div><div id="rd-giu" hidden></div>' +
-      '<div id="rd-lato"><i></i><i></i></div><div id="rd-dir"></div><div id="rd-vita"><div id="rd-chips"></div><div id="rd-armi"></div><b class="bar"><i id="rd-hp"></i></b></div><div id="rd-racc" aria-live="polite"></div><div id="rd-zaino" hidden></div>' +
+      '<div id="rd-lato"><i></i><i></i></div><div id="rd-dir"></div><div id="rd-vita"><div id="rd-chips"></div><div id="rd-mun"></div><div id="rd-armi"></div><b class="bar"><i id="rd-hp"></i></b></div><button id="rd-apri" hidden>Apri</button><div id="rd-racc" aria-live="polite"></div><div id="rd-zaino" hidden></div>' +
       (CF ? '' : '<div class="tasto" id="rd-salto" aria-label="Salta">▲</div><div class="tasto" id="rd-cambia" aria-label="Cambia arma">⇄</div><div class="tasto" id="rd-fuoco" aria-label="Spara">FUOCO</div>') +
       '<button id="rd-esci">Pausa</button><div id="rd-pan" hidden></div>';
     (document.getElementById('hud') || document.getElementById('app') || document.body).appendChild(hud);
-    ['dir', 'lato', 'zl', 'zr', 'lb', 'mir', 'tit', 'obi', 'boss', 'sq', 'radio', 'toasts', 'giu', 'chips', 'hp', 'salto', 'fuoco', 'esci', 'pan', 'vig', 'armi', 'cambia', 'num', 'racc', 'zaino'].forEach(k => { ui[k] = hud.querySelector('#rd-' + k); });
+    ['mun', 'apri', 'dir', 'lato', 'zl', 'zr', 'lb', 'mir', 'tit', 'obi', 'boss', 'sq', 'radio', 'toasts', 'giu', 'chips', 'hp', 'salto', 'fuoco', 'esci', 'pan', 'vig', 'armi', 'cambia', 'num', 'racc', 'zaino'].forEach(k => { ui[k] = hud.querySelector('#rd-' + k); });
+    ui.apri.addEventListener('pointerdown', e => { e.preventDefault(); e.stopPropagation(); if (vicinoCassa()) apriCassa(); });
+    window.addEventListener('keydown', e => { if (R.attivo && stato === 'gioco' && !e.repeat && (e.key === 'e' || e.key === 'E') && vicinoCassa()) apriCassa(); });
     ui.obi.addEventListener('pointerdown', e => { if (innerHeight > 500) return; ui.obi.classList.toggle('tutto'); e.stopPropagation(); });   // telefono: tocca per vedere tutti gli obiettivi
     window.addEventListener('keydown', e => { if (R.attivo && (stato === 'gioco') && !e.repeat && (e.key === 'i' || e.key === 'I' || e.key === 'Tab')) { zaino(); e.preventDefault(); } });
     const pausa = () => {
-      const avanti = cassa && cassa.aperta && !SEGUI && encI + 1 < NUM_SALE;
+      const avanti = false;   // si va avanti solo attraversando il portale
       stato = 'pausa'; sparo = false; zaino(false);
       pannello('<div class="kick">Pausa</div><h2>' + enc.nome + '</h2><div class="pul">' + (avanti ? '<button id="rd-av2">Prossima sala</button>' : '') + '<button id="rd-ri2"' + (avanti ? ' class="sec"' : '') + '>Riprendi</button>' + (enc.guida ? '<button class="sec" id="rd-cf">Come funziona</button>' : '') + (ultimaCassa && cassa && cassa.aperta ? '<button class="sec" id="rd-bt">Bottino</button>' : '') + (C ? '<button class="sec" id="rd-cmd">Comandi</button>' : '') + '<button class="sec" id="rd-menu">Stanza d\'attesa</button>' + (B.solo ? '' : '<button class="sec" id="rd-x">Esci dalla Sala</button>') + '</div>');
       ui.pan.querySelector('#rd-ri2').onclick = () => { pannello(''); stato = 'gioco'; }; ui.pan.querySelector('#rd-menu').onclick = () => menu();
       const x = ui.pan.querySelector('#rd-x'); if (x) x.onclick = () => R.esci(); const cm = ui.pan.querySelector('#rd-cmd'); if (cm) cm.onclick = () => C.impostazioni(ui.pan, pausa);
       const av = ui.pan.querySelector('#rd-av2'); if (av) av.onclick = () => prossimaSala();
-      const bt = ui.pan.querySelector('#rd-bt'); if (bt) bt.onclick = () => { stato = 'gioco'; pannelloCassa(ultimaCassa); };
+      const bt = ui.pan.querySelector('#rd-bt'); if (bt) bt.onclick = () => pannelloCassa(ultimaCassa);
       const cf = ui.pan.querySelector('#rd-cf'); if (cf) cf.onclick = () => { pannello('<div class="kick">Come funziona</div><h2>' + enc.nome + '</h2><ul>' + (enc.guida || []).map(g => '<li>' + g + '</li>').join('') + '</ul><div class="pul"><button id="rd-cfx">Indietro</button></div>'); ui.pan.querySelector('#rd-cfx').onclick = pausa; };
     };
     ui.esci.addEventListener('click', () => { if (stato === 'gioco') pausa(); else if (B.solo) menu(); else R.esci(); });
@@ -12679,6 +12746,7 @@ body.pc #rd-hud .tasto,body.pc #rd-hud .base{display:none}
   R._s = () => ({ stato, enc, io, bots, nemici, bersagli, squadra, proiettili, encI, arma: itemOra().k, scelta: DATI.scelta, DATI, STAT, FS, cassa, raccolte });
   R._cd = () => ({ DATI, salva: salvaDati, applica: applicaStat });
   R._suolo = suolo; R._percorso = k => { if (!pronto) R.avvia(); avviaPercorso(k); };
+  R._portale = () => portale ? { x: portale.x, z: portale.z, y: portale.y, k: portale.k } : null;
   R._completa = () => completa(); R._apri = () => { if (cassa && !cassa.aperta) apriCassa(); };   // per le prove
   R._vai = (i, subito) => { if (!pronto) R.avvia(); intro(i); if (subito) { pannello(''); stato = 'gioco'; } };
 })();
