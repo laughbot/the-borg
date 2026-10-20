@@ -242,7 +242,7 @@
     [-1, 1].forEach(s => { const o = mesh(new T.SphereGeometry(0.075, 10, 8), pelle, { x: s * 0.42, y: -0.04, z: 0.0 }); o.scale.set(0.6, 1, 0.8); testa.add(o); });
 
     /* ---------- capelli ---------- */
-    const capelli = new T.Group(); testa.add(capelli);
+    const capelli = new T.Group(); capelli.name = 'capelli'; testa.add(capelli);
     const R = seme(p.stile + 3);
     const rn = (a, b) => a + R() * (b - a);
     function ciuffo(ang, alt, lungh, spess, incl, inclLat, mat) {
@@ -440,7 +440,7 @@
     /* area invisibile per toccare l'avatar */
     const proxy = new T.Mesh(new T.CylinderGeometry(0.5, 0.5, 2.3, 8), new T.MeshBasicMaterial()); proxy.position.y = 1.15; proxy.visible = false; root.add(proxy);
 
-    const av = { root, corpo, testa, proxy, fase: 0, e: 0, sed: 0, sedT: 0, sdr: 0, sdrT: 0, emote: null, bic: 0, bicT: 0, fb: 0, p, look: Object.assign({}, look) };
+    const av = { parti: { busto, bL, bR, gL, gR }, root, corpo, testa, proxy, fase: 0, e: 0, sed: 0, sedT: 0, sdr: 0, sdrT: 0, emote: null, bic: 0, bicT: 0, fb: 0, p, look: Object.assign({}, look) };
     av.aggiorna = function (dt, vel, tempo) {
       const v = Math.min(1, vel / B.CFG.velocita);
       av.e += (v - av.e) * Math.min(1, dt * 10);
