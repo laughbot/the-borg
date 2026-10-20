@@ -37,9 +37,10 @@
   };
   // posizione di partenza dei tasti (frazioni dello schermo, misurate dal bordo destro/basso; 'sx' = dal bordo sinistro)
   const POS0 = {
-    fuoco: { x: 0.095, y: 0.2, d: 86 }, mira: { x: 0.215, y: 0.12, d: 56 }, salto: { x: 0.06, y: 0.47, d: 54 },
-    giu: { x: 0.165, y: 0.36, d: 54 }, ricarica: { x: 0.22, y: 0.6, d: 46 }, granata: { x: 0.285, y: 0.4, d: 50 },
-    cambia: { x: 0.29, y: 0.1, d: 46 }, abilita: { x: 0.15, y: 0.8, d: 50 }, corpo: { x: 0.36, y: 0.24, d: 54 },
+    // raccolti intorno al fuoco, in basso a destra: il centro dello schermo resta libero
+    fuoco: { x: 0.095, y: 0.2, d: 86 }, mira: { x: 0.207, y: 0.115, d: 56 }, salto: { x: 0.06, y: 0.47, d: 54 },
+    giu: { x: 0.15, y: 0.53, d: 50 }, ricarica: { x: 0.29, y: 0.2, d: 46 }, granata: { x: 0.28, y: 0.42, d: 50 },
+    cambia: { x: 0.335, y: 0.07, d: 46 }, abilita: { x: 0.15, y: 0.8, d: 50 }, corpo: { x: 0.195, y: 0.35, d: 54 },
     fuocoSx: { x: 0.07, y: 0.52, d: 58, sx: true }
   };
   const NOMI = { fuoco: 'Fuoco', mira: 'Mirino', salto: 'Salta', giu: 'Accovacciati (tieni: a terra)', ricarica: 'Ricarica', granata: 'Granata', cambia: 'Cambia arma', abilita: 'Abilità', corpo: 'Corpo a corpo', fuocoSx: 'Fuoco sinistro' };
@@ -122,7 +123,9 @@ body.pc .cf .cf-t,body.pc .cf .cf-base{display:none}
     function piazza() {
       tasti.forEach(k => {
         const p = Object.assign({}, POS0[k], imp.pos[k] || {}), t = T[k];
-        t.style.width = t.style.height = p.d + 'px';
+        // su schermi bassi (telefono in orizzontale) i tasti sono un po' piu' piccoli, se non li hai ridimensionati tu
+        const sc = imp.pos[k] && imp.pos[k].d ? 1 : Math.max(0.72, Math.min(1, Math.min(innerWidth, innerHeight) / 460));
+        t.style.width = t.style.height = Math.round(p.d * sc) + 'px';
         t.classList.toggle('sx', !!p.sx);
         if (p.sx) { t.style.left = 'calc(' + (p.x * 100) + '% + env(safe-area-inset-left,0px))'; t.style.right = ''; }
         else { t.style.right = 'calc(' + (p.x * 100) + '% + env(safe-area-inset-right,0px))'; t.style.left = ''; }
@@ -289,9 +292,10 @@ body.pc .cf .cf-t,body.pc .cf .cf-base{display:none}
       barra.innerHTML = '<span>Trascina i tasti</span><label>Grandezza <input type="range" min="36" max="120" step="2" disabled></label><button class="sec" data-a="r">Ripristina</button><button data-a="ok">Fatto</button>';
       el.appendChild(barra);
       const rg = barra.querySelector('input'); let sel = null;
-      const P = k => (imp.pos[k] = Object.assign({}, POS0[k], imp.pos[k] || {}));
+      // la grandezza si salva solo se la cambi tu col cursore: cosi' spostare un tasto non lo ingrandisce
+      const P = k => (imp.pos[k] = Object.assign({ x: POS0[k].x, y: POS0[k].y, sx: POS0[k].sx }, imp.pos[k] || {}));
       const giu = e => {
-        const t = e.target.closest('.cf-t'); if (!t) return; e.preventDefault(); e.stopPropagation(); sel = t.dataset.k; rg.disabled = false; rg.value = P(sel).d;
+        const t = e.target.closest('.cf-t'); if (!t) return; e.preventDefault(); e.stopPropagation(); sel = t.dataset.k; rg.disabled = false; rg.value = parseInt(T[sel].style.width) || POS0[sel].d;
         const mossa = ev => {   // l'app parte da (0,0): loc() da' gia' le coordinate dentro l'app, anche col telefono ruotato
           const [lx, ly] = loc(ev), W = el.clientWidth, H = el.clientHeight, p = P(sel);
           p.sx = lx < W * 0.5;
