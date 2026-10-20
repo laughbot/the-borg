@@ -33,20 +33,34 @@
   A.effettiMuti = () => mutaEffetti;
   ['pointerdown', 'touchend', 'keydown'].forEach(e => window.addEventListener(e, init, { passive: true }));
 
-  /* ---------- musica del borgo: valzerino allegro in Fa, marimba + basso + chitarrina ---------- */
+  /* ---------- musica del borgo: "Sole sul Borgo", tema tranquillo in Re (20/10/2026) ----------
+     Melodia originale, calma, nello spirito delle musiche delle cittadine dei giochi di ruolo giapponesi:
+     flauto morbido con un filo di vibrato, arpa leggera, accordi soffici e basso dolce. 84 battiti al minuto,
+     16 battute (circa 45 secondi); al secondo giro la melodia passa a un carillon, cosi' non stanca.
+     Niente shaker e niente suoni acuti e secchi (la vecchia marimba era fastidiosa). */
   const NOTE = n => 440 * Math.pow(2, (n - 69) / 12);
-  const OTTAVO = 60 / 104 / 2;                       // 104 battiti al minuto, a ottavi
-  // 8 battute; ogni battuta: basso, accordo, melodia (8 ottavi, 0 = pausa)
+  const OTTAVO = 60 / 84 / 2;
+  // ogni battuta: basso, accordo, melodia in 8 ottavi (0 = pausa, -1 = la nota prima continua)
+  const RE = [57, 62, 66], SIm = [54, 59, 62], SOL = [55, 59, 62], LA = [57, 61, 64], FAdm = [54, 57, 61], MIm = [55, 59, 64];
   const BRANO = [
-    { b: 41, a: [57, 60, 65], m: [72, 0, 69, 72, 74, 0, 72, 0] },
-    { b: 38, a: [57, 62, 65], m: [69, 0, 65, 67, 69, 0, 0, 0] },
-    { b: 46, a: [58, 62, 65], m: [70, 0, 74, 72, 70, 0, 69, 0] },
-    { b: 48, a: [55, 60, 64], m: [67, 0, 69, 70, 72, 0, 0, 0] },
-    { b: 41, a: [57, 60, 65], m: [77, 0, 76, 74, 72, 0, 69, 0] },
-    { b: 45, a: [57, 60, 64], m: [72, 0, 69, 0, 76, 0, 72, 0] },
-    { b: 46, a: [58, 62, 65], m: [74, 72, 70, 0, 69, 0, 67, 0] },
-    { b: 48, a: [55, 60, 64], m: [65, 0, 67, 0, 64, 0, 0, 0] }
+    { b: 50, a: RE, m: [66, -1, 69, -1, 74, -1, -1, -1] },
+    { b: 47, a: SIm, m: [73, -1, 71, -1, 69, -1, 66, -1] },
+    { b: 43, a: SOL, m: [67, -1, 71, -1, 74, -1, 76, -1] },
+    { b: 45, a: LA, m: [73, -1, -1, -1, 69, -1, -1, -1] },
+    { b: 50, a: RE, m: [66, -1, 69, -1, 74, -1, 76, -1] },
+    { b: 42, a: FAdm, m: [78, -1, -1, 76, 73, -1, 69, -1] },
+    { b: 43, a: SOL, m: [71, -1, 69, -1, 67, -1, 71, -1] },
+    { b: 45, a: LA, m: [69, -1, -1, -1, -1, -1, 0, 0] },
+    { b: 43, a: SOL, m: [74, -1, 71, -1, 67, -1, 71, -1] },
+    { b: 45, a: LA, m: [73, -1, 76, -1, 69, -1, -1, -1] },
+    { b: 42, a: FAdm, m: [76, -1, 73, -1, 78, -1, -1, -1] },
+    { b: 47, a: SIm, m: [74, -1, 73, -1, 71, -1, -1, -1] },
+    { b: 40, a: MIm, m: [67, -1, 71, -1, 76, -1, 74, -1] },
+    { b: 45, a: LA, m: [73, -1, 71, -1, 69, -1, 67, -1] },
+    { b: 50, a: RE, m: [66, -1, -1, 69, 74, -1, -1, -1] },
+    { b: 50, a: RE, m: [0, 0, 0, 0, 0, 0, 0, 0] }
   ];
+  const ARPA = [0, 1, 2, 1, 0, 1, 2, 1];             // ordine delle note dell'accordo nell'arpa
   // jukebox di casa: due dischi nello stesso formato, con il loro tempo (A.jukebox(n), 0 = spento)
   const DISCHI = [null,
     { otto: 60 / 122 / 2, cassa: true, brano: [            // "Borgo Disco" in La minore
@@ -66,6 +80,19 @@
   function inviluppo(g, t, vol, att, dur) { g.gain.setValueAtTime(0.0001, t); g.gain.linearRampToValueAtTime(vol, t + att); g.gain.exponentialRampToValueAtTime(0.0001, t + dur); }
   function osc(tipo, f, t, dur, vol, att) { const o = ctx.createOscillator(), g = ctx.createGain(); o.type = tipo; o.frequency.value = f; inviluppo(g, t, vol, att, dur); o.connect(g); g.connect(musG); o.start(t); o.stop(t + dur + 0.05); }
   function marimba(n, t, vol) { const f = NOTE(n); osc('sine', f, t, 0.9, vol, 0.004); osc('sine', f * 4, t, 0.12, vol * 0.22, 0.002); osc('triangle', f * 2, t, 0.25, vol * 0.12, 0.003); }
+  function flauto(n, t, dur, vol) {                  // flauto morbido: attacco dolce, vibrato che arriva piano
+    const f = NOTE(n), o = ctx.createOscillator(), o2 = ctx.createOscillator(), lfo = ctx.createOscillator(), lg = ctx.createGain(), lp = ctx.createBiquadFilter(), g = ctx.createGain();
+    o.type = 'sine'; o.frequency.value = f; o2.type = 'triangle'; o2.frequency.value = f; const g2 = ctx.createGain(); g2.gain.value = 0.25;
+    lfo.frequency.value = 5; lg.gain.setValueAtTime(0, t); lg.gain.linearRampToValueAtTime(f * 0.006, t + Math.min(0.4, dur)); lfo.connect(lg); lg.connect(o.frequency); lg.connect(o2.frequency);
+    lp.type = 'lowpass'; lp.frequency.value = 2000;
+    g.gain.setValueAtTime(0.0001, t); g.gain.linearRampToValueAtTime(vol, t + 0.07); g.gain.linearRampToValueAtTime(vol * 0.75, t + Math.max(0.1, dur * 0.8)); g.gain.exponentialRampToValueAtTime(0.0001, t + dur + 0.3);
+    o.connect(lp); o2.connect(g2); g2.connect(lp); lp.connect(g); g.connect(musG);
+    [o, o2, lfo].forEach(x => { x.start(t); x.stop(t + dur + 0.35); });
+  }
+  function carillon(n, t, vol) { const f = NOTE(n); osc('sine', f, t, 1.6, vol, 0.004); osc('sine', f * 2, t, 0.5, vol * 0.12, 0.004); }
+  function arpa(n, t, vol) { const f = NOTE(n); osc('sine', f, t, 1.0, vol, 0.006); osc('triangle', f, t, 0.35, vol * 0.3, 0.006); }
+  function accordi(acc, t, dur) { acc.forEach(n => { osc('sine', NOTE(n), t, dur, 0.022, 0.5); osc('sine', NOTE(n) * 1.003, t, dur, 0.012, 0.6); }); }
+  function bassoDolce(n, t) { osc('sine', NOTE(n), t, 1.1, 0.16, 0.02); osc('triangle', NOTE(n), t, 0.4, 0.04, 0.02); }
   function basso(n, t) { osc('triangle', NOTE(n), t, 0.55, 0.2, 0.01); osc('sine', NOTE(n), t, 0.8, 0.12, 0.01); }
   function chitarrina(acc, t, vol) { acc.forEach((n, i) => osc('triangle', NOTE(n), t + i * 0.012, 0.3, vol, 0.005)); }
   function shaker(t, vol) {
@@ -77,19 +104,32 @@
   function pianifica() {
     if (!ctx) return;
     const dj = juke && scenaCorr === 'altro' ? juke : 0, D = DISCHI[dj];
-    const target = mutaMusica ? 0 : dj ? 0.5 : scenaCorr === 'piazza' ? 0.55 : scenaCorr === 'altro' ? 0.25 : 0;
+    const target = mutaMusica ? 0 : dj ? 0.5 : scenaCorr === 'piazza' ? 0.42 : scenaCorr === 'altro' ? 0.22 : 0;
     musG.gain.setTargetAtTime(target, ctx.currentTime, 0.5);
     if (target === 0) { prossimo = 0; return; }
     if (dj !== discoCorr) { discoCorr = dj; passo = 0; prossimo = 0; }
     if (!prossimo || prossimo < ctx.currentTime) prossimo = ctx.currentTime + 0.1;
-    const brano = D ? D.brano : BRANO, otto = D ? D.otto : OTTAVO;
+    if (!D) {                                          // tema del borgo
+      while (prossimo < ctx.currentTime + 0.5) {
+        const t = prossimo, giro = Math.floor(passo / (8 * BRANO.length)), bt = BRANO[Math.floor(passo / 8) % BRANO.length], k = passo % 8;
+        const n = bt.m[k];
+        if (n > 0) {
+          let lung = 1; while (k + lung < 8 && bt.m[k + lung] === -1) lung++;
+          if (giro % 2 === 0) flauto(n, t, lung * OTTAVO, 0.1); else carillon(n + 12, t, 0.055);
+        }
+        if (k === 0) { bassoDolce(bt.b, t); accordi(bt.a, t, OTTAVO * 8.5); }
+        if (k === 4) bassoDolce(bt.b + 7, t);
+        arpa(bt.a[ARPA[k]], t, k % 2 ? 0.022 : 0.032);
+        prossimo += OTTAVO; passo++;
+      }
+      return;
+    }
+    const brano = D.brano, otto = D.otto;
     while (prossimo < ctx.currentTime + 0.5) {
-      const t = prossimo, giro = Math.floor(passo / 64), bt = brano[Math.floor(passo / 8) % 8], k = passo % 8;
-      // la melodia suona un giro si' e uno no; nel giro "di respiro" c'e' un arpeggio leggero
-      if (giro % 2 === 0 || D) { const n = bt.m[k]; if (n) marimba(n, t, 0.13); }
-      else if (k % 2 === 0) marimba(bt.a[(k / 2) % 3] + 12, t, 0.06);
+      const t = prossimo, bt = brano[Math.floor(passo / 8) % 8], k = passo % 8;
+      const n = bt.m[k]; if (n) marimba(n, t, 0.13);
       if (k === 0) basso(bt.b, t); if (k === 4) basso(bt.b + 7, t);
-      if (D && D.cassa && k % 2 === 0) { cassa(t); if (k % 4 === 2) basso(bt.b + 12, t); }
+      if (D.cassa && k % 2 === 0) { cassa(t); if (k % 4 === 2) basso(bt.b + 12, t); }
       if (k === 2 || k === 6) chitarrina(bt.a, t, 0.035);
       shaker(t, k % 2 ? 0.012 : 0.022);
       prossimo += otto * (k % 2 ? 0.9 : 1.1); passo++;          // un filo di swing

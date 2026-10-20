@@ -70,12 +70,17 @@
   };
   const nGranate = () => ALLENA ? CD.GRANATE_MAX : DATI.granate.length;
 
+  /* ---------- voci delle Gemelle (voci.js): titolo della sala e una frase, entrando ---------- */
+  const VOCI = () => B.CriptaVoci;
+  function voceSala(i, perc) { const V = VOCI(); if (V && i < NUM_SALE) V.sala(i, perc || null); }
+  function voceZitta() { const V = VOCI(); if (V) V.zitte(); }
+
   /* ---------- suoni (sintetizzati, nessun file) ---------- */
   let ac = null, mst = null, bufN = null;
   function audio() {
     if (ac) { if (ac.state === 'suspended') ac.resume(); return ac; }
     const A = window.AudioContext || window.webkitAudioContext; if (!A) return null;
-    ac = new A(); mst = ac.createGain(); mst.gain.value = 0.55; mst.connect(ac.destination);
+    ac = new A(); mst = ac.createGain(); mst.gain.value = 0.55; mst.connect(ac.destination); if (VOCI()) VOCI().sblocca();
     bufN = ac.createBuffer(1, ac.sampleRate * 0.5, ac.sampleRate); const d = bufN.getChannelData(0); for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
     return ac;
   }
@@ -2878,7 +2883,7 @@
   }
   function menu() {
     if (SEGUI) { lascia(); return; }
-    ON = null; stato = 'menu'; ALLENA = false; if (!scena || !enc) prepara(0);
+    ON = null; stato = 'menu'; ALLENA = false; voceZitta(); if (!scena || !enc) prepara(0);
     const capo = SQ.capo, cR = capo ? null : capoR(), mem = capo ? membri() : [], tutti = capo ? mem : membriDi(cR);
     const paTxt = cR && typeof cR.d.pa === 'string' ? cR.d.pa.slice(0, 60) : NOMI_INC[clamp(cR ? nnum(cR.d.pa, 0) | 0 : 0, 0, NUM_SALE - 1)];
     // i 6 posti: capo, amici, poi i Custodi bot
@@ -3000,7 +3005,7 @@
   }
 
   function intro(i) {
-    audio(); prepara(i);
+    audio(); prepara(i); if (i !== ALLENAMENTO) voceSala(i);
     // si entra direttamente nella sala: niente spiegazioni a schermo (sono in Pausa → Come funziona); parte alla prima azione
     if (i !== ALLENAMENTO) { pannello(''); stato = 'gioco'; return; }
     stato = 'intro';
@@ -3010,13 +3015,13 @@
     ui.pan.querySelector('#rd-menu').onclick = () => menu();
   }
   function wipe(perche) {
-    if (stato !== 'gioco') return; stato = 'wipe'; sparo = false; if (ON) ON.wm = perche; suono('caduta'); ripristinaIngresso();
+    if (stato !== 'gioco') return; stato = 'wipe'; sparo = false; if (ON) ON.wm = perche; suono('caduta'); ripristinaIngresso(); if (VOCI()) VOCI().wipe();
     pannello('<div class="kick male">Squadra annientata</div><h2>' + enc.nome + '</h2><p class="sotto">' + perche + ' Le munizioni tornano quelle che avevi entrando.</p><div class="pul"><button id="rd-ri">Riprova</button><button class="sec" id="rd-menu">Stanza d\'attesa</button></div>');
     ui.pan.querySelector('#rd-ri').onclick = () => enc.prima ? avviaPercorso(encI) : intro(encI);
     ui.pan.querySelector('#rd-menu').onclick = () => menu();
   }
   // percorso di salti prima dell'incontro (se la sala ce l'ha), altrimenti l'introduzione
-  function avviaPercorso(k) { if (!SALE[k] || !SALE[k].prima) return intro(k); audio(); prepara(k, true); pannello(''); stato = 'gioco'; toast(enc.nome + ': raggiungi ' + NOMI_INC[k]); }
+  function avviaPercorso(k) { if (!SALE[k] || !SALE[k].prima) return intro(k); audio(); prepara(k, true); voceSala(k, SALE[k].prima); pannello(''); stato = 'gioco'; toast(enc.nome + ': raggiungi ' + NOMI_INC[k]); }
   function avviaSala(k) { ALLENA = k === ALLENAMENTO; inizioSala(); avviaPercorso(k); }
 
   /* ---------- fine sala: la cassa ---------- */
@@ -3350,10 +3355,11 @@ body.pc #rd-hud .tasto,body.pc #rd-hud .base{display:none}
     const pausa = () => {
       const avanti = cassa && cassa.aperta && !SEGUI && encI + 1 < NUM_SALE;
       stato = 'pausa'; sparo = false; zaino(false);
-      pannello('<div class="kick">Pausa</div><h2>' + enc.nome + '</h2><div class="pul">' + (avanti ? '<button id="rd-av2">Prossima sala</button>' : '') + '<button id="rd-ri2"' + (avanti ? ' class="sec"' : '') + '>Riprendi</button>' + (enc.guida ? '<button class="sec" id="rd-cf">Come funziona</button>' : '') + (ultimaCassa && cassa && cassa.aperta ? '<button class="sec" id="rd-bt">Bottino</button>' : '') + (C ? '<button class="sec" id="rd-cmd">Comandi</button>' : '') + '<button class="sec" id="rd-menu">Stanza d\'attesa</button>' + (B.solo ? '' : '<button class="sec" id="rd-x">Esci dalla Sala</button>') + '</div>');
+      pannello('<div class="kick">Pausa</div><h2>' + enc.nome + '</h2><div class="pul">' + (avanti ? '<button id="rd-av2">Prossima sala</button>' : '') + '<button id="rd-ri2"' + (avanti ? ' class="sec"' : '') + '>Riprendi</button>' + (enc.guida ? '<button class="sec" id="rd-cf">Come funziona</button>' : '') + (ultimaCassa && cassa && cassa.aperta ? '<button class="sec" id="rd-bt">Bottino</button>' : '') + (C ? '<button class="sec" id="rd-cmd">Comandi</button>' : '') + (VOCI() ? '<button class="sec" id="rd-voci">Voci delle Gemelle: ' + (VOCI().attive() ? 'sì' : 'no') + '</button>' : '') + '<button class="sec" id="rd-menu">Stanza d\'attesa</button>' + (B.solo ? '' : '<button class="sec" id="rd-x">Esci dalla Sala</button>') + '</div>');
       ui.pan.querySelector('#rd-ri2').onclick = () => { pannello(''); stato = 'gioco'; }; ui.pan.querySelector('#rd-menu').onclick = () => menu();
       const x = ui.pan.querySelector('#rd-x'); if (x) x.onclick = () => R.esci(); const cm = ui.pan.querySelector('#rd-cmd'); if (cm) cm.onclick = () => C.impostazioni(ui.pan, pausa);
       const av = ui.pan.querySelector('#rd-av2'); if (av) av.onclick = () => prossimaSala();
+      const vc = ui.pan.querySelector('#rd-voci'); if (vc) vc.onclick = () => { VOCI().cambia(); pausa(); };
       const bt = ui.pan.querySelector('#rd-bt'); if (bt) bt.onclick = () => { stato = 'gioco'; pannelloCassa(ultimaCassa); };
       const cf = ui.pan.querySelector('#rd-cf'); if (cf) cf.onclick = () => { pannello('<div class="kick">Come funziona</div><h2>' + enc.nome + '</h2><ul>' + (enc.guida || []).map(g => '<li>' + g + '</li>').join('') + '</ul><div class="pul"><button id="rd-cfx">Indietro</button></div>'); ui.pan.querySelector('#rd-cfx').onclick = pausa; };
     };
@@ -3536,7 +3542,7 @@ body.pc #rd-hud .tasto,body.pc #rd-hud .base{display:none}
     const lasciaSq = () => { esciDaSquadra(); lascia(); };
     let h;
     if (sto === 'intro') h = '<div class="kick">' + (encI === ALLENAMENTO ? 'Allenamento' : enc.percorso && enc.prima ? 'Percorso' : 'Sala ' + (encI + 1) + ' di ' + NUM_SALE) + ' · ' + enc.luogo + ' · con ' + n + '</div><h2>' + enc.nome + '</h2>' + (enc.guida ? '<ul>' + enc.guida.map(g => '<li>' + g + '</li>').join('') + '</ul>' : '') + '<p class="sotto">Aspetta che ' + n + ' inizi lo scontro.</p>';
-    else if (sto === 'wipe') { if (SEGUI.wipe !== SEGUI.pn) { SEGUI.wipe = SEGUI.pn; ripristinaIngresso(); } h = '<div class="kick male">Squadra annientata</div><h2>' + enc.nome + '</h2><p class="sotto">' + esc(d.wm || '') + ' Le munizioni tornano quelle che avevi entrando. Aspetta che ' + n + ' riprovi.</p>'; }
+    else if (sto === 'wipe') { if (SEGUI.wipe !== SEGUI.pn) { SEGUI.wipe = SEGUI.pn; ripristinaIngresso(); if (VOCI()) VOCI().wipe(); } h = '<div class="kick male">Squadra annientata</div><h2>' + enc.nome + '</h2><p class="sotto">' + esc(d.wm || '') + ' Le munizioni tornano quelle che avevi entrando. Aspetta che ' + n + ' riprovi.</p>'; }
     else if (sto === 'fatto') h = '<div class="kick bene">Sala superata</div><h2>' + enc.nome + '</h2><p class="sotto">Aspetta che ' + n + ' scelga cosa fare.</p>';
     else h = '<div class="kick">Pausa</div><h2>' + enc.nome + '</h2><p class="sotto">' + n + ' ha messo in pausa.</p>';
     pannello(h + esci); ui.pan.querySelector('#rd-lascia').onclick = lasciaSq;
@@ -3594,7 +3600,7 @@ body.pc #rd-hud .tasto,body.pc #rd-hud .base{display:none}
     if (d.pn !== SEGUI.pn) {
       SEGUI.pn = d.pn; const ei = clamp(d.ei | 0, 0, INCONTRI.length - 1);
       if (ei !== SEGUI.ei) { SEGUI.ei = ei; ALLENA = ei === ALLENAMENTO; inizioSala(); }   // nuova sala: lo zaino si ricarica dalla scorta
-      liberaFantasmi(); prepara(ei, !!d.pe); SEGUI.rp = -1; SEGUI.d = null; SEGUI.pan = ''; stato = 'intro';
+      liberaFantasmi(); prepara(ei, !!d.pe); if (!ALLENA && SALE[ei]) voceSala(ei, d.pe ? SALE[ei].prima : null); SEGUI.rp = -1; SEGUI.d = null; SEGUI.pan = ''; stato = 'intro';
     }
     if (SEGUI.d !== d) { SEGUI.d = d; seguiDati(d); }
     if (Array.isArray(d.lt) && nnum(d.lt[0], 0) > (SEGUI.ltN || 0)) { SEGUI.ltN = nnum(d.lt[0], 0); segnaLato(d.lt[1] ? 1 : 0); }   // ondata in arrivo
@@ -3736,7 +3742,7 @@ body.pc #rd-hud .tasto,body.pc #rd-hud .base{display:none}
   };
   R.esci = function () {
     if (SEGUI) { liberaFantasmi(); SEGUI = null; } ON = null; esciDaSquadra(); salvaDati(); zaino(false);   // uscendo dalla Cripta la squadra si scioglie
-    R.attivo = false; document.body.classList.remove('raid-attivo'); stato = 'menu'; sparo = false; mv.x = mv.y = 0; mv.id = sg.id = fu.id = null; pannello('');
+    voceZitta(); R.attivo = false; document.body.classList.remove('raid-attivo'); stato = 'menu'; sparo = false; mv.x = mv.y = 0; mv.id = sg.id = fu.id = null; pannello('');
     try { if (document.pointerLockElement) document.exitPointerLock(); } catch (e) { }
     try { screen.orientation.unlock(); } catch (e) { } if (B.orienta) B.orienta(false);
     if (R.onEsci) R.onEsci();
