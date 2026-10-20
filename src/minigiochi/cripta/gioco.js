@@ -79,8 +79,20 @@
     bufN = ac.createBuffer(1, ac.sampleRate * 0.5, ac.sampleRate); const d = bufN.getChannelData(0); for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
     return ac;
   }
-  function suono(tipo) {
+  function suono(tipo, pan) {
     if (!ac || (B.Audio && B.Audio.effettiMuti && B.Audio.effettiMuti())) return; const t = ac.currentTime;
+    // Striscianti: sibilo quando si avvicinano, graffio quando colpiscono; si sentono dal lato da cui arrivano
+    if (tipo === 'sibilo' || tipo === 'graffio') {
+      let out = mst; if (pan !== undefined && ac.createStereoPanner) { const sp = ac.createStereoPanner(); sp.pan.value = clamp(pan, -1, 1); sp.connect(mst); out = sp; }
+      const colpi = tipo === 'graffio' ? 3 : 1;
+      for (let k = 0; k < colpi; k++) {
+        const n = ac.createBufferSource(), f = ac.createBiquadFilter(), g = ac.createGain(), s0 = t + k * 0.06; n.buffer = bufN;
+        if (tipo === 'sibilo') { f.type = 'highpass'; f.frequency.setValueAtTime(2400, s0); f.frequency.linearRampToValueAtTime(5200, s0 + 0.4); g.gain.setValueAtTime(0.0001, s0); g.gain.linearRampToValueAtTime(0.11, s0 + 0.12); g.gain.exponentialRampToValueAtTime(0.0001, s0 + 0.45); }
+        else { f.type = 'bandpass'; f.frequency.value = 1900 + k * 500; f.Q.value = 2.5; g.gain.setValueAtTime(0.22, s0); g.gain.exponentialRampToValueAtTime(0.0001, s0 + 0.07); }
+        n.connect(f); f.connect(g); g.connect(out); n.start(s0); n.stop(s0 + 0.5);
+      }
+      return;
+    }
     if (tipo === 'sparo' || tipo === 'colpo' || tipo === 'esplo' || tipo === 'botto' || tipo === 'cambio') {
       const n = ac.createBufferSource(), f = ac.createBiquadFilter(), g = ac.createGain(); n.buffer = bufN;
       if (tipo === 'sparo') { f.type = 'bandpass'; f.frequency.value = 900; f.Q.value = 0.7; g.gain.setValueAtTime(0.16, t); g.gain.exponentialRampToValueAtTime(0.0001, t + 0.08); }
@@ -245,9 +257,9 @@
   const matRoccia = (rx, ry, col) => { const t = texRoccia.clone(); t.needsUpdate = true; t.repeat.set(rx, ry); return TMx({ map: t, color: new T.Color(col || '#b8b0c0'), side: T.DoubleSide }); };
 
   // cose che fanno partire la sala quando ti avvicini (piastre, oggetti da portare, fiamme, bancarelle)
-  const interattivi = [];
+  const interattivi = [], rialzi = [];
   function nuovaScena(nebbia) {
-    interattivi.length = 0; granateVolo.length = 0; mirK = 0; statoArmi = {}; pozzeCura.length = 0; raccolte.length = 0;   // nuovo incontro: caricatori pieni (le riserve sono nello zaino)
+    interattivi.length = 0; rialzi.length = 0; granateVolo.length = 0; mirK = 0; statoArmi = {}; pozzeCura.length = 0; raccolte.length = 0;   // nuovo incontro: caricatori pieni (le riserve sono nello zaino)
     scena = new T.Scene(); scena.background = new T.Color(0x0e0b12); scena.fog = new T.Fog(0x0e0b12, 16, (nebbia || 80) - 4);
     scena.add(new T.HemisphereLight(0xb4b0d8, 0x3a2a22, conBorg ? 0.62 : 0.85));
     const d = new T.DirectionalLight(0xffd2a8, 0.32); d.position.set(6, 20, 10); scena.add(d);
@@ -411,9 +423,38 @@
   const BARATRO = -50;
   let pianoSotto = null;   // la piattaforma trovata dall'ultima chiamata a suolo()
   function suolo(x, z, ymax) {
-    pianoSotto = null; if (!piani.length) return 0; let g = BARATRO; if (ymax === undefined) ymax = 1e9;
+    pianoSotto = null; if (ymax === undefined) ymax = 1e9; let g = piani.length ? BARATRO : 0;
     for (const p of piani) if (x >= p.x0 && x <= p.x1 && z >= p.z0 && z <= p.z1 && p.y <= ymax && p.y > g) { g = p.y; pianoSotto = p; }
+    for (const r of rialzi) if (r.y <= ymax && r.y > g && Math.hypot(x - r.x, z - r.z) < r.r) g = r.y;
     return g;
+  }
+  /* ---------- rialzi: podi di pietra alti 1 metro, ci si sale con un salto ----------
+     Gli Striscianti non saltano: da li' sopra non ti graffiano (ma Novizi, Guardacripta ed esplosioni si'). */
+  const RIALZO_H = 1.0;
+  function rialzo(x, z, r) {
+    r = r || 2.0;
+    pz(new T.CylinderGeometry(r, r + 0.25, RIALZO_H, 24), TM(C2.pietra), x, RIALZO_H / 2, z, 0.03);
+    pz(new T.CylinderGeometry(r + 0.05, r + 0.05, 0.08, 24), TM(C2.pietraC), x, RIALZO_H + 0.02, z, 0.02);
+    pz(new T.TorusGeometry(r * 0.62, 0.05, 6, 28), mbc(0xd9a441), x, RIALZO_H + 0.08, z, 0.01).rotation.x = PI / 2;
+    ostacoli.push({ x, z, r, h: RIALZO_H, rialzo: 1 }); rialzi.push({ x, z, r: r - 0.1, y: RIALZO_H });
+  }
+  // dove metterli: due, uno per lato, dentro la sala e lontani da piastre, oggetti, bersagli, pilastri e acqua
+  function mettiRialzi(n) {
+    const e = lim.ell, cx = e ? e.cx : (lim.x0 + lim.x1) / 2, cz = e ? e.cz : (lim.z0 + lim.z1) / 2, rx = e ? e.rx : (lim.x1 - lim.x0) / 2, rz = e ? e.rz : (lim.z1 - lim.z0) / 2;
+    const libero = (x, z) => {
+      if (e && ((x - cx) / (rx - 3)) ** 2 + ((z - cz) / (rz - 3)) ** 2 > 1) return false;
+      if (enc.evita && enc.evita({ x, z })) return false;
+      if (ostacoli.some(c => Math.hypot(x - c.x, z - c.z) < c.r + 3)) return false;
+      if (interattivi.some(o => { const p = o.pos || o; return Math.hypot(x - p.x, z - p.z) < (o.r || 1.4) + 3; })) return false;
+      return !bersagli.some(b => b.c && Math.hypot(x - b.c.x, z - b.c.z) < (b.r || 1) + 3);
+    };
+    const r0 = enc.rinascita || { x: 0, z: 0 };
+    for (const k of [0.68, 0.55, 0.8, 0.45]) for (const deg of [40, 25, 55, 10, 70, -5, -20, 85, -35, -50]) {
+      const a = deg * PI / 180, x = cx + Math.cos(a) * rx * k, z = cz + Math.sin(a) * rz * k;
+      if (Math.hypot(x - r0.x, z - r0.z) < 5) continue;
+      if (n === 1) { if (libero(cx, z)) { rialzo(cx, z); return; } continue; }
+      if (libero(x, z) && libero(2 * cx - x, z)) { rialzo(x, z); rialzo(2 * cx - x, z); return; }
+    }
   }
   // piattaforme mobili (nave-tomba, pistoni): si spostano avanti e indietro e trascinano chi ci sta sopra
   function aggPiani() {
@@ -425,7 +466,7 @@
     }
   }
   function collidi(p, r) {
-    for (const c of ostacoli) { if (p.y > c.h) continue; const dx = p.x - c.x, dz = p.z - c.z, d = Math.hypot(dx, dz), m = c.r + r; if (d < m) { if (d < 1e-4) { p.x += m; continue; } p.x = c.x + dx / d * m; p.z = c.z + dz / d * m; } }
+    for (const c of ostacoli) { if (p.y >= c.h - 0.05) continue; /* chi sta sopra (un rialzo) non viene spinto via */ const dx = p.x - c.x, dz = p.z - c.z, d = Math.hypot(dx, dz), m = c.r + r; if (d < m) { if (d < 1e-4) { p.x += m; continue; } p.x = c.x + dx / d * m; p.z = c.z + dz / d * m; } }
     p.x = clamp(p.x, lim.x0 + r, lim.x1 - r); p.z = clamp(p.z, lim.z0 + r, lim.z1 - r);
     if (lim.ell) { const e = lim.ell, ex = (p.x - e.cx) / (e.rx - r), ez = (p.z - e.cz) / (e.rz - r), q = ex * ex + ez * ez; if (q > 1) { const k = 1 / Math.sqrt(q); p.x = e.cx + (p.x - e.cx) * k; p.z = e.cz + (p.z - e.cz) * k; } }   // sale ovali
   }
@@ -573,14 +614,18 @@
         const dx = u.pos.x - e.pos.x, dz = u.pos.z - e.pos.z, d = Math.hypot(dx, dz) || 1, nx = dx / d, nz = dz / d;
         e.yaw += angDiff(e.yaw, Math.atan2(dx, dz)) * Math.min(1, dt * 8);
         let vx = 0, vz = 0;
-        if (e.tipo === 'schiavo') { if (d > 1.3) { vx = nx; vz = nz; } else if (e.cd <= 0) { e.cd = 0.9; ferisci(u, 11, 'Strisciante'); anima(e, 'artiglio'); } }
+        if (e.tipo === 'schiavo') {
+          if (u.io && !e.sentito && d < 8) { e.sentito = true; if (ora - tSibilo > 0.25) { tSibilo = ora; suono('sibilo', latoDi(e.pos).pan); } }
+          const sopra = u.pos.y - e.pos.y > 0.7;   // su un rialzo: gli Striscianti non saltano, restano sotto
+          if (d > 1.3) { vx = nx; vz = nz; } else if (e.cd <= 0 && !sopra) { e.cd = 0.9; ferisci(u, 11, 'Strisciante', e.pos); anima(e, 'artiglio'); if (u.io) suono('graffio', latoDi(e.pos).pan); }
+        }
         else if (e.tipo === 'maledetto') { if (d > 1.5) { vx = nx; vz = nz; } else { muore(e); return; } }   // ti corre addosso ed esplode
         else if (e.tipo === 'accolito') {
           if (d > 17) { vx = nx; vz = nz; } else if (d < 9) { vx = -nx; vz = -nz; }
           vx += -nz * e.strafe * 0.7; vz += nx * e.strafe * 0.7; if (Math.random() < dt * 0.4) e.strafe *= -1;
           if (e.cd <= 0 && vede(e.pos, u.pos)) { e.cd = rnd(1.6, 2.4); proiettile(e.c.clone(), centro(u).clone(), 17, 9, COL.verde, 0.16, 0.6); anima(e, 'sparo'); }
         } else if (e.tipo === 'cavaliere') {
-          if (d > 2.4) { vx = nx; vz = nz; } if (d < 3 && e.cd <= 0) { e.cd = 1.7; ferisci(u, 26, 'Guardacripta'); scuoti = Math.max(scuoti, u.io ? 0.3 : 0); anima(e, 'fendente'); }
+          if (d > 2.4) { vx = nx; vz = nz; } if (d < 3 && e.cd <= 0) { e.cd = 1.7; ferisci(u, 26, 'Guardacripta', e.pos); scuoti = Math.max(scuoti, u.io ? 0.3 : 0); anima(e, 'fendente'); }
           else if (d > 8 && e.cd <= 0 && vede(e.pos, u.pos)) { e.cd = 3.8; proiettile(e.c.clone(), centro(u).clone(), 12, 22, 0xffa94d, 0.32, 0.3); anima(e, 'lancio'); }
         } else if (e.tipo === 'cantore') {
           const ax = e.ancora ? e.ancora.x - e.pos.x : 0, az = e.ancora ? e.ancora.z - e.pos.z : 0; vx = ax * 0.2 + Math.sin(ora * 0.7 + e.fase) * 0.6; vz = az * 0.2;
@@ -624,14 +669,20 @@
     mesh.position.copy(b.pos); scena.add(mesh);
     b.k = 'b' + i; bots.push(b); squadra.push(b); return b;
   }
-  function ferisci(u, d, causa) {
+  function latoDi(p) { const dx = p.x - io.pos.x, dz = p.z - io.pos.z, d = Math.hypot(dx, dz) || 1, fx = -Math.sin(io.yaw), fz = -Math.cos(io.yaw); return { pan: (dx * -fz + dz * fx) / d, ang: Math.atan2(dx * -fz + dz * fx, dx * fx + dz * fz) }; }
+  // colpo preso: un arco rosso intorno al mirino indica da dove e' arrivato
+  function segnaColpo(src) {
+    if (!ui.dir || !src) return; const a = latoDi(src).ang, el = document.createElement('i'); el.style.transform = 'rotate(' + a.toFixed(2) + 'rad)';
+    ui.dir.appendChild(el); while (ui.dir.children.length > 4) ui.dir.firstChild.remove(); setTimeout(() => el.remove(), 900);
+  }
+  function ferisci(u, d, causa, src) {
     if (SEGUI || u.morto || stato !== 'gioco') return;
     if (u.io && ora < (io.invuln || 0)) return;   // Mantello della Notte Chiara: appena rientrato
     d *= D.dmg * FS.dmg * (u.res || 1); if (u.io && STAT.poteri.cratere && u.hp < u.max * 0.3) d *= 0.5;   // livello, difesa dei pezzi, Corazza del Cratere
     if (u.remoto && u.crt && u.hp < u.max * 0.3) d *= 0.5;
     if (u.io && parata) d *= 0.4;   // con la spada in parata
     u.hp -= d; u.ultimoColpo = ora; if (R._danni) R._danni[(u.io ? 'io' : u.remoto ? 'amico' : 'bot') + ':' + (causa || '?')] = (R._danni[(u.io ? 'io' : u.remoto ? 'amico' : 'bot') + ':' + (causa || '?')] || 0) + Math.round(d);   // per le prove
-    if (u.io) { flashDanno = Math.min(1, flashDanno + d / 40); scuoti = Math.max(scuoti, 0.12); vibrazione(d > 18); }
+    if (u.io) { flashDanno = Math.min(1, flashDanno + d / 40); scuoti = Math.max(scuoti, 0.12); vibrazione(d > 18); segnaColpo(src); }
     if (u.hp <= 0) abbatti(u, causa);
   }
   function abbatti(u, causa) {
@@ -1120,6 +1171,7 @@
   let tVibra = 0, swVibra = null;
   let vibraDopo = 0;   // iPhone: la vibrazione funziona solo durante un tocco, quindi la si rimanda al tocco successivo
   function vibraOra() { try { if (swVibra) swVibra.click(); } catch (e) { } }
+  let tSibilo = 0;
   function vibrazione(forte) {
     if (!vibra || ora - tVibra < 0.25) return; tVibra = ora;
     try { if (navigator.vibrate) { navigator.vibrate(forte ? [60, 40, 60] : 40); return; } } catch (e) { }
@@ -1168,7 +1220,7 @@
       const p = proiettili[i]; p.vita -= dt; p.pos.addScaledVector(p.v, dt); let via = p.vita <= 0 || p.pos.y < suolo(p.pos.x, p.pos.z) + 0.05;
       if (!via) for (const c of ostacoli) if (p.pos.y < c.h && Math.hypot(p.pos.x - c.x, p.pos.z - c.z) < c.r + p.r) { via = true; break; }
       if (!via && (p.pos.x < lim.x0 || p.pos.x > lim.x1 || p.pos.z < lim.z0 || p.pos.z > lim.z1)) via = true;
-      if (!via && !SEGUI) for (const u of squadra) { if (u.morto) continue; const dy = p.pos.y - (u.pos.y + 1.0); if (Math.abs(dy) < 1.1 && Math.hypot(p.pos.x - u.pos.x, p.pos.z - u.pos.z) < 0.5 + p.r) { ferisci(u, p.danno, p.causa); via = true; break; } }
+      if (!via && !SEGUI) for (const u of squadra) { if (u.morto) continue; const dy = p.pos.y - (u.pos.y + 1.0); if (Math.abs(dy) < 1.1 && Math.hypot(p.pos.x - u.pos.x, p.pos.z - u.pos.z) < 0.5 + p.r) { ferisci(u, p.danno, p.causa, p.pos.clone().addScaledVector(p.v, -1)); via = true; break; } }
       if (via) { scoppio(p.pos, p.m.material.color.getHex(), 4, 2); scena.remove(p.m); proiettili.splice(i, 1); }
     }
   }
@@ -2800,7 +2852,8 @@
     bots.forEach(b => { if (b.remoto) { if (b.av && B.liberaAvatar) B.liberaAvatar(b.av); if (b.rr) b.rr.u = null; } }); liberaFantasmi(); prepN++;
     encI = i; ALLENA = i === ALLENAMENTO; FS = CD.scalaSala(Math.min(i, NUM_SALE - 1)); if (ALLENA) FS = CD.scalaSala(Math.max(0, Math.round((DATI.livello - 1) / 3)));
     applicaStat(); cassa = null;
-    enc = perc ? percorso(PERCORSI[SALE[i].prima], i, true) : INCONTRI[i](); enc.costruisci(); sveglia = !!(perc || enc.percorso || enc.prima || i === ALLENAMENTO); mostraTitolo(); compatta(); tEnc = 0; tFine = 0; raffica = 0; tCambio = 0; ia = 0; mostraArma();
+    enc = perc ? percorso(PERCORSI[SALE[i].prima], i, true) : INCONTRI[i](); enc.costruisci(); sveglia = !!(perc || enc.percorso || enc.prima || i === ALLENAMENTO); mostraTitolo();
+    if (!enc.percorso) mettiRialzi(i === ALLENAMENTO ? 1 : 2); compatta(); tEnc = 0; tFine = 0; raffica = 0; tCambio = 0; ia = 0; mostraArma();
     for (const k in radioVisti) delete radioVisti[k];
     io.hp = io.max; io.morto = false; io.marchio = 0; io.pretesa = 0; io.porta = null; io.vy = 0; io.tRin = 0; io.invuln = 0; io.vola = false; io.lento = 0; flashDanno = 0;
     ui.toasts.innerHTML = ''; zaino(false); aggHud(true);
@@ -3258,6 +3311,9 @@ body.pc #rd-hud .tasto,body.pc #rd-hud .base{display:none}
 #rd-obi,#rd-toasts,#rd-radio,#rd-sq,#rd-chips{display:none!important}
 #rd-tit{opacity:0;transition:opacity .9s}#rd-tit.vedi{opacity:1}
 #rd-lato{position:absolute;inset:0;pointer-events:none}
+#rd-dir{position:absolute;left:50%;top:50%;width:0;height:0;pointer-events:none}
+#rd-dir i{position:absolute;left:-60px;top:-60px;width:120px;height:120px;border-radius:50%;border-top:6px solid rgba(235,70,55,.9);filter:drop-shadow(0 0 6px rgba(235,70,55,.8));animation:rdDir .9s ease-out forwards}
+@keyframes rdDir{0%{opacity:1}100%{opacity:0}}
 #rd-lato i{position:absolute;top:0;bottom:0;width:16%;opacity:0}
 #rd-lato i:first-child{left:0;background:linear-gradient(90deg,rgba(224,87,74,.6),transparent)}
 #rd-lato i:last-child{right:0;background:linear-gradient(270deg,rgba(224,87,74,.6),transparent)}
@@ -3282,11 +3338,11 @@ body.pc #rd-hud .tasto,body.pc #rd-hud .base{display:none}
     hud = document.createElement('div'); hud.id = 'rd-hud';
     hud.innerHTML = '<div id="rd-vig"></div><div id="rd-num"></div>' + (CF ? '' : '<div class="zona" id="rd-zl"></div><div class="zona" id="rd-zr"></div><div class="base" id="rd-lb"><i></i></div>') +
       '<div id="rd-mir"></div><div id="rd-tit"></div><div id="rd-obi"></div><div id="rd-boss" hidden></div><div id="rd-sq"></div><div id="rd-radio" aria-live="polite"></div><div id="rd-toasts"></div><div id="rd-giu" hidden></div>' +
-      '<div id="rd-lato"><i></i><i></i></div><div id="rd-vita"><div id="rd-chips"></div><div id="rd-armi"></div><b class="bar"><i id="rd-hp"></i></b></div><div id="rd-racc" aria-live="polite"></div><div id="rd-zaino" hidden></div>' +
+      '<div id="rd-lato"><i></i><i></i></div><div id="rd-dir"></div><div id="rd-vita"><div id="rd-chips"></div><div id="rd-armi"></div><b class="bar"><i id="rd-hp"></i></b></div><div id="rd-racc" aria-live="polite"></div><div id="rd-zaino" hidden></div>' +
       (CF ? '' : '<div class="tasto" id="rd-salto" aria-label="Salta">▲</div><div class="tasto" id="rd-cambia" aria-label="Cambia arma">⇄</div><div class="tasto" id="rd-fuoco" aria-label="Spara">FUOCO</div>') +
       '<button id="rd-esci">Pausa</button><div id="rd-pan" hidden></div>';
     (document.getElementById('hud') || document.getElementById('app') || document.body).appendChild(hud);
-    ['lato', 'zl', 'zr', 'lb', 'mir', 'tit', 'obi', 'boss', 'sq', 'radio', 'toasts', 'giu', 'chips', 'hp', 'salto', 'fuoco', 'esci', 'pan', 'vig', 'armi', 'cambia', 'num', 'racc', 'zaino'].forEach(k => { ui[k] = hud.querySelector('#rd-' + k); });
+    ['dir', 'lato', 'zl', 'zr', 'lb', 'mir', 'tit', 'obi', 'boss', 'sq', 'radio', 'toasts', 'giu', 'chips', 'hp', 'salto', 'fuoco', 'esci', 'pan', 'vig', 'armi', 'cambia', 'num', 'racc', 'zaino'].forEach(k => { ui[k] = hud.querySelector('#rd-' + k); });
     ui.obi.addEventListener('pointerdown', e => { if (innerHeight > 500) return; ui.obi.classList.toggle('tutto'); e.stopPropagation(); });   // telefono: tocca per vedere tutti gli obiettivi
     window.addEventListener('keydown', e => { if (R.attivo && (stato === 'gioco') && !e.repeat && (e.key === 'i' || e.key === 'I' || e.key === 'Tab')) { zaino(); e.preventDefault(); } });
     const pausa = () => {
@@ -3663,7 +3719,8 @@ body.pc #rd-hud .tasto,body.pc #rd-hud .base{display:none}
     }
   }
   R._colpo = (id, dn) => { svegliati(); const e = nemici.find(x => x.id === id); return e ? colpoMio(e, dn) : 'no'; };
-  R._sveglia = () => svegliati();   // per le prove
+  R._sveglia = () => svegliati();
+  R._rialzi = () => rialzi.slice();   // per le prove   // per le prove
   R._colpoB = (i, dn) => { svegliati(); return bersagli[i] ? colpoMio(bersagli[i], dn) : 'no'; };
   R._on = () => ({ mioId, SEGUI, ON, amici: [...amiciR.values()].map(r => ({ nick: r.nick, d: r.d })), gHit });
 
