@@ -1253,21 +1253,22 @@
   /* ---------- REGIA DELLE ONDATE ----------
      I nemici arrivano per un motivo: ogni sala chiama un'ondata quando succede qualcosa (prendi un oggetto,
      rompi un bersaglio, finisce una fase), annunciata 2,5 secondi prima e da un lato solo, cosi' ci si gira.
-     La pressione non cala: se in campo restano pochi nemici ne arrivano altri, e a ogni giro (G.forza)
-     le ondate sono piu' grosse e piu' frequenti. All'inizio della sala qualche secondo per orientarsi. */
+     Fatta pulizia la sala resta calma finche' non fate la mossa dopo: si puo' respirare, ma non accamparsi.
+     Se restate fermi troppo a lungo (25 s con la sala quasi vuota) arriva un'ondata a spingervi avanti.
+     A ogni giro (G.forza) le ondate sono piu' grosse. */
   // l'ondata in arrivo si vede come una luce rossa che pulsa sul bordo dello schermo da quel lato
   function segnaLato(l) { const el = ui.lato && ui.lato.children[l ? 1 : 0]; if (!el) return; el.classList.remove('on'); void el.offsetWidth; el.classList.add('on'); }
   function regia(o) {
     const G = { xs: o.xs, zr: o.zr, calma: o.calma === undefined ? 7 : o.calma, pausa: o.pausa || 9, min: o.min || 6, base: o.base || ['schiavo', 'schiavo', 'accolito'],
-      t: 0, ultima: -99, coda: [], forza: 0, ferma: false };
+      t: 0, ultima: -99, coda: [], forza: 0, ferma: false, quiete: 0, attesa: o.attesa || 25 };
     const vivi = () => nemici.filter(e => e.vivo && !e.boss && !e.mini).length;
     const molt = () => 1 + G.forza * 0.2;
     // un'ondata: tipi di nemici, dopo 'ritardo' secondi (piu' i 2,5 dell'avviso), da un lato
     G.ondata = (tipi, q) => {
       if (SEGUI) return; q = q || {};
       const lato = q.lato === 0 || q.lato === 1 ? q.lato : Math.random() < 0.5 ? 0 : 1;
-      G.coda.push({ t: (q.ritardo || 0) + (q.subito ? 0 : 2.5), tipi: tipi || G.base, lato, m: (q.m || 1) * molt(), perche: q.perche || '', avv: !!q.subito });
-      G.ultima = G.t;
+      G.coda.push({ t: (q.ritardo || 0) + (q.subito ? 0 : 2.5), tipi: tipi || G.base, lato, m: (q.m || 1) * molt() * 1.3, perche: q.perche || '', avv: !!q.subito });
+      G.ultima = G.t; G.quiete = 0;
     };
     G.agg = dt => {
       if (SEGUI) return; G.t += dt;
@@ -1276,8 +1277,9 @@
         if (!q.avv && q.t <= 2.5) { q.avv = true; segnaLato(q.lato); if (ON) ON.lt = [(ON.lt ? ON.lt[0] : 0) + 1, q.lato]; }
         if (q.t <= 0) { spawnLato(q.tipi, G.xs, G.zr, q.lato, q.m); G.coda.splice(i, 1); G.ultima = G.t; }
       }
-      // pressione costante: pochi nemici in campo e nessuna ondata da un po' -> ne arriva un'altra
-      if (!G.ferma && G.t > G.calma && !G.coda.length && G.t - G.ultima > G.pausa / molt() && vivi() < G.min) G.ondata(G.base);
+      // fretta: con la sala quasi vuota il tempo di calma scorre; se state fermi troppo a lungo arriva un'ondata
+      if (!G.ferma && !G.coda.length && vivi() <= 2) G.quiete += dt; else if (vivi() > 2) G.quiete = 0;
+      if (G.quiete > G.attesa) G.ondata(G.base);
     };
     return G;
   }
