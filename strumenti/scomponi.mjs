@@ -49,6 +49,7 @@ export const BLOCCHI = [
   ['MINIGIOCO GO-KART', 'src/minigiochi/go-kart/gioco.js'],
   ['THE BORG - COMANDI FPS:', 'src/minigiochi/comandi-fps.js'],
   ['THE BORG - PAINTBALL', 'src/minigiochi/paintball/gioco.js'],
+  ['La Cripta del Re senza Luce: PROGRESSI E BOTTINO', 'src/minigiochi/cripta/bottino.js'],
   ['LA CRIPTA DEL RE SENZA LUCE: MODELLI', 'src/minigiochi/cripta/modelli.js'],
   ['La Cripta del Re Senza Luce: ambienti scolpiti', 'src/minigiochi/cripta/ambienti.js'],
   ['La Cripta del Re Senza Luce: creature scolpite', 'src/minigiochi/cripta/creature.js'],
