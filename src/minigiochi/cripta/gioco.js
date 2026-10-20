@@ -260,7 +260,7 @@
   const interattivi = [], rialzi = [];
   function nuovaScena(nebbia) {
     interattivi.length = 0; rialzi.length = 0; granateVolo.length = 0; mirK = 0; statoArmi = {}; pozzeCura.length = 0; raccolte.length = 0;   // nuovo incontro: caricatori pieni (le riserve sono nello zaino)
-    scena = new T.Scene(); scena.background = new T.Color(0x0e0b12); scena.fog = new T.Fog(0x0e0b12, 16, (nebbia || 80) - 4);
+    segniOcchio = null; scena = new T.Scene(); scena.background = new T.Color(0x0e0b12); scena.fog = new T.Fog(0x0e0b12, 16, (nebbia || 80) - 4);
     scena.add(new T.HemisphereLight(0xb4b0d8, 0x3a2a22, conBorg ? 0.62 : 0.85));
     const d = new T.DirectionalLight(0xffd2a8, 0.32); d.position.set(6, 20, 10); scena.add(d);
     cam = new T.PerspectiveCamera(72, 16 / 9, 0.08, 180); cam.rotation.order = 'YXZ'; scena.add(cam); costruendo = true; ambiente = null;
@@ -589,7 +589,7 @@
   }
   function scegliBersaglio(e) {
     let best = null, bd = 1e9;
-    for (const u of squadra) { if (u.morto) continue; const d = Math.hypot(u.pos.x - e.pos.x, u.pos.z - e.pos.z) * (u.io || u.remoto ? 0.8 : 1); if (d < bd) { bd = d; best = u; } }
+    for (const u of squadra) { if (u.morto || (u.io && io.nascosto)) continue; const d = Math.hypot(u.pos.x - e.pos.x, u.pos.z - e.pos.z) * (u.io || u.remoto ? 0.8 : 1); if (d < bd) { bd = d; best = u; } }
     return best;
   }
   const centro = u => _c.set(u.pos.x, u.pos.y + 1.1, u.pos.z);
@@ -660,7 +660,8 @@
     let [nome, col] = NOMI_BOT[i], av = null, mesh;
     if (conAvatar()) {
       const u = window.CONFIG.utentiDemo[i]; nome = u.nick; col = B.paletteDa ? B.paletteDa(u.look).giacca : col;
-      av = B.unisciAvatar(B.creaAvatar(u.look)); mesh = av.root;
+      const grezzo = B.creaAvatar(u.look); if (B.ArmatureCripta) try { B.ArmatureCripta.veste(grezzo, CD.vesteBot(i, encI)); } catch (e) { }
+      av = B.unisciAvatar(grezzo); mesh = av.root;
       const fucile = new T.Group(); fucile.position.set(0.3, 1.0, 0.3); mesh.add(fucile);
       parte(fucile, GBOX, ml(0x2b2d33), 0, 0, 0.15, 0.1, 0.13, 0.6); parte(fucile, GBOX, ml(0xcfc8b8), 0, 0.08, 0.1, 0.11, 0.03, 0.32); parte(fucile, GBOX, mbc(0x7ad8ff), 0, 0.1, 0.2, 0.03, 0.02, 0.05);
       if (B.etichetta) { const et = B.etichetta(nome, { sfondo: '#1b201d', colore: '#e9e1c9', altezza: 0.3 }); et.position.y = 2.75; mesh.add(et); }
@@ -833,7 +834,7 @@
         b.cd = rnd(st.cad[0], st.cad[1]); st.colpi--; R._spari = (R._spari || 0) + 1;
         const da = new T.Vector3(b.pos.x + Math.sin(b.yaw) * 0.6, b.pos.y + 1.3, b.pos.z + Math.cos(b.yaw) * 0.6), dist = b.pos.distanceTo(tp);
         const p = st.mira * clamp(1.15 - dist / 60, 0.45, 1) * (vel > 4 ? 0.82 : 1) * ((s.r || 1) > 1.4 ? 1.12 : 1);
-        if (Math.random() < p) { s.colpisci(st.dmg * (1 + (D.n - 1.3) * 0.4) * molt(b, s) * FS.hp, b); scia(da, tp, 0xe8f4ff, 0.05); }
+        if (Math.random() < p) { s.colpisci(st.dmg * (1 + (D.n - 1.3) * 0.4) * molt(b, s) * FS.hp * (STAT.poteri.stendardo && !io.morto && b.pos.distanceTo(io.pos) < 12 ? 1.1 : 1), b); scia(da, tp, 0xe8f4ff, 0.05); }
         else scia(da, tp.clone().add(new T.Vector3(rnd(-2, 2), rnd(-1, 1), rnd(-2, 2))), 0xe8f4ff, 0.05);
         if (st.colpi <= 0) { st.tRic = st.ric; radio(b, Math.random() < 0.5 ? 'Ricarico!' : 'Ricarico, coprimi', 0.25); }
       }
@@ -932,8 +933,13 @@
     const L = Math.hypot(mx, my); if (L > 1) { mx /= L; my /= L; }
     // corpo: scatto, scivolata, accovacciato e a terra cambiano velocita' e altezza degli occhi
     if (c && corpo) corpo.tick(dt, c, io.aTerra);
+    // Passo d'Ombra: la scivolata e' uno scatto lungo e ti nasconde per un attimo; Velo: accovacciato e fermo
+    if (STAT.poteri.ombra && corpo && corpo.scivola > 0.7 && !(io.ombraFino > ora)) { io.ombraFino = ora + 1.2; scoppio(new T.Vector3(io.pos.x, io.pos.y + 0.6, io.pos.z), 0x8a7dff, 10, 3); }
+    if (STAT.poteri.velo && ((c && c.giu) || R._giu) && Math.hypot(mx, my) < 0.1) io.veloT = (io.veloT || 0) + dt; else io.veloT = 0;
+    if (STAT.poteri.occhio) aggOcchio(); else if (segniOcchio) segniOcchio.forEach(m => m.visible = false);
+    const nasc = io.ombraFino > ora || io.veloT > 0.6; if (nasc !== !!io.nascosto) { io.nascosto = nasc; if (ui.nasc) ui.nasc.hidden = !nasc; }
     const corsa = c ? (c.corsa || R._corsa ? 1.3 : 1) : (tasti.shift || R._corsa ? 1.3 : 1);
-    const sp = 6.2 * (corpo && c ? corpo.vel * (c.corsa || R._corsa ? 1 : 1) : corsa) * (io.porta ? 0.8 : 1) * STAT.vel * (io.lento > ora ? 0.55 : 1);
+    const sp = (io.ombraFino > ora + 0.4 ? 1.5 : 1) * 6.2 * (corpo && c ? corpo.vel * (c.corsa || R._corsa ? 1 : 1) : corsa) * (io.porta ? 0.8 : 1) * STAT.vel * (io.lento > ora ? 0.55 : 1);
     const sy = Math.sin(io.yaw), cy = Math.cos(io.yaw), px = io.pos.x, pz = io.pos.z;
     io.pos.x += (mx * cy + my * sy) * sp * dt; io.pos.z += (-mx * sy + my * cy) * sp * dt;
     // nei percorsi: le piattaforme piu' alte di un gradino sono muri
@@ -945,7 +951,7 @@
     const vuoleSalto = salto || (c ? c.prendi('salto') : tasti[' ']);
     if (vuoleSalto && tTerra > 0) { if (c && (c.giu || c.terra)) c.alzati(); else { io.vy = 7.6; io.aTerra = false; tTerra = 0; } }
     else if (vuoleSalto && !io.aTerra) {   // in aria: doppio salto (scarpe epiche o migliori), poi il volo (Passi di Cometa)
-      if (STAT.salti > 1 && !io.doppio) { io.doppio = true; io.vy = 7.2; scoppio(new T.Vector3(io.pos.x, io.pos.y + 0.1, io.pos.z), 0xbfe6ff, 6, 2); suono('cambio'); }
+      if (STAT.salti > 1 && !io.doppio) { io.doppio = true; io.vy = STAT.saltoAlto ? 9.4 : 7.2; scoppio(new T.Vector3(io.pos.x, io.pos.y + 0.1, io.pos.z), 0xbfe6ff, 6, 2); suono('cambio'); }
       else if (STAT.poteri.volo && voloT > 0.1) { io.vola = !io.vola; if (io.vola) toast('Volo: premi di nuovo salto per smettere', '', true); }
     }
     salto = false;
@@ -957,7 +963,7 @@
     if (io.pos.y <= g) { io.pos.y = g; io.vy = 0; io.aTerra = true; } else if (io.pos.y > g + 0.06) io.aTerra = false;
     collidi(io.pos, 0.45);
     if (io.pos.y < -7) cadutaNelVuoto();
-    if (ora - io.ultimoColpo > (STAT.poteri.occhio ? 1.5 : 3.2) && !SEGUI) io.hp = Math.min(io.max, io.hp + 32 * dt * io.max / 100);
+    if (ora - io.ultimoColpo > 3.2 / (1 + (STAT.rigen || 0) * 4) && !SEGUI) io.hp = Math.min(io.max, io.hp + 32 * dt * io.max / 100);
     // mirino di precisione: zoom della camera e arma al centro
     const it = itemOra(), a = ARMI[it.k], st = armaSt(it.u), m = modArmi[it.k];
     // le riserve dell'arma sono le munizioni dello zaino (condivise tra armi dello stesso tipo)
@@ -1080,7 +1086,7 @@
       if (g.t >= (g.max || 1.6) || p.y < -8) {
         scena.remove(g.m); granateVolo.splice(i, 1); if (p.y < -8) continue;
         scoppiaGranata(p.clone(), g.tipo || 'framm');
-        if (STAT.poteri.scintille) { const q = p.clone(), tp = g.tipo || 'framm'; effetti.push({ t: 0, dur: 0.6, fine: () => scoppiaGranata(q, tp) }); }   // Guanti delle Scintille
+        if (STAT.poteri.scintilla) { const q = p.clone(), tp = g.tipo || 'framm'; effetti.push({ t: 0, dur: 0.6, fine: () => scoppiaGranata(q, tp) }); }   // Guanti delle Scintille
       }
     }
   }
@@ -1139,6 +1145,7 @@
   }
   // Cuore di Cometa: ogni uccisione rimette colpi nel caricatore e aumenta il danno
   function uccisaDaMe(e) {
+    if (STAT.poteri.faro && !io.morto) { io.hp = Math.min(io.max, io.hp + 12); scoppio(new T.Vector3(io.pos.x, io.pos.y + 1.2, io.pos.z), 0xffe08a, 5, 1.5); }
     const it = itemOra(); if (it.k !== 'cuoreCometa') return; const st = armaSt(it.u);
     if (st) st.cur = Math.min(ARMI[it.k].cap, st.cur + 6); sciaN = ora < sciaT ? Math.min(3, sciaN + 1) : 1; sciaT = ora + 5;
   }
@@ -1190,7 +1197,9 @@
   function corpoACorpo() {
     if (cdCorpo > 0 || io.morto || stato !== 'gioco') return; svegliati();
     cdCorpo = CORPO_CD; tCambio = Math.max(tCambio, 0.25);
-    fendente({ r: CORPO_R, dn: CORPO_DANNO * STAT.danno, multi: 1, cono: 0.35, spinta: 1.6 });
+    const tuono = STAT.poteri.tuono;
+    fendente({ r: CORPO_R, dn: CORPO_DANNO * STAT.danno * (tuono ? 3 : 1), multi: tuono ? 4 : 1, cono: tuono ? -1 : 0.35, spinta: tuono ? 3 : 1.6, col: tuono ? 0x9fd8ff : 0 });
+    if (tuono) { anello(io.pos.x, io.pos.z, 0x9fd8ff, CORPO_R + 0.8); suono('esplo'); }
   }
   // un colpo da vicino: i bersagli davanti (o addosso) entro r, i piu' vicini per primi; niente mira
   function fendente(o) {
@@ -1217,12 +1226,35 @@
   function mirino(esito) { ui.mir.className = esito === 'immune' ? 'imm' : esito === 'ok' ? 'hit' : ''; tMirino = 0.12; }
 
   /* ---------- proiettili ---------- */
+  // Occhio della Cometa: un segno sopra i nemici entro 25 m, visibile anche attraverso i muri
+  let segniOcchio = null;
+  function aggOcchio() {
+    if (!segniOcchio) {
+      const cv = document.createElement('canvas'); cv.width = cv.height = 64; const x = cv.getContext('2d');
+      x.shadowColor = '#ff7a3c'; x.shadowBlur = 12; x.fillStyle = '#ffb36b'; x.strokeStyle = '#3a1406'; x.lineWidth = 4;
+      x.beginPath(); x.moveTo(12, 14); x.lineTo(52, 14); x.lineTo(32, 50); x.closePath(); x.fill(); x.stroke();
+      const tx = new T.CanvasTexture(cv); if (T.SRGBColorSpace) tx.colorSpace = T.SRGBColorSpace;
+      const mat = new T.SpriteMaterial({ map: tx, depthTest: false, depthWrite: false, transparent: true, sizeAttenuation: false });
+      segniOcchio = []; for (let i = 0; i < 14; i++) { const m = new T.Sprite(mat); m.scale.set(0.06, 0.06, 1); m.renderOrder = 999; m.visible = false; scena.add(m); segniOcchio.push(m); }
+    }
+    let i = 0;
+    for (const e of nemici) { if (i >= segniOcchio.length) break; if (!e.vivo || e.pos.distanceTo(io.pos) > 25) continue; const m = segniOcchio[i++]; m.visible = true; m.position.set(e.pos.x, e.pos.y + (e.boss || e.mini ? 3.6 : 2.3), e.pos.z); }
+    for (; i < segniOcchio.length; i++) segniOcchio[i].visible = false;
+  }
+  // Corazza Specchio: il colpo torna verso il nemico piu' vicino davanti, con il triplo del danno
+  function rifletti(p) {
+    let best = null, bd = 30;
+    for (const e of nemici) { if (!e.vivo) continue; const d = e.pos.distanceTo(io.pos); if (d < bd) { bd = d; best = e; } }
+    scoppio(p.pos.clone(), 0xdff4ff, 8, 3); suono('cambio');
+    if (!best) return; const q = best.pos.clone().setY(best.pos.y + 1.1); scia(p.pos.clone(), q, 0xdff4ff, 0.12);
+    const dn = Math.max(40, p.danno * 3) * STAT.danno, esito = colpoMio(best, dn); numeroDanno(best, q, dn, esito);
+  }
   function aggProiettili(dt) {
     for (let i = proiettili.length - 1; i >= 0; i--) {
       const p = proiettili[i]; p.vita -= dt; p.pos.addScaledVector(p.v, dt); let via = p.vita <= 0 || p.pos.y < suolo(p.pos.x, p.pos.z) + 0.05;
       if (!via) for (const c of ostacoli) if (p.pos.y < c.h && Math.hypot(p.pos.x - c.x, p.pos.z - c.z) < c.r + p.r) { via = true; break; }
       if (!via && (p.pos.x < lim.x0 || p.pos.x > lim.x1 || p.pos.z < lim.z0 || p.pos.z > lim.z1)) via = true;
-      if (!via && !SEGUI) for (const u of squadra) { if (u.morto) continue; const dy = p.pos.y - (u.pos.y + 1.0); if (Math.abs(dy) < 1.1 && Math.hypot(p.pos.x - u.pos.x, p.pos.z - u.pos.z) < 0.5 + p.r) { ferisci(u, p.danno, p.causa, p.pos.clone().addScaledVector(p.v, -1)); via = true; break; } }
+      if (!via && !SEGUI) for (const u of squadra) { if (u.morto) continue; const dy = p.pos.y - (u.pos.y + 1.0); if (Math.abs(dy) < 1.1 && Math.hypot(p.pos.x - u.pos.x, p.pos.z - u.pos.z) < 0.5 + p.r) { if (u.io && STAT.poteri.specchio && Math.random() < 0.25) { rifletti(p); via = true; break; } ferisci(u, p.danno, p.causa, p.pos.clone().addScaledVector(p.v, -1)); via = true; break; } }
       if (via) { scoppio(p.pos, p.m.material.color.getHex(), 4, 2); scena.remove(p.m); proiettili.splice(i, 1); }
     }
   }
@@ -2946,6 +2978,30 @@
   }
 
   /* ---------- zaino: armi, pezzi, granate, munizioni (in stanza d'attesa o in partita, senza pausa) ---------- */
+  // foto del proprio avatar con i pezzi indossati (davanti e dietro), disegnata con lo stesso motore
+  const fotoCache = {};
+  function fotoVestito() {
+    try {
+      const look = (window.Gioco && Gioco.stato && Gioco.stato.giocatore && Gioco.stato.giocatore.look) || {}, eq = CD.vesteDi(DATI);
+      const chiave = JSON.stringify(look) + CD.codificaVeste(eq); if (fotoCache[chiave]) return fotoCache[chiave];
+      const r = B.app && B.app.renderer; if (!r || !B.creaAvatar) return null;
+      const W = 220, H = 310, sc = new T.Scene(), cv = document.createElement('canvas'); cv.width = W * 2; cv.height = H; const cx = cv.getContext('2d');
+      sc.add(new T.HemisphereLight(0xffffff, 0x4a3a50, 0.55)); const dl = new T.DirectionalLight(0xffffff, 0.75); dl.position.set(2, 5, 4); sc.add(dl);
+      const av = B.creaAvatar(look); if (B.ArmatureCripta) B.ArmatureCripta.veste(av, eq); sc.add(av.root);
+      const camF = new T.PerspectiveCamera(30, W / H, 0.1, 50), rt = new T.WebGLRenderTarget(W, H), px = new Uint8Array(W * H * 4);
+      const vRT = r.getRenderTarget(), vc = new T.Color(); r.getClearColor(vc); const va = r.getClearAlpha();
+      [0, PI].forEach((rot, n) => {
+        av.root.rotation.y = rot + 0.45; camF.position.set(0, 1.25, 5.4); camF.lookAt(0, 1.05, 0);
+        r.setRenderTarget(rt); r.setClearColor(0x000000, 0); r.clear(); r.render(sc, camF); r.readRenderTargetPixels(rt, 0, 0, W, H, px);
+        const im = cx.createImageData(W, H);
+        for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) { const a = ((H - 1 - y) * W + x) * 4, b = (y * W + x) * 4; for (let k = 0; k < 3; k++) im.data[b + k] = Math.min(255, 255 * Math.pow(px[a + k] / 255, 1 / 2.2)); im.data[b + 3] = px[a + 3]; }
+        cx.putImageData(im, W * n, 0);
+      });
+      r.setRenderTarget(vRT); r.setClearColor(vc, va); rt.dispose();
+      av.root.traverse(o => { if (o.geometry) o.geometry.dispose(); });
+      return (fotoCache[chiave] = cv.toDataURL());
+    } catch (e) { return null; }
+  }
   function htmlZaino(inPartita) {
     const st = CD.statistiche(DATI);
     let h = '<div class="kick">Armi in mano</div><div class="zm">' + DATI.scelta.map((u, i) => { const it = itemDi(u); return '<span><small>Mano ' + (i + 1) + '</small>' + (it ? nomeArmaHtml(it) : '—') + '</span>'; }).join('') + '</div>';
@@ -2955,13 +3011,13 @@
       return '<div class="zr"><div><b style="color:' + rar(it.r).col + '">' + A.nome + '</b> <small>' + A.tipo + ' · ' + rar(it.r).nome + ' · danno ' + dn + ' · ' + (m ? '<i style="color:' + m.col + '">' + m.nome.toLowerCase() + '</i>' : 'colpi infiniti') + '</small><p>' + A.desc + '</p></div>' +
         '<div class="zb"><button class="ma' + (su === 0 ? ' on' : '') + '" data-u="' + it.u + '" data-p="0">1</button><button class="ma' + (su === 1 ? ' on' : '') + '" data-u="' + it.u + '" data-p="1">2</button></div></div>';
     }).join('') + '</div>';
-    h += '<div class="kick">Equipaggiamento · vita ' + st.vita + ' · difesa ' + Math.round((1 - st.res) * 100) + '%' + (st.salti > 1 ? ' · doppio salto' : '') + '</div><div class="zl">' + CD.PARTI.map(s => {
+    h += '<div class="kick">Equipaggiamento · vita ' + st.vita + ' · difesa ' + Math.round((1 - st.res) * 100) + '%' + (st.salti > 1 ? ' · doppio salto' : '') + '</div>' + (inPartita ? '' : (f => f ? '<img class="zfoto" alt="Il tuo Portatore con i pezzi indossati" src="' + f + '">' : '')(fotoVestito())) + '<div class="zl">' + CD.PARTI.map(s => {
       const E = CD.EQUIP[s], miei = DATI.pezzi.filter(p => p.s === s).sort((a, b) => b.r - a.r);
       if (!miei.length) return '<div class="zr"><div><b>' + E.nome + '</b> <small>non ne hai ancora: si trova nelle casse</small></div></div>';
       return miei.map(p => {
-        const f = [E.dif ? 'difesa +' + E.dif[p.r] + '%' : '', E.vita ? 'vita +' + E.vita[p.r] : '', E.ric ? 'ricarica -' + E.ric[p.r] + '%' : '', E.gran && E.gran[p.r] ? 'granate +' + E.gran[p.r] + '%' : '', E.vel ? 'velocità +' + E.vel[p.r] + '%' : '', E.salto && E.salto[p.r] ? 'doppio salto' : '', E.rientro ? 'rientri ' + E.rientro[p.r] + ' s prima' : ''].filter(Boolean).join(' · ');
+        const f = [E.dif ? 'difesa +' + E.dif[p.r] + '%' : '', E.vita ? 'vita +' + E.vita[p.r] : '', E.ric ? 'ricarica -' + E.ric[p.r] + '%' : '', E.gran && E.gran[p.r] ? 'granate +' + E.gran[p.r] + '%' : '', E.vel ? 'velocità +' + E.vel[p.r] + '%' : '', E.rientro ? 'rientri ' + E.rientro[p.r] + ' s prima' : ''].filter(Boolean).join(' · ');
         const su = DATI.equip[s] === p.u;
-        return '<div class="zr"><div><b style="color:' + rar(p.r).col + '">' + E.nomi[p.r] + '</b> <small>' + E.nome.toLowerCase() + ' · ' + rar(p.r).nome + ' · ' + f + '</small>' + (p.r === 4 ? '<p>' + E.stellare.desc + '</p>' : '') + '</div><div class="zb"><button class="ind' + (su ? ' on' : '') + '" data-u="' + p.u + '">' + (su ? 'Indossato' : 'Indossa') + '</button></div></div>';
+        return '<div class="zr"><div><b style="color:' + rar(p.r).col + '">' + esc(CD.nomePezzo(p)) + '</b> <small>' + E.nome.toLowerCase() + ' · ' + rar(p.r).nome + ' · ' + f + '</small>' + '<p>' + esc(CD.descPezzo(p)) + '</p>' + '</div><div class="zb"><button class="ind' + (su ? ' on' : '') + '" data-u="' + p.u + '">' + (su ? 'Indossato' : 'Indossa') + '</button></div></div>';
       }).join('');
     }).join('') + '</div>';
     h += '<div class="kick">Granate (massimo ' + CD.GRANATE_MAX + ')</div><p class="sotto">' + (DATI.granate.length ? DATI.granate.map(g => '<b>' + CD.GRANATE[g].nome + '</b> <small>' + CD.GRANATE[g].desc + '</small>').join('<br>') : 'Nessuna: si trovano nelle casse.') + '</p>';
@@ -3376,6 +3432,8 @@ body.pc #rd-hud .tasto,body.pc #rd-hud .base{display:none}
 #rd-mun small{font-size:13px;opacity:.75;font-weight:700;margin-left:3px}#rd-mun.poco{color:#ff9a8a}
 #rd-mun em{font-style:normal;font-size:11px;font-weight:700;letter-spacing:.06em;opacity:.8;margin-left:8px}
 #rd-armi .zn{opacity:1;font-size:16px;padding:2px 12px}
+#rd-pan .zfoto,.zfoto{display:block;margin:4px auto 8px;width:240px;max-width:100%;height:auto}
+#rd-nasc{position:absolute;left:50%;top:18%;transform:translateX(-50%);z-index:5;font:800 12px system-ui,sans-serif;letter-spacing:.2em;text-transform:uppercase;color:#c9bfff;text-shadow:0 0 8px #6a5cff;opacity:.85}
 #rd-apri{position:absolute;left:50%;bottom:32%;transform:translateX(-50%);z-index:9;pointer-events:auto;font:800 18px system-ui,sans-serif;letter-spacing:.12em;text-transform:uppercase;padding:12px 34px;border-radius:999px;border:2px solid #fff1c4;background:linear-gradient(#e2b24f,#b8862e);color:#1b1407;box-shadow:0 0 24px rgba(255,210,122,.7)}
 #rd-racc{right:auto!important;left:50%!important;transform:translateX(-50%);bottom:calc(96px + env(safe-area-inset-bottom,0px))!important;align-items:center!important;z-index:5}
 #rd-dir{position:absolute;left:50%;top:50%;width:0;height:0;pointer-events:none}
@@ -3405,11 +3463,11 @@ body.pc #rd-hud .tasto,body.pc #rd-hud .base{display:none}
     hud = document.createElement('div'); hud.id = 'rd-hud';
     hud.innerHTML = '<div id="rd-vig"></div><div id="rd-num"></div>' + (CF ? '' : '<div class="zona" id="rd-zl"></div><div class="zona" id="rd-zr"></div><div class="base" id="rd-lb"><i></i></div>') +
       '<div id="rd-mir"></div><div id="rd-tit"></div><div id="rd-obi"></div><div id="rd-boss" hidden></div><div id="rd-sq"></div><div id="rd-radio" aria-live="polite"></div><div id="rd-toasts"></div><div id="rd-giu" hidden></div>' +
-      '<div id="rd-lato"><i></i><i></i></div><div id="rd-dir"></div><div id="rd-vita"><div id="rd-chips"></div><div id="rd-mun"></div><div id="rd-armi"></div><b class="bar"><i id="rd-hp"></i></b></div><button id="rd-apri" hidden>Apri</button><div id="rd-racc" aria-live="polite"></div><div id="rd-zaino" hidden></div>' +
+      '<div id="rd-lato"><i></i><i></i></div><div id="rd-dir"></div><div id="rd-vita"><div id="rd-chips"></div><div id="rd-mun"></div><div id="rd-armi"></div><b class="bar"><i id="rd-hp"></i></b></div><button id="rd-apri" hidden>Apri</button><div id="rd-nasc" hidden>nascosto</div><div id="rd-racc" aria-live="polite"></div><div id="rd-zaino" hidden></div>' +
       (CF ? '' : '<div class="tasto" id="rd-salto" aria-label="Salta">▲</div><div class="tasto" id="rd-cambia" aria-label="Cambia arma">⇄</div><div class="tasto" id="rd-fuoco" aria-label="Spara">FUOCO</div>') +
       '<button id="rd-esci">Pausa</button><div id="rd-pan" hidden></div>';
     (document.getElementById('hud') || document.getElementById('app') || document.body).appendChild(hud);
-    ['mun', 'apri', 'dir', 'lato', 'zl', 'zr', 'lb', 'mir', 'tit', 'obi', 'boss', 'sq', 'radio', 'toasts', 'giu', 'chips', 'hp', 'salto', 'fuoco', 'esci', 'pan', 'vig', 'armi', 'cambia', 'num', 'racc', 'zaino'].forEach(k => { ui[k] = hud.querySelector('#rd-' + k); });
+    ['mun', 'apri', 'nasc', 'dir', 'lato', 'zl', 'zr', 'lb', 'mir', 'tit', 'obi', 'boss', 'sq', 'radio', 'toasts', 'giu', 'chips', 'hp', 'salto', 'fuoco', 'esci', 'pan', 'vig', 'armi', 'cambia', 'num', 'racc', 'zaino'].forEach(k => { ui[k] = hud.querySelector('#rd-' + k); });
     ui.apri.addEventListener('pointerdown', e => { e.preventDefault(); e.stopPropagation(); if (vicinoCassa()) apriCassa(); });
     window.addEventListener('keydown', e => { if (R.attivo && stato === 'gioco' && !e.repeat && (e.key === 'e' || e.key === 'E') && vicinoCassa()) apriCassa(); });
     ui.obi.addEventListener('pointerdown', e => { if (innerHeight > 500) return; ui.obi.classList.toggle('tutto'); e.stopPropagation(); });   // telefono: tocca per vedere tutti gli obiettivi
@@ -3508,10 +3566,11 @@ body.pc #rd-hud .tasto,body.pc #rd-hud .base{display:none}
     if (s.vivo === false) return 'no';
     return s.esitoC ? s.esitoC() : s.imm ? 'immune' : 'ok';
   }
-  function avatarAmico(nick, look) {
+  function avatarAmico(nick, look, eq) {
     let av = null, mesh;
     if (B.creaAvatar && B.unisciAvatar) {
-      av = B.unisciAvatar(B.creaAvatar(look || {})); mesh = av.root;
+      const grezzo = B.creaAvatar(look || {}); if (eq && B.ArmatureCripta) try { B.ArmatureCripta.veste(grezzo, CD.decodificaVeste(eq)); } catch (e) { }
+      av = B.unisciAvatar(grezzo); mesh = av.root;
       const fucile = new T.Group(); fucile.position.set(0.3, 1.0, 0.3); mesh.add(fucile);
       parte(fucile, GBOX, ml(0x2b2d33), 0, 0, 0.15, 0.1, 0.13, 0.6); parte(fucile, GBOX, ml(0xcfc8b8), 0, 0.08, 0.1, 0.11, 0.03, 0.32); parte(fucile, GBOX, mbc(0x9dffb0), 0, 0.1, 0.2, 0.03, 0.02, 0.05);
     } else mesh = modGuardiano('#7be08a');
@@ -3522,7 +3581,7 @@ body.pc #rd-hud .tasto,body.pc #rd-hud .base{display:none}
   /* ---------- padrone di casa ---------- */
   function converti(b, r) {
     b.orig = { nome: b.nome, col: b.col, mesh: b.mesh, av: b.av, k: b.k, max: b.max };
-    scena.remove(b.mesh); const f = avatarAmico(r.nick, r.look); b.mesh = f.mesh; b.av = f.av;
+    scena.remove(b.mesh); const f = avatarAmico(r.nick, r.look, r.d.eq); b.mesh = f.mesh; b.av = f.av; b.eqC = r.d.eq;
     b.remoto = true; b.rr = r; r.u = b; b.nome = r.nick; b.col = '#7be08a'; b.k = String(r.d.id); b.max = clamp(nnum(r.d.mx, 100), 50, 400); b.hp = b.max; b.res = clamp(nnum(r.d.rs, 1), 0.4, 1); b.crt = !!r.d.cr; b.morto = false; b.marchio = 0; b.pretesa = 0;
     b.rpN = prepN * 1000 + 1; b.meta = null; b.v = 0; b.mesh.position.copy(b.pos);
     toast(r.nick + ' entra nella squadra al posto di ' + b.orig.nome, 'bene');
@@ -3590,8 +3649,8 @@ body.pc #rd-hud .tasto,body.pc #rd-hud .base{display:none}
   }
   function fantasma(k, nome) {
     let f = SEGUI.fant.get(k); if (f) return f;
-    let look = null, nick = nome; amiciR.forEach(r => { if (String(r.d.id) === k) { look = r.look; nick = r.nick; } });
-    const a = avatarAmico(nick, look);
+    let look = null, nick = nome, eq = null; amiciR.forEach(r => { if (String(r.d.id) === k) { look = r.look; nick = r.nick; eq = r.d.eq; } });
+    const a = avatarAmico(nick, look, eq);
     f = { k, nome: nick, col: '#7be08a', av: a.av, mesh: a.mesh, pos: new T.Vector3(), hp: 100, max: 100, morto: false, marchio: 0, pretesa: 0, yaw: 0, v: 0, fant: true, primo: true };
     SEGUI.fant.set(k, f); return f;
   }
@@ -3695,14 +3754,14 @@ body.pc #rd-hud .tasto,body.pc #rd-hud .base{display:none}
   // hb: un battito ogni 2 secondi, cosi' gli amici sanno che ci sei anche se stai fermo (la presenza parte solo quando cambia)
   R.rete = function () {
     if (!R.attivo) return null;
-    const hb = Math.floor(performance.now() / 2000);
-    if (SEGUI) return { id: mioId, st: 'raid', hb, g: SEGUI.g, ru: 'o', x: f2(io.pos.x), y: f2(io.pos.y), z: f2(io.pos.z), r: f2(io.yaw + PI), v: f1(Math.min(SEGUI.v, 12)), rp: SEGUI.rp, h: gHit, mx: Math.round(io.max), rs: +(io.res || 1).toFixed(3), cr: STAT.poteri.cratere ? 1 : 0, dn: DONI };
-    if (ON) return Object.assign(reteHostDati(), { hb, dn: DONI });
+    const hb = Math.floor(performance.now() / 2000), eq = CD.codificaVeste(CD.vesteDi(DATI));
+    if (SEGUI) return { id: mioId, st: 'raid', hb, eq, g: SEGUI.g, ru: 'o', x: f2(io.pos.x), y: f2(io.pos.y), z: f2(io.pos.z), r: f2(io.yaw + PI), v: f1(Math.min(SEGUI.v, 12)), rp: SEGUI.rp, h: gHit, mx: Math.round(io.max), rs: +(io.res || 1).toFixed(3), cr: STAT.poteri.cratere ? 1 : 0, dn: DONI };
+    if (ON) return Object.assign(reteHostDati(), { hb, eq, dn: DONI });
     if (stato === 'menu') {
-      if (SQ.capo) { const ora2 = performance.now(); return { id: mioId, st: 'raid', hb, ru: 'L', g: SQ.g, mem: membri().map(r => String(r.d.id)), lv: 2, pa: nomePartenza(), inv: Object.keys(SQ.inv).filter(k => ora2 - SQ.inv[k] < 60000), out: Object.keys(SQ.out) }; }
-      return { id: mioId, st: 'raid', hb, ru: 'M', g: SQ.g, pr: SQ.pronto ? 1 : 0 };
+      if (SQ.capo) { const ora2 = performance.now(); return { id: mioId, st: 'raid', hb, eq, ru: 'L', g: SQ.g, mem: membri().map(r => String(r.d.id)), lv: 2, pa: nomePartenza(), inv: Object.keys(SQ.inv).filter(k => ora2 - SQ.inv[k] < 60000), out: Object.keys(SQ.out) }; }
+      return { id: mioId, st: 'raid', hb, eq, ru: 'M', g: SQ.g, pr: SQ.pronto ? 1 : 0 };
     }
-    return { id: mioId, st: 'raid', hb, ru: 'G', g: SQ.g };   // in partita con i bot
+    return { id: mioId, st: 'raid', hb, eq, ru: 'G', g: SQ.g };   // in partita con i bot
   };
   R.amico = function (peer, nick, d, look) {
     const r = amiciR.get(peer);
@@ -3811,7 +3870,7 @@ body.pc #rd-hud .tasto,body.pc #rd-hud .base{display:none}
   // per i test automatici
   R._input = o => { if ('mv' in o) { mv.x = o.mv[0]; mv.y = o.mv[1]; R._mv = o.mv[0] || o.mv[1] ? o.mv : null; } if (o.salto) salto = true; if (C) { ['mira', 'giu', 'terra'].forEach(k => { if (k in o) C[k] = o[k]; }); ['ricarica', 'granata', 'scivola'].forEach(k => { if (o[k]) C.eventi[k] = true; }); } if ('cambia' in o) cambiaArma(o.cambia); if ('sparo' in o) sparo = o.sparo; if ('yaw' in o) io.yaw = o.yaw; if ('pitch' in o) io.pitch = o.pitch; };
   R._nemico = (tipo, x, z, opz) => nemico(tipo, x, z, opz);   // per le prove automatiche
-  R._s = () => ({ stato, enc, io, bots, nemici, bersagli, squadra, proiettili, encI, arma: itemOra().k, scelta: DATI.scelta, DATI, STAT, FS, cassa, raccolte });
+  R._s = () => ({ segniOcchio, stato, enc, io, bots, nemici, bersagli, squadra, proiettili, encI, arma: itemOra().k, scelta: DATI.scelta, DATI, STAT, FS, cassa, raccolte });
   R._cd = () => ({ DATI, salva: salvaDati, applica: applicaStat });
   R._suolo = suolo; R._percorso = k => { if (!pronto) R.avvia(); avviaPercorso(k); };
   R._portale = () => portale ? { x: portale.x, z: portale.z, y: portale.y, k: portale.k } : null;

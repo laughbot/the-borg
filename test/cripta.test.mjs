@@ -29,7 +29,14 @@ D.riempiZaino(S); eq(S.zaino, { p: 360, s: 36, h: 9 }); eq(S.scorta, { p: 180, s
 // statistiche: livello e pezzi
 const st1 = D.statistiche(S); eq(st1.vita, 100); eq(st1.res, 1); eq(st1.salti, 1);
 S.livello = 30; const st30 = D.statistiche(S); ok(st30.vita > 180 && st30.res < 0.75 && st30.danno > 2, JSON.stringify(st30));
-S.pezzi.push({ u: 'e9', s: 'scarpe', r: 4 }); S.equip.scarpe = 'e9'; const stS = D.statistiche(S); eq(stS.salti, 2); ok(stS.poteri.volo === 1);
+S.pezzi.push({ u: 'e9', s: 'scarpe', r: 4, x: 'cometa' }); S.equip.scarpe = 'e9'; const stS = D.statistiche(S); ok(stS.poteri.volo === 1, 'Passi di Cometa: volo');
+S.pezzi.push({ u: 'e10', s: 'scarpe', r: 4, x: 'rondine' }); S.equip.scarpe = 'e10'; eq(D.statistiche(S).salti, 2, 'Ali di Rondine: doppio salto');
+S.pezzi.push({ u: 'e11', s: 'scarpe', r: 2, set: 'viandante' }); S.equip.scarpe = 'e11'; eq(D.statistiche(S).salti, 2, 'Viandante epiche: doppio salto');
+S.pezzi.push({ u: 'e12', s: 'scarpe', r: 2, set: 'sentinella' }); S.equip.scarpe = 'e12'; eq(D.statistiche(S).salti, 1, 'Sentinella: niente doppio salto');
+// vecchi salvataggi: i pezzi senza set diventano del Portatore, gli stellari senza chiave prendono quella di base
+{ const V = D.pulisci({ pezzi: [{ u: 'e1', s: 'casco', r: 2 }, { u: 'e2', s: 'scarpe', r: 4 }] }); eq(V.pezzi[0].set, 'portatore'); eq(V.pezzi[1].x, 'cometa'); }
+// nomi
+eq(D.nomePezzo({ s: 'casco', r: 2, set: 'sentinella' }), 'Casco della Sentinella'); eq(D.nomePezzo({ s: 'scarpe', r: 4, x: 'rondine' }), 'Ali di Rondine');
 
 // armi: al massimo una stellare in mano
 S.armi.push({ u: 'a8', k: 'cuoreCometa', r: 4 }, { u: 'a9', k: 'ultimaLanterna', r: 4 });
@@ -58,6 +65,8 @@ eq(D.cadutaMun('x', true).map(c => c[0]).sort(), ['h', 'p', 's']);
   ok(premi > 0 && doni > 0, 'Starlight dalla cassa e dai doppioni');
   eq(Object.keys(C.medaglie).length, 14, 'una medaglietta per sala');
   ok(C.armi.some(a => a.r === 4) || C.pezzi.some(p => p.r === 4), 'in 200 casse esce almeno una stellare');
+  ok(C.pezzi.every(p => p.r === 4 ? D.STELLARI[p.s][p.x] : D.SETS[p.set]), 'ogni pezzo ha un set o uno stellare valido');
+  ok(new Set(C.pezzi.filter(p => p.r < 4).map(p => p.set)).size >= 3, 'dalle casse escono set diversi');
   // nessun doppione tenuto: stessa arma con rarita' uguale o minore diventa Starlight
   const visti = {}; C.armi.forEach(a => { const k = a.k + '/' + a.r; ok(!visti[k] || D.ARMI[a.k].base, 'doppione tenuto: ' + k); visti[k] = 1; });
   // in prova niente Starlight
@@ -87,4 +96,15 @@ eq(D.cadutaMun('x', true).map(c => c[0]).sort(), ['h', 'p', 's']);
   const Q = D.carica(true); D.tuttoProva(Q, 30); D.salva(Q, true); eq(D.carica().livello, 21, 'la prova non tocca il salvataggio vero'); eq(D.carica(true).livello, 30);
 }
 
+// equipaggiamento addosso: formato per le armature, codice corto per la rete, compagni bot
+{
+  const S = D.nuovo(); D.tuttoProva(S, 30);
+  D.PARTI.forEach(s => { const p = S.pezzi.find(q => q.s === s && q.r === 3 && q.set === 'oracolo'); if (p) D.indossa(S, p.u); });
+  const st = S.pezzi.find(q => q.s === 'scarpe' && q.r === 4 && q.x === 'rondine'); D.indossa(S, st.u);
+  const v = D.vesteDi(S); eq(v.casco, { r: 3, set: 'oracolo' }); eq(v.scarpe, { r: 4, k: 'rondine' });
+  const c = D.codificaVeste(v); eq(c.length, 10, c); eq(D.decodificaVeste(c), v, 'la rete riporta gli stessi pezzi');
+  eq(D.decodificaVeste('-'.repeat(5)), {}); eq(D.decodificaVeste(null), {}); ok(typeof D.decodificaVeste('9z9z9z9z9z').casco === 'object', 'codice strano: niente errori');
+  for (let i = 0; i < 5; i++) for (let sala = 0; sala < 14; sala++) { const b = D.vesteBot(i, sala); Object.values(b).forEach(e => ok(e.r >= 0 && e.r <= 4)); }
+  eq(D.vesteBot(0, 8).mantello, { r: 4, k: 'stendardo' });
+}
 console.log('ok  cripta (progressi e bottino): ' + n + ' controlli');

@@ -71,20 +71,56 @@
   const STELLARI_ARMI = ['cuoreCometa', 'ultimaLanterna'];
 
   /* ---------- equipaggiamento: un pezzo per parte ----------
-     val: il valore per rarita' (comune ... stellare). Ogni stellare ha un potere tutto suo. */
+     Ogni pezzo ha una RARITA' (quanto e' forte) e un SET (forma e vantaggio): portatore, sentinella,
+     viandante, oracolo. Gli STELLARI (rarita' 4) non hanno set: hanno una forma e un potere tutti loro (x).
+     Pezzo salvato: { u, s: parte, r: rarita', set } oppure { u, s, r: 4, x: chiave dello stellare }. */
   const PARTI = ['casco', 'armatura', 'guanti', 'scarpe', 'mantello'];
   const EQUIP = {
-    casco: { nome: 'Casco', nomi: ['Elmo di Cuoio', 'Elmo del Minatore', 'Celata Lucente', 'Corona del Portatore', 'Elmo della Cometa'],
-      dif: [3, 5, 7, 9, 10], stellare: { k: 'occhio', desc: 'La vita torna a salire dopo 1,5 secondi invece di 3.' } },
-    armatura: { nome: 'Armatura', nomi: ['Giaco di Maglia', 'Corazza del Borgo', 'Usbergo di Luce', 'Armatura del Portatore', 'Corazza del Cratere'],
-      dif: [5, 7, 9, 12, 13], vita: [5, 10, 15, 20, 20], stellare: { k: 'cratere', desc: 'Sotto il 30% di vita subisci metà dei danni.' } },
-    guanti: { nome: 'Guanti', nomi: ['Guanti di Tela', 'Guanti da Scavo', 'Manopole Lucenti', 'Mani del Portatore', 'Guanti delle Scintille'],
-      ric: [5, 8, 11, 15, 15], gran: [0, 5, 10, 15, 20], stellare: { k: 'scintille', desc: 'Le granate esplodono due volte.' } },
-    scarpe: { nome: 'Scarpe', nomi: ['Stivali di Pelle', 'Stivali del Pozzo', 'Calzari Leggeri', 'Passi del Portatore', 'Passi di Cometa'],
-      vel: [2, 4, 6, 8, 8], salto: [0, 0, 1, 1, 1], stellare: { k: 'volo', desc: 'In aria tieni premuto il salto per volare fino a 2,5 secondi.' } },
-    mantello: { nome: 'Mantello', nomi: ['Mantello di Lana', 'Mantello del Viandante', 'Mantello di Brace', 'Mantello del Portatore', 'Mantello della Notte Chiara'],
-      rientro: [1, 2, 3, 4, 5], stellare: { k: 'notte', desc: 'Quando rientri sei invulnerabile per 3 secondi.' } }
+    casco: { nome: 'Casco', dif: [3, 5, 7, 9, 10] },
+    armatura: { nome: 'Armatura', dif: [5, 7, 9, 12, 13], vita: [5, 10, 15, 20, 20] },
+    guanti: { nome: 'Guanti', ric: [5, 8, 11, 15, 15], gran: [0, 5, 10, 15, 20] },
+    scarpe: { nome: 'Scarpe', vel: [2, 4, 6, 8, 8] },
+    mantello: { nome: 'Mantello', rientro: [1, 2, 3, 4, 5] }
   };
+  const SETS = {
+    portatore: { nome: 'del Portatore', desc: 'Equilibrato: un po\' di difesa in piu\'.' },
+    sentinella: { nome: 'della Sentinella', desc: 'Pesante: molta piu\' difesa, un po\' piu\' lento.' },
+    viandante: { nome: 'del Viandante', desc: 'Leggero: piu\' veloce e ricarica prima. Le scarpe epiche o migliori danno il doppio salto.' },
+    oracolo: { nome: 'dell\'Oracolo', desc: 'Mistico: la vita torna prima e le granate si caricano di piu\'.' }
+  };
+  const NOMI_SET = Object.keys(SETS);
+  const STELLARI = {
+    casco: { occhio: { nome: 'Occhio della Cometa', potere: 'Vedi i nemici vicini anche dietro i muri.' }, faro: { nome: 'Faro del Borgo', potere: 'Ogni nemico che elimini ti cura un po\'.' } },
+    armatura: { cratere: { nome: 'Cuore del Cratere', potere: 'Sotto il 30% di vita prendi meta\' dei danni.' }, specchio: { nome: 'Corazza Specchio', potere: 'A volte un colpo a distanza torna indietro a chi l\'ha sparato.' } },
+    guanti: { scintilla: { nome: 'Mani di Scintilla', potere: 'Le granate esplodono due volte.' }, tuono: { nome: 'Pugni del Tuono', potere: 'Il pugno fa il triplo del danno e un\'onda d\'urto.' } },
+    scarpe: { cometa: { nome: 'Passi di Cometa', potere: 'In aria premi salto per volare fino a 2,5 secondi.' }, rondine: { nome: 'Ali di Rondine', potere: 'Doppio salto, e il secondo salto e\' piu\' alto.' }, ombra: { nome: 'Passo d\'Ombra', potere: 'Scivolando fai uno scatto lungo e per un attimo i nemici non ti vedono.' } },
+    mantello: { notte: { nome: 'Mantello della Notte Chiara', potere: 'Quando rientri sei invulnerabile per 3 secondi.' }, velo: { nome: 'Velo dell\'Invisibile', potere: 'Accovacciato e fermo, i nemici smettono di vederti.' }, stendardo: { nome: 'Stendardo del Borgo', potere: 'I compagni vicini fanno il 10% di danno in piu\'.' } }
+  };
+  const STELLARE_BASE = { casco: 'occhio', armatura: 'cratere', guanti: 'scintilla', scarpe: 'cometa', mantello: 'notte' };   // per i vecchi salvataggi
+  // equipaggiamento indossato nel formato di B3.ArmatureCripta.veste: { casco: { r, set } | { r: 4, k } }
+  const vesteDi = dati => {
+    const v = {}; if (!dati || !dati.equip) return v;
+    PARTI.forEach(s => { const p = (dati.pezzi || []).find(q => q.u === dati.equip[s]); if (p) v[s] = p.r === 4 && p.x ? { r: 4, k: p.x } : { r: p.r | 0, set: p.set || 'portatore' }; });
+    return v;
+  };
+  // i compagni bot: ognuno un set suo, piu' rari andando avanti nelle sale; Kira porta un pezzo stellare dalla sala 7
+  const vesteBot = (i, sala) => {
+    const set = NOMI_SET[i % NOMI_SET.length], base = Math.min(3, Math.floor((sala || 0) / 3)), v = {};
+    PARTI.forEach((s, j) => { if ((sala || 0) < 2 && j > 2 + i % 2) return; v[s] = { r: Math.max(0, Math.min(3, base - ((i + j) % 2))), set }; });
+    if (i === 0 && sala >= 6) v.mantello = { r: 4, k: 'stendardo' };
+    return v;
+  };
+  // in rete l'equipaggiamento viaggia corto: per ogni parte rarita' + una lettera (set o stellare), '-' se vuota
+  const CHIAVI_V = () => NOMI_SET.concat(...PARTI.map(s => Object.keys(STELLARI[s])));
+  const codificaVeste = v => { const K = CHIAVI_V(); return PARTI.map(s => { const e = v && v[s]; if (!e) return '-'; const i = K.indexOf(e.k || e.set); return (e.r | 0) + (i < 0 ? '0' : i.toString(36)); }).join(''); };
+  const decodificaVeste = c => {
+    const v = {}; if (typeof c !== 'string') return v; const K = CHIAVI_V(); let j = 0;
+    PARTI.forEach(s => { if (c[j] === '-') { j++; return; } const r = Math.max(0, Math.min(4, parseInt(c[j], 10) || 0)), k = K[parseInt(c[j + 1], 36)] || 'portatore'; j += 2; v[s] = r === 4 && STELLARI[s][k] ? { r, k } : { r: Math.min(r, 3), set: SETS[k] ? k : 'portatore' }; });
+    return v;
+  };
+  const nomePezzo = p => p.r === 4 && STELLARI[p.s][p.x] ? STELLARI[p.s][p.x].nome : EQUIP[p.s].nome + ' ' + (SETS[p.set] || SETS.portatore).nome;
+  const descPezzo = p => p.r === 4 && STELLARI[p.s][p.x] ? STELLARI[p.s][p.x].potere : (SETS[p.set] || SETS.portatore).desc;
+  const stessoPezzo = (a, b) => a.s === b.s && (a.r === 4 || b.r === 4 ? a.r === b.r && a.x === b.x : a.set === b.set);
 
   /* ---------- granate (se ne tengono al massimo 2) ---------- */
   const GRANATE = {
@@ -134,7 +170,7 @@
     ['lucciola', 'tridente'].forEach((k, i) => { if (!S.armi.some(a => a.k === k)) S.armi.unshift({ u: 'a' + (i + 1), k, r: 0 }); });   // le armi di base non si perdono mai
     if (Array.isArray(r.scelta)) S.scelta = r.scelta.filter(u => S.armi.some(a => a.u === u)).slice(0, 2);
     while (S.scelta.length < 2) { const a = S.armi.find(x => !S.scelta.includes(x.u)); if (!a) break; S.scelta.push(a.u); }
-    if (Array.isArray(r.pezzi)) S.pezzi = r.pezzi.filter(p => p && EQUIP[p.s] && typeof p.u === 'string').map(p => ({ u: p.u, s: p.s, r: Math.max(0, Math.min(4, num(p.r, 0) | 0)) }));
+    if (Array.isArray(r.pezzi)) S.pezzi = r.pezzi.filter(p => p && EQUIP[p.s] && typeof p.u === 'string').map(p => { const rr = Math.max(0, Math.min(4, num(p.r, 0) | 0)); return rr === 4 ? { u: p.u, s: p.s, r: 4, x: STELLARI[p.s][p.x] ? p.x : STELLARE_BASE[p.s] } : { u: p.u, s: p.s, r: rr, set: SETS[p.set] ? p.set : 'portatore' }; });
     if (r.equip && typeof r.equip === 'object') PARTI.forEach(s => { const u = r.equip[s]; S.equip[s] = S.pezzi.some(p => p.u === u && p.s === s) ? u : null; });
     if (Array.isArray(r.granate)) S.granate = r.granate.filter(g => GRANATE[g]).slice(0, GRANATE_MAX);
     TIPI_MUN.forEach(t => { S.scorta[t] = Math.max(0, Math.min(MUN[t].scorta, num(r.scorta && r.scorta[t], S.scorta[t]) | 0)); S.zaino[t] = Math.max(0, Math.min(MUN[t].zaino, num(r.zaino && r.zaino[t], 0) | 0)); });
@@ -159,16 +195,24 @@
       const p = pezzo(S, s); if (!p) return; const E = EQUIP[s], r = p.r;
       if (E.dif) dif += E.dif[r]; if (E.vita) st.vita += E.vita[r];
       if (E.ric) st.ric *= 1 - E.ric[r] / 100; if (E.gran) st.gran *= 1 + E.gran[r] / 100;
-      if (E.vel) st.vel *= 1 + E.vel[r] / 100; if (E.salto && E.salto[r]) st.salti = 2;
+      if (E.vel) st.vel *= 1 + E.vel[r] / 100;
       if (E.rientro) st.rientro += E.rientro[r];
-      if (r === 4) st.poteri[E.stellare.k] = 1;
+      if (r === 4) { st.poteri[p.x] = 1; return; }
+      // vantaggi del set, un po' per ogni pezzo
+      if (p.set === 'portatore') dif += 1;
+      if (p.set === 'sentinella') { dif += 3; st.vel *= 0.985; }
+      if (p.set === 'viandante') { st.vel *= 1.02; st.ric *= 0.97; if (s === 'scarpe' && r >= 2) st.salti = 2; }
+      if (p.set === 'oracolo') { st.rigen = (st.rigen || 0) + 0.15; st.gran *= 1.04; }
     });
+    // poteri degli stellari che cambiano le statistiche
+    if (st.poteri.rondine) { st.salti = 2; st.saltoAlto = 1; }
+    if (st.poteri.cometa) st.poteri.volo = 1;
     st.res *= 1 - dif / 100; st.dif = dif; st.vita = Math.round(st.vita);
     return st;
   }
   // un'arma del giocatore: le statistiche di base piu' rarita' e livello
   function armaDi(S, u) { const a = S.armi.find(x => x.u === u); if (!a) return null; return { u: a.u, k: a.k, r: a.r, def: ARMI[a.k], molt: RARITA[a.r].danno * fattoreLiv(S.livello) }; }
-  const nomeOggetto = o => o.k ? ARMI[o.k].nome : EQUIP[o.s].nomi[o.r];
+  const nomeOggetto = o => o.k ? ARMI[o.k].nome : nomePezzo(o);
 
   /* ---------- armi in mano: due alla volta, al massimo una stellare ---------- */
   function equipaggia(S, u, posto) {
@@ -232,9 +276,11 @@
         if (gia) { R.doppioni += DOPPIONE[r]; R.oggetti.push({ k: key, r, doppione: true }); }
         else { const u = nuovoUid(S, 'a'); S.armi.push({ u, k: key, r }); R.oggetti.push({ u, k: key, r }); }
       } else {
-        const s = PARTI[Math.floor(c() * PARTI.length)], gia = S.pezzi.find(p => p.s === s && p.r >= r);
-        if (gia) { R.doppioni += DOPPIONE[r]; R.oggetti.push({ s, r, doppione: true }); }
-        else { const u = nuovoUid(S, 'e'); S.pezzi.push({ u, s, r }); R.oggetti.push({ u, s, r }); if (!S.equip[s]) S.equip[s] = u; }
+        const s = PARTI[Math.floor(c() * PARTI.length)];
+        const nuovoP = r === 4 ? { s, r, x: Object.keys(STELLARI[s])[Math.floor(c() * Object.keys(STELLARI[s]).length)] } : { s, r, set: NOMI_SET[Math.floor(c() * NOMI_SET.length)] };
+        const gia = S.pezzi.find(p => stessoPezzo(p, nuovoP) && p.r >= r);
+        if (gia) { R.doppioni += DOPPIONE[r]; R.oggetti.push(Object.assign({ doppione: true }, nuovoP)); }
+        else { const u = nuovoUid(S, 'e'); const pz = Object.assign({ u }, nuovoP); S.pezzi.push(pz); R.oggetti.push(pz); if (!S.equip[s]) S.equip[s] = u; }
       }
     }
     S.pieta = leg ? 0 : S.pieta + 1;
@@ -269,7 +315,7 @@
   function tuttoProva(S, liv) {
     S.livello = Math.max(1, Math.min(LIV_MAX, liv | 0));
     Object.keys(ARMI).forEach(k => { if (!S.armi.some(a => a.k === k && a.r >= (ARMI[k].base ? 0 : 3))) S.armi.push({ u: nuovoUid(S, 'a'), k, r: ARMI[k].stellare ? 4 : ARMI[k].base ? 0 : 3 }); });
-    PARTI.forEach(s => [3, 4].forEach(r => { if (!S.pezzi.some(p => p.s === s && p.r === r)) S.pezzi.push({ u: nuovoUid(S, 'e'), s, r }); }));
+    PARTI.forEach(s => { NOMI_SET.forEach(set => { if (!S.pezzi.some(p => p.s === s && p.set === set && p.r === 3)) S.pezzi.push({ u: nuovoUid(S, 'e'), s, r: 3, set }); }); Object.keys(STELLARI[s]).forEach(x => { if (!S.pezzi.some(p => p.s === s && p.x === x)) S.pezzi.push({ u: nuovoUid(S, 'e'), s, r: 4, x }); }); });
     S.granate = ['luce', 'stordente'];
     TIPI_MUN.forEach(t => { S.scorta[t] = MUN[t].scorta; S.zaino[t] = MUN[t].zaino; });
   }
@@ -277,7 +323,7 @@
   B.CriptaDati = {
     NUM_SALE, LIV_MAX, RARITA, PROB, PIETA, DOPPIONE, MUN, TIPI_MUN, ARMI, BOTTINO_ARMI, STELLARI_ARMI, PARTI, EQUIP, GRANATE, GRANATE_MAX,
     livMaxSala, dopoSala, livAtteso, fattoreLiv, scalaSala,
-    nuovo, carica, salva, pulisci, statistiche, armaDi, pezzo, nomeOggetto, equipaggia, indossa,
+    nuovo, carica, salva, pulisci, statistiche, armaDi, pezzo, nomeOggetto, nomePezzo, descPezzo, vesteDi, vesteBot, codificaVeste, decodificaVeste, SETS, NOMI_SET, STELLARI, equipaggia, indossa,
     riempiZaino, aggiungiMun, compra, cadutaMun, tiraRarita, apriCassa, salaFatta, partenza, azzeraSale, tuttoProva
   };
 })();
