@@ -60,12 +60,14 @@
       desc: 'Un razzo alla volta, per i nemici grossi e i boss.' },
     tempesta: { nome: 'Tempesta', tipo: 'mitragliatrice', mun: 'h', mod: 'mitra', cd: 0.085, dmg: 26, disp: 0.014, dispMira: 0.006, rinc: 0.012, assist: 1, bocca: -0.72, lampo: 0.08, cap: 60, tRic: 3.2, zoom: 1.25,
       desc: 'Mitragliatrice pesante: tanti colpi forti per ripulire le ondate.' },
+    spada: { nome: 'Lama dell\'Alba', tipo: 'spada', mun: 's', mod: 'spada', spada: { r: 3.8, multi: 3, cono: 0.2 }, cd: 0.55, dmg: 210, disp: 0, dispMira: 0, rinc: 0.01, assist: 1, bocca: -0.6, lampo: 0.01, cap: 8, tRic: 2.0, zoom: 1,
+      desc: 'Spada: niente mira, colpisce fino a tre nemici davanti a te. Usa le munizioni speciali come energia (8 fendenti, poi si ricarica). Tieni il mirino per parare: prendi meno danni.' },
     cuoreCometa: { nome: 'Cuore di Cometa', tipo: 'automatico stellare', mun: 'p', mod: 'stellare', stellare: 1, cd: 0.1, dmg: 15, disp: 0.007, dispMira: 0.0018, rinc: 0.012, assist: 1, bocca: -0.62, lampo: 0.08, cap: 36, tRic: 1.5, zoom: 1.35,
       perk: 'scia', desc: 'Stellare. Scia di Stelle: ogni nemico che uccidi rimette 6 colpi nel caricatore e aumenta il danno per 5 secondi (fino a 3 volte).' },
     ultimaLanterna: { nome: 'Ultima Lanterna', tipo: 'lanciarazzi stellare', mun: 'h', mod: 'lanterna', stellare: 1, cd: 0.9, dmg: 0, esplode: { r: 5.5, dmg: 560 }, disp: 0.003, dispMira: 0.001, rinc: 0.11, assist: 1, bocca: -0.78, lampo: 0.16, cap: 2, tRic: 2.4, zoom: 1.35,
       perk: 'luce', desc: 'Stellare. Lanterna Viva: due razzi; dove esplodono lasciano per 4 secondi una pozza di luce che cura i compagni.' }
   };
-  const BOTTINO_ARMI = ['rondine', 'martello', 'sciame', 'vedetta', 'tuono', 'ago', 'cometa', 'drago', 'tempesta'];
+  const BOTTINO_ARMI = ['rondine', 'martello', 'sciame', 'vedetta', 'tuono', 'ago', 'cometa', 'drago', 'tempesta', 'spada'];
   const STELLARI_ARMI = ['cuoreCometa', 'ultimaLanterna'];
 
   /* ---------- equipaggiamento: un pezzo per parte ----------
