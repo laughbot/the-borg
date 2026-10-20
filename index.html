@@ -2,7 +2,7 @@
 <html lang="it">
 <head>
   <meta charset="utf-8">
-  <meta name="versione" content="f0fd27c6cd35">
+  <meta name="versione" content="c0a1c68a1182">
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="mobile-web-app-capable" content="yes">
@@ -8938,7 +8938,7 @@ float rumoreC(vec3 x) { vec3 i = floor(x); vec3 f = fract(x); f = f * f * (3.0 -
   const D = { n: 2.5, int: 0.7, cap: 26, dmg: 1.15, hp: 1.2 };
   /* Modalita' prova (solo per chi la attiva con ?prova nell'indirizzo; ?prova=0 la spegne):
      si sceglie qualsiasi stanza, anche i percorsi, senza Starlight e con un salvataggio a parte. */
-  let PROVA = false; try { const q = new URLSearchParams(location.search).get('prova'); if (q !== null) localStorage.setItem('theborg.raid.prova', q === '0' ? '0' : '1'); PROVA = localStorage.getItem('theborg.raid.prova') === '1'; } catch (e) { }
+  let PROVA = false; try { PROVA = localStorage.getItem('theborg.raid.prova') === '1'; } catch (e) { }
   // progressi, livello, armi, equipaggiamento, munizioni e granate: la logica e' in bottino.js (B3.CriptaDati)
   const CD = B.CriptaDati, NUM_SALE = CD.NUM_SALE, ARMI = CD.ARMI;
   let DATI = CD.carica(PROVA);
@@ -11604,13 +11604,14 @@ float rumoreC(vec3 x) { vec3 i = floor(x); vec3 f = fract(x); f = f * f * (3.0 -
     for (let i = 0; i < 5 - nAmici; i++) posti.push({ n: nomeBot(i), bot: 1 });
     const slot = q => '<div class="slot' + (q.bot ? ' bot' : '') + '"><span class="nome">' + (q.capo ? '👑 ' : q.bot ? '🤖 ' : '') + esc(q.n) + '</span><small>' + (q.bot ? 'Custode bot' : q.capo ? 'capo squadra' : q.pr ? '<i class="ok">pronto</i>' : 'non ancora pronto') + '</small>' + (capo && q.id ? '<button class="togli" data-id="' + esc(q.id) + '" aria-label="Togli ' + esc(q.n) + ' dalla squadra">Togli</button>' : '') + '</div>';
     // da dove partire: dall'ultimo salvataggio del capo; in modalita' prova il capo sceglie qualsiasi stanza
+    const modo = capo ? '<div class="livs" role="group" aria-label="Modalità"><span>Modalità</span><button class="lv md' + (PROVA ? '' : ' on') + '" data-m="0" aria-pressed="' + !PROVA + '">Partita</button><button class="lv md' + (PROVA ? ' on' : '') + '" data-m="1" aria-pressed="' + PROVA + '">Prova</button></div>' : '';
     let scelte;
     if (capo && PROVA) {
       const lista = STANZE.map((st, i) => { const atto = ATTI.find(a => a[0] === st.k && !st.p && !(STANZE[i - 1] && STANZE[i - 1].k === st.k)); return (atto ? '<div class="atto">' + atto[1] + '</div>' : '') + '<button class="inc' + (i === SQ.pa ? ' on' : '') + '" data-i="' + i + '" aria-pressed="' + (i === SQ.pa) + '"><b>' + (st.k + 1) + '</b>' + st.n + (st.p ? ' <span class="ok">percorso</span>' : DATI.completati[st.k] ? ' <span class="ok">fatta</span>' : '') + '</button>'; }).join('');
       scelte = '<div class="kick">Modalità prova · scegli la stanza</div><div class="lista">' + lista + '</div>' +
         '<p class="sotto">In prova non si guadagnano Starlight e il salvataggio è a parte: quello vero non cambia.</p>' +
         '<div class="livs" role="group" aria-label="Banco di prova"><span>Banco di prova</span><button class="lv tp" data-l="1">Livello 1</button><button class="lv tp" data-l="15">Livello 15</button><button class="lv tp" data-l="30">Tutto al 30</button></div>' +
-        '<div class="pul"><button class="sec" id="rd-noprova">Esci dalla prova</button></div>';
+        '';
     } else if (capo) {
       const fatti = Object.keys(DATI.completati).length, k = partenzaSalvata();
       scelte = '<p class="sotto">Partenza: <b>Sala ' + (k + 1) + ' · ' + nomePartenza() + '</b> (ultimo salvataggio)<br>Sale superate: ' + fatti + ' di ' + NUM_SALE + ' · livello consigliato ' + CD.livAtteso(k) + '</p>' +
@@ -11622,7 +11623,7 @@ float rumoreC(vec3 x) { vec3 i = floor(x); vec3 f = fract(x); f = f * f * (3.0 -
       : '<button id="rd-pronto">' + (SQ.pronto ? 'Non sono più pronto' : 'Sono pronto') + '</button><button class="sec" id="rd-lascia">Lascia la squadra</button>';
     pannello('<div class="lobby"><div class="col"><div class="kick">Raid · squadra privata</div><h2>La Cripta del Re senza Luce</h2>' +
       '<p class="sotto">' + (capo ? (nAmici ? 'La tua squadra' : 'Sei capo squadra. Invita gli amici o parti con i Custodi bot.') : 'Sei nella squadra di <b>' + esc(cR ? cR.nick : '…') + '</b>.') + '</p>' +
-      '<div class="slots">' + posti.map(slot).join('') + '</div><div class="pul">' + azioni + '</div>' + scelte + '<div class="pul"><button class="sec" id="rd-storia">La storia</button></div></div>' +
+      modo + '<div class="slots">' + posti.map(slot).join('') + '</div><div class="pul">' + azioni + '</div>' + scelte + '<div class="pul"><button class="sec" id="rd-storia">La storia</button></div></div>' +
       '<div class="col">' + schedaPersonaggio() + htmlAmici() +
       '<div class="livs" role="group" aria-label="Vibrazione"><span>Vibrazione</span><button class="lv vb' + (vibra ? ' on' : '') + '" data-v="1">Sì</button><button class="lv vb' + (vibra ? '' : ' on') + '" data-v="0">No</button></div>' +
       testoComandi() + '</div></div>');
@@ -11645,7 +11646,12 @@ float rumoreC(vec3 x) { vec3 i = floor(x); vec3 f = fract(x); f = f * f * (3.0 -
       ui.pan.querySelector('#rd-zero-si').onclick = () => { CD.azzeraSale(DATI); salvaDati(); menu(); toast('Salvataggio cancellato: si riparte dalla prima sala', '', true); };
       ui.pan.querySelector('#rd-menu').onclick = () => menu();
     });
-    on('#rd-noprova', () => { PROVA = false; SQ.pa = 0; try { localStorage.setItem('theborg.raid.prova', '0'); } catch (e) { } DATI = CD.carica(false); applicaStat(); statoArmi = {}; mostraArma(); menu(); });
+    ui.pan.querySelectorAll('.md').forEach(b => b.onclick = () => {   // Partita o Prova: ognuna con il suo salvataggio
+      const v = b.dataset.m === '1'; if (v === PROVA) return;
+      PROVA = v; SQ.pa = 0; try { localStorage.setItem('theborg.raid.prova', v ? '1' : '0'); } catch (e) { }
+      DATI = CD.carica(PROVA); applicaStat(); statoArmi = {}; mostraArma(); menu();
+      toast(v ? 'Modalità prova: scegli la stanza che vuoi, niente Starlight' : 'Partita vera: si parte dall\'ultima sala salvata', '', true);
+    });
     on('#rd-pronto', () => { SQ.pronto = !SQ.pronto; menu(); });
     on('#rd-lascia', () => { esciDaSquadra(); menu(); });
   }
