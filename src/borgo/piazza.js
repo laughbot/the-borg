@@ -286,6 +286,16 @@
     /* ---------- alberi di ciliegio ---------- */
     function ciliegio(x, z, s) {
       const g = new T.Group(); g.position.set(x, 0, z); g.scale.setScalar(s); scene.add(g);
+      // vicino al portale della Cripta gli alberi sono morti: rami neri e storti, niente fiori
+      const PC = B.PORTALE_CRIPTA;
+      if (PC && Math.hypot(x - PC.x, z - PC.z) < 13) {
+        const legno = M('#2b2126'); g.add(mesh(new T.CylinderGeometry(0.2, 0.42, 2.9, 7), legno, { y: 1.45, l: 0.03 })).rotation.z = 0.08;
+        [[-1, 0.4, 0.9], [1, -0.3, 1.0], [0.3, 1, 0.8], [-0.4, -1, 0.7], [0.9, 0.6, 0.6]].forEach((b, i) => {
+          const r = mesh(new T.CylinderGeometry(0.03, 0.12, 1.7 * b[2], 6), legno, { x: b[0] * 0.5, y: 2.9 + i * 0.12, z: b[1] * 0.4, l: 0.02 }); r.rotation.z = -b[0] * 0.9; r.rotation.x = b[1] * 0.7; g.add(r);
+          const p = mesh(new T.CylinderGeometry(0.01, 0.05, 0.7, 5), legno, { x: b[0] * 1.1, y: 3.7 + i * 0.1, z: b[1] * 0.85, l: 0.015 }); p.rotation.z = b[0] * 0.6; g.add(p);
+        });
+        ostCer(x, z, 0.5 * s); return;
+      }
       const tr = mesh(new T.CylinderGeometry(0.26, 0.46, 2.7, 10), M('#6b4630'), { y: 1.35, l: 0.03 }); g.add(tr);
       [[-1, 0.5], [1, -0.4], [0, 0.9]].forEach(b => { const r = mesh(new T.CylinderGeometry(0.1, 0.17, 1.5, 8), M('#6b4630'), { x: b[0] * 0.45, y: 2.8, z: b[1] * 0.2, l: 0.02 }); r.rotation.z = -b[0] * 0.7; r.rotation.x = b[1] * 0.5; g.add(r); });
       const cols = ['#f4a3c4', '#f8bcd4', '#ee8fb6', '#fbd0e1', '#f29bbf'];
@@ -618,6 +628,8 @@
 
     /* ---------- laghetto, ruota panoramica e mercatino (js/piazza-attivita.js) ---------- */
     if (B.costruisciAttivita) B.costruisciAttivita({ scene, edifici, ostacoli, porte, sedili, anim, toccabili, lampione, panchina });
+    // il portale della Cripta del Re, nell'angolo sud-ovest vicino al Cratere (js/portale-cripta.js)
+    if (B.costruisciPortaleCripta) B.costruisciPortaleCripta({ scene, edifici, ostacoli, porte, anim, toccabili });
 
     /* ---------- i pezzi fermi uniti in poche mesh: stessa piazza, molto meno lavoro per il telefono (js/ottimizza.js) ---------- */
     if (B.unisciStatici) { const r = B.unisciStatici(scene, { anim, fade: fadeItems, protetti: toccabili.map(t => t.obj) }); B.statPiazza = r; }

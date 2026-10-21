@@ -61,6 +61,7 @@ export const BLOCCHI = [
   ['THE BORG 3D - MOBILI INTERATTIVI', 'src/borgo/mobili-interattivi.js'],
   ['THE BORG 3D - MISSIONI', 'src/borgo/missioni.js'],
   ["THE BORG 3D - ATTIVITA' DELLA PIAZZA", 'src/borgo/attivita-piazza.js'],
+  ['THE BORG 3D - PORTALE DELLA CRIPTA', 'src/borgo/portale-cripta.js'],
   ['window.BELIN_IMG=', 'src/dati/belinverse-immagini.js'],
   ['BELINVERSE 2 (Set 001)', 'src/minigiochi/belinverse/carte.js'],
   ['BELINVERSE 2: il gioco di carte', 'src/minigiochi/belinverse/gioco.js'],
