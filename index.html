@@ -2,7 +2,7 @@
 <html lang="it">
 <head>
   <meta charset="utf-8">
-  <meta name="versione" content="a7425b19d797">
+  <meta name="versione" content="8670525a9eda">
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="mobile-web-app-capable" content="yes">
@@ -2171,8 +2171,8 @@ window.CONFIG = {
       trave(g, WU + 0.1, 0.16, 0, h1 + 0.08, zt); trave(g, WU + 0.1, 0.16, 0, H - 0.08, zt);
       [-1, 1].forEach(s => { trave(g, 0.18, h2, s * (WU / 2 - 0.05), h1 + h2 / 2, zt); trave(g, 0.18, h1 - 0.5, s * (w / 2 - 0.05), 0.5 + (h1 - 0.5) / 2, zb + 0.045); });
       trave(g, 0.12, h2, 0, h1 + h2 / 2, zt); [-1, 1].forEach(s => trave(g, 0.1, h2 * 1.15, s * WU * 0.25, h1 + h2 / 2, zt, s * 0.75));
-      // finestre del piano alto
-      [-1, 1].forEach(s => finestra(g, s * WU * 0.3, h1 + 1.2, 0.85, 0.95, zt, { persiane: o.persiane || '#2f6a78', fiori: true }));
+      // finestre del piano alto (senza fioriere: finivano davanti all'insegna)
+      [-1, 1].forEach(s => finestra(g, s * WU * 0.3, h1 + 1.2, 0.85, 0.95, zt, { persiane: o.persiane || '#2f6a78' }));
       // porta ad arco con luce
       const px = o.porta || 0;
       g.add(mesh(new T.BoxGeometry(1.5, 1.8, 0.14), M(pietra), { x: px, y: 0.9 + 0.3, z: zb + 0.03, lb: 0.012 }));
@@ -2194,7 +2194,7 @@ window.CONFIG = {
       // insegna
       const IW = o.insegnaGiochi ? 5.7 : o.insegnaLtc ? 5.4 : 3.0, IH = o.insegnaGiochi ? 1.5 : o.insegnaLtc ? 0.98 : 0.72;
       const ins = new T.Mesh(new T.PlaneGeometry(IW, IH), new T.MeshBasicMaterial({ map: o.insegnaGiochi ? B.texInsegnaGiochi(1024, 270) : o.insegnaLtc ? B.texInsegnaLTC(1024, 186) : B.texInsegna(o.senzaNome ? '' : o.nome, 512, 123), transparent: true }));
-      ins.position.set(px, h1 + 0.5, zt + 0.08); g.add(ins);
+      ins.position.set(px, h1 + 0.5, zt + 0.27); g.add(ins);   // davanti ai davanzali delle finestre di sopra
       if (o.insegnaGiochi) { // alone luminoso dietro l'insegna
         const cv = document.createElement('canvas'); cv.width = 256; cv.height = 128; const cx = cv.getContext('2d');
         const rg = cx.createRadialGradient(128, 64, 8, 128, 64, 128); rg.addColorStop(0, 'rgba(255,90,200,.75)'); rg.addColorStop(.5, 'rgba(110,80,255,.35)'); rg.addColorStop(1, 'rgba(0,0,0,0)');
@@ -2202,7 +2202,7 @@ window.CONFIG = {
         const hl = new T.Mesh(new T.PlaneGeometry(IW * 1.7, IH * 2.2), new T.MeshBasicMaterial({ map: new T.CanvasTexture(cv), transparent: true, blending: T.AdditiveBlending, depthWrite: false }));
         hl.position.set(px, h1 + 0.5, zt + 0.02); g.add(hl);
       }
-      g.add(mesh(new T.BoxGeometry(IW + 0.14, IH + 0.12, 0.05), M('#3a2216'), { x: px, y: h1 + 0.5, z: zt + 0.04, lb: 0.01 }));
+      g.add(mesh(new T.BoxGeometry(IW + 0.14, IH + 0.12, 0.05), M('#3a2216'), { x: px, y: h1 + 0.5, z: zt + 0.235, lb: 0.01 }));
       // tetto: due falde con tegole, colmo, timpani
       const s = (d + 0.5) / 2 + 0.45, rh = 1.45, beta = Math.atan2(rh, s), Ls = Math.hypot(s, rh) + 0.1, WR = w + 0.5 + 0.9;
       const tt = B.texTegole(o.tetto || '#2f3f8f');
@@ -2397,8 +2397,8 @@ window.CONFIG = {
         bu.position.set(pa.x + (pb.x - pa.x) * u, pa.y - 0.2 + (pb.y - pa.y) * u - Math.sin(u * PI) * 0.7, pa.z + (pb.z - pa.z) * u); scene.add(bu);
       }
     }
-    // niente ghirlande lungo la fila dei negozi (z -5.6): coprivano le insegne
-    ghirlanda('-3.4,3.2', '3.4,3.2'); ghirlanda('-8.5,20', '0,21'); ghirlanda('0,21', '8.5,20'); ghirlanda('-20,15', '-8.5,20'); ghirlanda('8.5,20', '20,16');
+    ghirlanda('-12,-5.6', '-4.8,-5.6'); ghirlanda('-4.8,-5.6', '2.6,-5.6'); ghirlanda('2.6,-5.6', '9.4,-5.6'); ghirlanda('9.4,-5.6', '15.6,-5.6');
+    ghirlanda('-3.4,3.2', '3.4,3.2'); ghirlanda('-17.2,-5.6', '-12,-5.6'); ghirlanda('-22.4,-5.6', '-17.2,-5.6'); ghirlanda('15.6,-5.6', '22.2,-5.6'); ghirlanda('-8.5,20', '0,21'); ghirlanda('0,21', '8.5,20'); ghirlanda('-20,15', '-8.5,20'); ghirlanda('8.5,20', '20,16');
 
     /* ---------- panchine, tavolini, botti, aiuole, stendardo ---------- */
     function panchina(x, z, rot, y0) {
