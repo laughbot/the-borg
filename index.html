@@ -2,7 +2,7 @@
 <html lang="it">
 <head>
   <meta charset="utf-8">
-  <meta name="versione" content="c8a3314f1b39">
+  <meta name="versione" content="a7425b19d797">
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="mobile-web-app-capable" content="yes">
@@ -5366,9 +5366,34 @@ body.pc .cf .cf-t,body.pc .cf .cf-base{display:none}
     // visuale: trascina a destra, anche tenendo premuto il fuoco
     const sens = () => (c.mira ? imp.sens * imp.sensMira : imp.sens);
     const guarda = (o, e) => { const [x, y] = loc(e); if (opz.guarda) opz.guarda((x - o.lx) * 0.0062 * sens(), (y - o.ly) * 0.0062 * sens()); o.lx = x; o.ly = y; };
+    // computer, come negli sparatutto per PC: il mouse resta "catturato" dal gioco e muove la visuale
+    // senza tenere premuto niente. Si cattura da solo al primo clic o tasto in partita (il browser
+    // vuole un gesto), si libera quando si apre un menu o lo zaino e si riprende quando si chiude.
+    // Esc libera il mouse: il gioco apre il suo menu (opz.liberato).
+    const puo = () => c.attivo && !c.tocco && (!opz.puoCatturare || opz.puoCatturare());
+    const preso = () => document.pointerLockElement === zr;
+    let lasciato = false, eraPreso = false, chiesto = 0;   // lasciato: l'ho liberato io (menu, zaino), niente menu all'uscita
+    function cattura() {
+      if (preso() || !puo() || performance.now() - chiesto < 50) return;   // non due richieste nello stesso istante
+      chiesto = performance.now();
+      try { const p = zr.requestPointerLock(); if (p && p.catch) p.catch(() => { chiesto = 0; }); } catch (x) { chiesto = 0; }
+    }
+    document.addEventListener('pointerlockerror', () => { chiesto = 0; });
+    c.cattura = cattura;
+    const dopoGesto = () => { if (!c.tocco && c.attivo) setTimeout(cattura, 0); };   // dopo i gestori del clic (es. "Torna a giocare")
+    document.addEventListener('click', dopoGesto);
+    window.addEventListener('keydown', e => { if (!e.repeat && e.key !== 'Escape') dopoGesto(); });
+    document.addEventListener('pointerlockchange', () => {
+      chiesto = 0; const prima = eraPreso; eraPreso = preso();
+      if (eraPreso || c.tocco || !prima) return;   // conta solo quando il mouse era davvero catturato e viene liberato
+      fuocoTocco = false; if (c.mira) { c.mira = false; if (T.mira) T.mira.classList.remove('attivo'); }
+      if (lasciato) { lasciato = false; return; }
+      if (puo() && opz.liberato) opz.liberato();   // Esc o cambio finestra: apre il menu
+    });
+    c.libera = () => { if (preso()) { lasciato = true; try { document.exitPointerLock(); } catch (x) { } } };
     zr.addEventListener('pointerdown', e => {
       if (!c.attivo) return;
-      if (!c.tocco) { if (document.pointerLockElement !== zr) { try { const p = zr.requestPointerLock(); if (p && p.catch) p.catch(() => { }); } catch (x) { } } if (e.button === 2) premiMira(true); else fuocoTocco = true; return; }
+      if (!c.tocco) { if (!preso()) { cattura(); e.preventDefault(); return; } if (e.button === 2) premiMira(true); else fuocoTocco = true; return; }
       if (sg.id !== null) return; sg.id = e.pointerId; try { zr.setPointerCapture(e.pointerId); } catch (x) { } [sg.lx, sg.ly] = loc(e); e.preventDefault();
     });
     zr.addEventListener('contextmenu', e => e.preventDefault());
@@ -5453,7 +5478,8 @@ body.pc .cf .cf-t,body.pc .cf .cf-base{display:none}
     });
     window.addEventListener('keyup', e => { kb[e.key.toLowerCase()] = false; });
     window.addEventListener('blur', () => { for (const k in kb) kb[k] = false; fuocoTocco = false; });
-    document.addEventListener('mousemove', e => { if (!c.attivo || c.tocco || document.pointerLockElement !== zr) return; if (opz.guarda) opz.guarda(e.movementX * 0.0024 * sens(), e.movementY * 0.0024 * sens()); });
+    document.addEventListener('mousemove', e => { if (!c.attivo || c.tocco || document.pointerLockElement !== zr) return; const mx = Math.max(-400, Math.min(400, e.movementX)), my = Math.max(-400, Math.min(400, e.movementY));   // alcuni browser danno uno scatto enorme appena catturato
+      if (opz.guarda) opz.guarda(mx * 0.0024 * sens(), my * 0.0024 * sens()); });
     window.addEventListener('mouseup', e => { if (c.tocco) return; if (e.button === 2) premiMira(false); else fuocoTocco = false; });
     window.addEventListener('wheel', e => { if (c.attivo && Math.abs(e.deltaY) > 2) c.eventi.cambia = true; }, { passive: true });
 
@@ -5461,6 +5487,7 @@ body.pc .cf .cf-t,body.pc .cf .cf-base{display:none}
        mirinoSu(): true se il mirino e' su un bersaglio (per il fuoco automatico) */
     let tCorsa = 0;
     c.leggi = function (dt, mirinoSu) {
+      if (preso() && !puo()) c.libera();   // si e' aperto un menu o lo zaino: il puntatore serve per cliccare
       let mx = c.mv.x, my = c.mv.y;
       if (kb.a || kb.arrowleft) mx -= 1; if (kb.d || kb.arrowright) mx += 1; if (kb.w || kb.arrowup) my -= 1; if (kb.s || kb.arrowdown) my += 1;
       const L = Math.hypot(mx, my); if (L > 1) { mx /= L; my /= L; }
@@ -5477,7 +5504,7 @@ body.pc .cf .cf-t,body.pc .cf .cf-base{display:none}
       c.sparo = premuto || !!auto;
       return c;
     };
-    c.mostra = function (si) { c.attivo = si; el.classList.toggle('fermo', !si); if (!si) { c.gMira = null; if (T.granata) T.granata.classList.remove('mirando', 'annulla'); c.mira = false; c.sparo = false; c.mv.x = c.mv.y = 0; fu.giu = fs.giu = false; fuocoTocco = false; mv.id = sg.id = fu.id = fs.id = null; corsaBlocco = false; for (const k in c.eventi) c.eventi[k] = false; if (T.mira) T.mira.classList.remove('attivo'); knob.style.transform = ''; base.classList.remove('on'); } };
+    c.mostra = function (si) { c.attivo = si; el.classList.toggle('fermo', !si); if (!si) { c.libera(); c.gMira = null; if (T.granata) T.granata.classList.remove('mirando', 'annulla'); c.mira = false; c.sparo = false; c.mv.x = c.mv.y = 0; fu.giu = fs.giu = false; fuocoTocco = false; mv.id = sg.id = fu.id = fs.id = null; corsaBlocco = false; for (const k in c.eventi) c.eventi[k] = false; if (T.mira) T.mira.classList.remove('attivo'); knob.style.transform = ''; base.classList.remove('on'); } };
     c.lasciaMira = () => { c.mira = false; if (T.mira) T.mira.classList.remove('attivo'); };
     /* informazioni a schermo: munizioni, ricarica, attese di granata/abilita' */
     // aggiorna il DOM solo quando un valore cambia: scrivere testo e stili a ogni frame rallenta molto Safari su iPhone
@@ -12296,7 +12323,7 @@ float rumoreC(vec3 x) { vec3 i = floor(x); vec3 f = fract(x); f = f * f * (3.0 -
      niente sconosciuti. Ognuno entra nella Cripta con la sua squadra da 1; si invita o ci si unisce alla
      squadra di un amico. Si parte dall'ultima sala salvata del capo (in modalita' prova da qualsiasi stanza),
      gli altri dicono "pronto". I posti liberi (fino a 6) li prendono i Custodi bot (provvisori: col server si giochera' in 6 amici). */
-  const testoComandi = () => '<p class="com">' + (B.touch ? (CF ? 'Sinistra: muoviti (spingi in avanti fino in fondo per correre). Destra: trascina per guardare. Tasti: fuoco (anche a sinistra), mirino, salto (in aria: doppio salto o volo, se hai le scarpe giuste), accovacciati (in corsa: scivolata; tieni premuto: a terra), ricarica, granata, pugno (corpo a corpo: colpisce chi ti è addosso, anche sotto, senza mirare), cambia arma. Lo zaino 🎒 è accanto alle armi. In pausa trovi Comandi per sensibilità, fuoco automatico e posizione dei tasti.' : 'Sinistra: muoviti. Destra: trascina per guardare. Tasto rosso: spara (mira assistita). Tasto ▲: salta. Tasto ⇄: cambia arma.') : '<b>WASD</b> per muoverti, <b>clic</b> per catturare il mouse, poi muovi il mouse per guardare e tieni premuto per sparare. <b>Spazio</b> salta, <b>Maiusc</b> corre, <b>Q</b> o <b>rotella</b> cambia arma, <b>I</b> apre lo zaino.' + (CF ? ' <b>Tasto destro</b> mirino, <b>R</b> ricarica, <b>G</b> granata, <b>V</b> corpo a corpo, <b>C</b> accovacciati o scivola, <b>Z</b> a terra.' : '')) + '</p>';
+  const testoComandi = () => '<p class="com">' + (B.touch ? (CF ? 'Sinistra: muoviti (spingi in avanti fino in fondo per correre). Destra: trascina per guardare. Tasti: fuoco (anche a sinistra), mirino, salto (in aria: doppio salto o volo, se hai le scarpe giuste), accovacciati (in corsa: scivolata; tieni premuto: a terra), ricarica, granata, pugno (corpo a corpo: colpisce chi ti è addosso, anche sotto, senza mirare), cambia arma. Lo zaino 🎒 è accanto alle armi. In pausa trovi Comandi per sensibilità, fuoco automatico e posizione dei tasti.' : 'Sinistra: muoviti. Destra: trascina per guardare. Tasto rosso: spara (mira assistita). Tasto ▲: salta. Tasto ⇄: cambia arma.') : '<b>WASD</b> per muoverti, il <b>mouse</b> muove la visuale (come negli sparatutto per PC: al primo clic il gioco lo cattura, <b>Esc</b> lo libera e apre il menu), <b>clic</b> per sparare. <b>Spazio</b> salta, <b>Maiusc</b> corre, <b>Q</b> o <b>rotella</b> cambia arma, <b>I</b> apre lo zaino.' + (CF ? ' <b>Tasto destro</b> mirino, <b>R</b> ricarica, <b>G</b> granata, <b>V</b> corpo a corpo, <b>C</b> accovacciati o scivola, <b>Z</b> a terra.' : '')) + '</p>';
   const rar = r => CD.RARITA[r];
   const nomeArmaHtml = it => '<span class="rar" style="color:' + rar(it.r).col + '">' + ARMI[it.k].nome + '</span>';
   function schedaPersonaggio() {
@@ -12880,13 +12907,17 @@ body.pc #rd-hud .tasto,body.pc #rd-hud .base{display:none}
       const cf = ui.pan.querySelector('#rd-cf'); if (cf) cf.onclick = () => { pannello('<div class="kick">Come funziona</div><h2>' + enc.nome + '</h2><ul>' + (enc.guida || []).map(g => '<li>' + g + '</li>').join('') + '</ul><div class="pul"><button id="rd-cfx">Indietro</button></div>'); ui.pan.querySelector('#rd-cfx').onclick = pausa; };
     };
     // su telefono i comandi di gioco fermano il "click": il tasto risponde al tocco stesso (pointerup)
-    const premiEsci = () => { if (stato === 'gioco') { if (ui.pan.hidden) pausa(); else pannello(''); } else if (B.solo) menu(); else R.esci(); };
+    let tLiberato = 0;   // Esc che libera il mouse apre gia' il menu: non richiuderlo subito
+    const premiEsci = (daTasto) => { if (daTasto === true && performance.now() - tLiberato < 500) return; if (stato === 'gioco') { if (ui.pan.hidden) pausa(); else pannello(''); } else if (B.solo) menu(); else R.esci(); };
     ui.esci.addEventListener('pointerdown', e => { e.stopPropagation(); });
     ui.esci.addEventListener('pointerup', e => { e.stopPropagation(); e.preventDefault(); premiEsci(); });
-    window.addEventListener('keydown', e => { if (R.attivo && stato === 'gioco' && !e.repeat && (e.key === 'Escape' || e.key === 'p' || e.key === 'P')) premiEsci(); });
+    window.addEventListener('keydown', e => { if (R.attivo && stato === 'gioco' && !e.repeat && (e.key === 'Escape' || e.key === 'p' || e.key === 'P')) premiEsci(true); });
     if (CF) {
       // comandi condivisi con gli altri sparatutto: sotto i pannelli, sopra il resto dell'HUD
-      C = CF.crea({ dove: hud, tasti: ['fuoco', 'mira', 'salto', 'giu', 'ricarica', 'granata', 'cambia', 'corpo'], granataMirata: true, audio, guarda: (dx, dy) => { io.yaw -= dx; io.pitch = clamp(io.pitch - dy, -1.35, 1.35); } });
+      C = CF.crea({ dove: hud, tasti: ['fuoco', 'mira', 'salto', 'giu', 'ricarica', 'granata', 'cambia', 'corpo'], granataMirata: true, audio, guarda: (dx, dy) => { io.yaw -= dx; io.pitch = clamp(io.pitch - dy, -1.35, 1.35); },
+        // PC: mouse catturato solo in partita, senza menu o zaino aperti; Esc lo libera e apre il menu
+        puoCatturare: () => stato === 'gioco' && ui.pan.hidden && (!ui.zaino || ui.zaino.hidden),
+        liberato: () => { tLiberato = performance.now(); if (ui.pan.hidden) pausa(); } });
       hud.insertBefore(C.el, ui.pan); corpo = CF.corpo(); R._riposo = () => C.riposo();
       ui.armi.addEventListener('pointerdown', e => { const s = e.target.closest('span'); if (!s) return; if (s.classList.contains('zn')) { zaino(); return; } cambiaArma([...ui.armi.children].indexOf(s)); });
       return;
