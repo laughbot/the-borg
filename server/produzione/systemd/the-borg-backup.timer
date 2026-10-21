@@ -1,0 +1,9 @@
+[Unit]
+Description=The Borg: copia del database ogni notte
+
+[Timer]
+OnCalendar=*-*-* 04:17:00
+Persistent=true
+
+[Install]
+WantedBy=timers.target

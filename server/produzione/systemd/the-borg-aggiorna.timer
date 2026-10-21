@@ -1,0 +1,9 @@
+[Unit]
+Description=The Borg: controlla gli aggiornamenti ogni 5 minuti
+
+[Timer]
+OnBootSec=2min
+OnUnitActiveSec=5min
+
+[Install]
+WantedBy=timers.target

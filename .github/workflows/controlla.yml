@@ -17,3 +17,9 @@ jobs:
       - run: node strumenti/costruisci.mjs --controlla
       - run: node test/filtro.test.mjs
       - run: node test/cripta.test.mjs
+      - run: bash server/test/produzione.test.sh
+      - name: Controlla la configurazione del server online
+        run: |
+          printf 'DOMINIO=a.sslip.io\nDB_PASSWORD=a\nSESSIONE_CHIAVE=a\nSESSIONE_RINNOVO_CHIAVE=a\nRUNTIME_HTTP_KEY=a\nCONSOLE_PASSWORD=a\nCONSOLE_FIRMA=a\n' > /tmp/prova.env
+          docker compose --env-file /tmp/prova.env -f server/produzione/docker-compose.yml config -q
+          docker run --rm -v "$PWD/server/produzione/Caddyfile:/etc/caddy/Caddyfile:ro" -e DOMINIO=a.sslip.io caddy:2-alpine caddy validate --config /etc/caddy/Caddyfile
