@@ -178,24 +178,7 @@
       porte.push({ id: 'porta-kart', nome: 'Go-Kart', x: px - 1.0, z: pz, r: 2.3, gioco: 'kart', testo: 'Gioca a Go-Kart' });
     })();
 
-    /* ---------- PORTALE DELLA CRIPTA DEL RE (parete nord) ---------- */
-    (function () {
-      const px = -10, pz = HZ0 + 0.7;
-      const g = new T.Group(); g.position.set(px, 0, pz); scena.add(g);
-      scatola(g, 4.2, 0.16, 1.6, '#1f2421', 0, 0.08, 0, 0.02);
-      [-1.7, 1.7].forEach(x => { scatola(g, 0.55, 3.6, 0.6, '#cfc6ad', x, 1.8, 0, 0.02); cil(g, 0.12, 0.3, 0.6, '#9be59a', x, 3.9, 0, 8); });
-      scatola(g, 4.0, 0.5, 0.6, '#2f2d26', 0, 3.65, 0, 0.02);
-      const velo = new T.Mesh(new T.PlaneGeometry(2.9, 3.2), new T.MeshBasicMaterial({ color: 0x5fbf6a, transparent: true, opacity: 0.35, side: T.DoubleSide, depthWrite: false }));
-      velo.position.set(0, 1.75, 0); g.add(velo);
-      anim.push(t => { velo.material.opacity = 0.28 + Math.sin(t * 2) * 0.08; });
-      const [cv, cx] = B.tela(512, 128); cx.fillStyle = '#121513'; B.rr(cx, 4, 4, 504, 120, 18); cx.fill(); cx.lineWidth = 7; cx.strokeStyle = '#d9a441'; cx.stroke();
-      cx.font = 'bold 62px Georgia, serif'; cx.textAlign = 'center'; cx.textBaseline = 'middle'; cx.fillStyle = '#e9e1c9'; cx.fillText('CRIPTA DEL RE', 256, 68);
-      const ins = new T.Mesh(new T.PlaneGeometry(3.8, 0.95), new T.MeshBasicMaterial({ map: B.tex(cv) })); ins.position.set(0, 4.4, 0.32); g.add(ins);
-      ostBox(px - 1.7, pz, 0.7, 0.7); ostBox(px + 1.7, pz, 0.7, 0.7);
-      const pr = new T.Mesh(new T.BoxGeometry(4, 3.6, 1.6), new T.MeshBasicMaterial()); pr.position.set(px, 1.8, pz); pr.visible = false; scena.add(pr);
-      toccabili.push({ obj: pr, tipo: 'azione', testo: 'Portale della Cripta del Re: avvicinati e premi "Gioca" (DEMO, squadra da 6 con bot)' });
-      porte.push({ id: 'gioco-raid', nome: 'La Cripta del Re', testo: 'Gioca alla Cripta del Re', gioco: 'raid', x: px, z: pz + 1.4, r: 2.0 });
-    })();
+    /* la Cripta del Re non e' piu' qui: si entra dal portale in piazza (js/portale-cripta.js) */
 
     /* ---------- luci e uscita ---------- */
     const lampa = B.Mluce('#ff9ad8', 0.9);
