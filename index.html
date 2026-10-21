@@ -2,7 +2,7 @@
 <html lang="it">
 <head>
   <meta charset="utf-8">
-  <meta name="versione" content="8eddfd8897b4">
+  <meta name="versione" content="a7425b19d797">
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="mobile-web-app-capable" content="yes">
@@ -2397,8 +2397,8 @@ window.CONFIG = {
         bu.position.set(pa.x + (pb.x - pa.x) * u, pa.y - 0.2 + (pb.y - pa.y) * u - Math.sin(u * PI) * 0.7, pa.z + (pb.z - pa.z) * u); scene.add(bu);
       }
     }
-    ghirlanda('-12,-5.6', '-4.8,-5.6'); ghirlanda('-4.8,-5.6', '2.6,-5.6'); ghirlanda('2.6,-5.6', '9.4,-5.6'); ghirlanda('9.4,-5.6', '15.6,-5.6');
-    ghirlanda('-3.4,3.2', '3.4,3.2'); ghirlanda('-17.2,-5.6', '-12,-5.6'); ghirlanda('-22.4,-5.6', '-17.2,-5.6'); ghirlanda('15.6,-5.6', '22.2,-5.6'); ghirlanda('-8.5,20', '0,21'); ghirlanda('0,21', '8.5,20'); ghirlanda('-20,15', '-8.5,20'); ghirlanda('8.5,20', '20,16');
+    // niente ghirlande lungo la fila dei negozi (z -5.6): coprivano le insegne
+    ghirlanda('-3.4,3.2', '3.4,3.2'); ghirlanda('-8.5,20', '0,21'); ghirlanda('0,21', '8.5,20'); ghirlanda('-20,15', '-8.5,20'); ghirlanda('8.5,20', '20,16');
 
     /* ---------- panchine, tavolini, botti, aiuole, stendardo ---------- */
     function panchina(x, z, rot, y0) {
