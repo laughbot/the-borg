@@ -2980,9 +2980,9 @@
   /* ---------- zaino: armi, pezzi, granate, munizioni (in stanza d'attesa o in partita, senza pausa) ---------- */
   // foto del proprio avatar con i pezzi indossati (davanti e dietro), disegnata con lo stesso motore
   const fotoCache = {};
-  function fotoVestito() {
+  function fotoVestito(dati) {
     try {
-      const look = (window.Gioco && Gioco.stato && Gioco.stato.giocatore && Gioco.stato.giocatore.look) || {}, eq = CD.vesteDi(DATI);
+      const look = (window.Gioco && Gioco.stato && Gioco.stato.giocatore && Gioco.stato.giocatore.look) || {}, eq = CD.vesteDi(dati || DATI);
       const chiave = JSON.stringify(look) + CD.codificaVeste(eq); if (fotoCache[chiave]) return fotoCache[chiave];
       const r = B.app && B.app.renderer; if (!r || !B.creaAvatar) return null;
       const W = 220, H = 310, sc = new T.Scene(), cv = document.createElement('canvas'); cv.width = W * 2; cv.height = H; const cx = cv.getContext('2d');
@@ -3011,7 +3011,7 @@
       return '<div class="zr"><div><b style="color:' + rar(it.r).col + '">' + A.nome + '</b> <small>' + A.tipo + ' · ' + rar(it.r).nome + ' · danno ' + dn + ' · ' + (m ? '<i style="color:' + m.col + '">' + m.nome.toLowerCase() + '</i>' : 'colpi infiniti') + '</small><p>' + A.desc + '</p></div>' +
         '<div class="zb"><button class="ma' + (su === 0 ? ' on' : '') + '" data-u="' + it.u + '" data-p="0">1</button><button class="ma' + (su === 1 ? ' on' : '') + '" data-u="' + it.u + '" data-p="1">2</button></div></div>';
     }).join('') + '</div>';
-    h += '<div class="kick">Equipaggiamento · vita ' + st.vita + ' · difesa ' + Math.round((1 - st.res) * 100) + '%' + (st.salti > 1 ? ' · doppio salto' : '') + '</div>' + (inPartita ? '' : (f => f ? '<img class="zfoto" alt="Il tuo Portatore con i pezzi indossati" src="' + f + '">' : '')(fotoVestito())) + '<div class="zl">' + CD.PARTI.map(s => {
+    h += '<div class="kick">Equipaggiamento · vita ' + st.vita + ' · difesa ' + Math.round((1 - st.res) * 100) + '%' + (st.salti > 1 ? ' · doppio salto' : '') + '</div>' + (inPartita ? '' : (f => f ? '<img class="zfoto" alt="Il tuo Portatore con i pezzi indossati" src="' + f + '">' : '')(fotoVestito()) + '<div class="zl"><div class="zr"><div><b>Mostra i pezzi in piazza</b> <small>' + (CD.inPiazza() ? 'tutti ti vedono con i pezzi della Cripta' : 'in piazza hai solo il tuo avatar') + '</small></div><div class="zb"><button class="piaz' + (CD.inPiazza() ? ' on' : '') + '">' + (CD.inPiazza() ? 'Sì' : 'No') + '</button></div></div></div>') + '<div class="zl">' + CD.PARTI.map(s => {
       const E = CD.EQUIP[s], miei = DATI.pezzi.filter(p => p.s === s).sort((a, b) => b.r - a.r);
       if (!miei.length) return '<div class="zr"><div><b>' + E.nome + '</b> <small>non ne hai ancora: si trova nelle casse</small></div></div>';
       return miei.map(p => {
@@ -3034,7 +3034,9 @@
       if (inPartita && !statoArmi[u]) { const st = armaSt(u), A = ARMI[itemDi(u).k]; if (st && A.mun) st.cur = 0; }   // presa dallo zaino: va caricata
       ia = clamp(ia, 0, 1); salvaDati(); mostraArma(); rifai();
     });
-    el.querySelectorAll('.ind').forEach(b => b.onclick = () => { CD.indossa(DATI, b.dataset.u); salvaDati(); applicaStat(inPartita); rifai(); });
+    const rivesti = () => { if (!PROVA && CD.inPiazza() && B.app && B.app.rivesti) B.app.rivesti(); };
+    el.querySelectorAll('.ind').forEach(b => b.onclick = () => { CD.indossa(DATI, b.dataset.u); salvaDati(); applicaStat(inPartita); rivesti(); rifai(); });
+    el.querySelectorAll('.piaz').forEach(b => b.onclick = () => { CD.inPiazza(!CD.inPiazza()); if (B.app && B.app.rivesti) B.app.rivesti(); rifai(); });
     el.querySelectorAll('.dona').forEach(b => b.onclick = () => {
       const t = b.dataset.t, q = CD.MUN[t].pacco; if (DATI.zaino[t] < q) return;
       DATI.zaino[t] -= q; DONI.push([++nDono, b.dataset.k, t, q]); if (DONI.length > 8) DONI.shift(); salvaDati();
@@ -3852,7 +3854,9 @@ body.pc #rd-hud .tasto,body.pc #rd-hud .base{display:none}
   R._colpoB = (i, dn) => { svegliati(); return bersagli[i] ? colpoMio(bersagli[i], dn) : 'no'; };
   R._on = () => ({ mioId, SEGUI, ON, amici: [...amiciR.values()].map(r => ({ nick: r.nick, d: r.d })), gHit });
 
+  R.foto = dati => fotoVestito(dati);   // per lo zaino della piazza
   R.avvia = function () {
+    if (stato === 'menu' && !SEGUI) { DATI = CD.carica(PROVA); applicaStat(); }   // i pezzi cambiati dallo zaino della piazza
     if (!pronto) { creaHud(); creaArmi(); pronto = true; }
     if (B.CreatureRaid && !B.CreatureRaid.pronte()) B.CreatureRaid.preparaPiano(null, 7);   // scolpisce i nemici a pezzi mentre sei nel menu
     R.attivo = true; document.body.classList.add('raid-attivo');
@@ -3865,6 +3869,7 @@ body.pc #rd-hud .tasto,body.pc #rd-hud .base{display:none}
     R.attivo = false; document.body.classList.remove('raid-attivo'); stato = 'menu'; sparo = false; mv.x = mv.y = 0; mv.id = sg.id = fu.id = null; pannello('');
     try { if (document.pointerLockElement) document.exitPointerLock(); } catch (e) { }
     try { screen.orientation.unlock(); } catch (e) { } if (B.orienta) B.orienta(false);
+    if (CD.inPiazza() && B.app && B.app.rivesti) try { B.app.rivesti(); } catch (e) { }   // i pezzi nuovi si vedono subito in piazza
     if (R.onEsci) R.onEsci();
   };
   // per i test automatici

@@ -138,8 +138,10 @@
   function costruisciIo(look, nick) {
     if (io.av) { scene.remove(io.av.root); B.liberaAvatar(io.av); }
     io.nick = nick || io.nick; io.bolla = null;
-    io.av = B.unisciAvatar(B.creaAvatar(look)); scene.add(io.av.root);     // pezzi uniti come per gli abitanti: da ~110 a ~25 disegni
-    const et = B.etichetta(io.nick, { sfondo: '#f2c76e', altezza: 0.4 }); et.position.y = 2.55; io.av.root.add(et);
+    const grezzo = B.creaAvatar(look), eq = B.CriptaDati && B.CriptaDati.vestePiazza ? B.CriptaDati.vestePiazza() : null;   // pezzi della Cripta, se li vuoi in piazza
+    if (eq && B.ArmatureCripta) try { B.ArmatureCripta.veste(grezzo, eq); } catch (e) { }
+    io.av = B.unisciAvatar(grezzo); scene.add(io.av.root);     // pezzi uniti come per gli abitanti: da ~110 a ~25 disegni
+    // il proprio nome non si mostra sopra la testa: lo vedono solo gli altri
     io.av.root.userData.io = true;
     io.bk = null; if (io.bici) { montaBici(); io.av.bicT = io.av.bic = 1; }
   }
@@ -494,7 +496,8 @@
   B.app = {
     io, gC, vistaAlto, assegnaLuci, ricostruisciCasa, casaOspite, setBici, creaBici, npc, C, cam, scene, renderer, stanze, G, joy, entraStanza, usaPorta, portaVicina, misura, atmosfera, impostaZoom,
     inclina, emote, mostraBolla, ruota: d => { C.azT += d * PI / 2; setSegui(false); },
-    stanza: () => stanza, gioco: () => giocoAttivo
+    stanza: () => stanza, gioco: () => giocoAttivo,
+    rivesti: () => { if (G.stato.giocatore && io.av) costruisciIo(G.stato.giocatore.look); }
   };
   if (B.Arredo) B.Arredo.init(B.app);
   if (B.Miss) B.Miss.init(B.app);

@@ -2,7 +2,7 @@
 <html lang="it">
 <head>
   <meta charset="utf-8">
-  <meta name="versione" content="b4494bfa8bba">
+  <meta name="versione" content="9c25c6e0aa2d">
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="mobile-web-app-capable" content="yes">
@@ -627,7 +627,7 @@ body.orizz #inizio-anteprima { width: 120px; height: 140px; }
     <div class="vista scorri">
       <header class="pagina-testa"><h2>Zaino</h2></header>
       <p class="avviso">Lo zaino non esiste ancora: qui andranno oggetti, mobili per la casa e, in futuro, le carte. Gli spazi sono vuoti apposta, per mostrare come sara' l'interfaccia.</p>
-      <div class="zaino-schede"><span class="catena sel">Oggetti</span><span class="catena">Mobili</span><span class="catena">Carte</span></div>
+      <div class="zaino-schede"><span class="catena sel">Oggetti</span><span class="catena">Mobili</span><span class="catena">Carte</span><span class="catena">Cripta</span></div>
       <div id="zaino-griglia"></div>
     </div>
   </section>
@@ -1256,6 +1256,40 @@ window.CONFIG = {
   }
 
   /* ===================================================================== */
+  /* ---------- accessori sopra i capelli ----------
+     Ogni pettinatura ha un volume diverso: i cappelli coprono i capelli che sporgerebbero dalla calotta,
+     corona e orecchie salgono sopra le pettinature alte, fascia, cuffie, molletta e fiocco si allargano
+     quanto serve per restare fuori dai capelli. */
+  function adattaAccessori(acc, capelli, testa, nCap0, nTes0, code) {
+    if (acc === 1 || acc === 4 || acc === 11 || acc === 2) return;
+    const capelliVeri = capelli.children.slice(0, nCap0), dondolano = new Set(code);
+    capelli.updateMatrixWorld(true);
+    const inv = new T.Matrix4().copy(capelli.matrixWorld).invert(), box = o => new T.Box3().setFromObject(o).applyMatrix4(inv);
+    const info = capelliVeri.map(o => ({ o, b: box(o), coda: dondolano.has(o) }));
+    // cappelli: via i ciuffi sopra la tesa (restano la "campana" sui lati, i capelli lunghi e le code)
+    const tesa = { 3: 0.12, 12: 0.12, 13: 0.4, 8: 0.42, 9: 0.5, 7: 0.5 }[acc];
+    if (tesa !== undefined) info.forEach(i => { if (i.coda || i.o.userData.campana) return; const c = (i.b.min.y + i.b.max.y) / 2; const via = acc === 3 || acc === 12 ? c > tesa : acc === 13 || acc === 8 ? i.b.max.y > tesa + 0.12 : i.b.max.y > 0.62; if (via) i.o.visible = false; });
+    // i ciuffi a punta non contano per la misura: contano le masse (calotta, campana, ricci, panino...)
+    const resto = info.filter(i => i.o.visible && !i.coda && !(i.o.geometry && i.o.geometry.type === 'ConeGeometry'));
+    // quanto sono larghi i capelli intorno alla fronte e quanto sono alti
+    let largo = 0.46, alto = 0.47;
+    resto.forEach(i => {
+      if (i.b.max.y > 0.12 && i.b.min.y < 0.32 && i.b.max.y - i.b.min.y < 1) largo = Math.max(largo, Math.abs(i.b.min.x), Math.abs(i.b.max.x), Math.abs(i.b.max.z) * 0.95);
+      if (Math.abs((i.b.min.x + i.b.max.x) / 2) < 0.3 && Math.abs((i.b.min.z + i.b.max.z) / 2) < 0.3) alto = Math.max(alto, i.b.max.y);
+    });
+    largo = Math.min(largo, 0.7);
+    const nuovi = capelli.children.slice(nCap0).concat(testa.children.slice(nTes0));
+    if (acc === 9 || acc === 7) {                                       // corona e orecchie: sopra la pettinatura
+      const su = Math.max(0, alto - 0.49); nuovi.forEach(o => { o.position.y += su; });
+      if (acc === 9 && largo > 0.5) { const k = Math.min(1.5, largo / 0.48); nuovi.forEach(o => { o.position.x *= k; o.position.z *= k; o.scale.x *= k; o.scale.z *= k; }); }
+    } else if (acc === 10 || acc === 5) {                               // fascia e cuffie: si allargano fuori dai capelli
+      const k = Math.max(1, (largo + 0.025) / (acc === 10 ? 0.435 : 0.47));
+      nuovi.forEach(o => { o.position.x *= k; o.position.z *= k; if (acc === 10 && o.geometry && o.geometry.type === 'TorusGeometry') o.scale.multiplyScalar(k); else if (acc === 5 && o.geometry && o.geometry.type === 'TorusGeometry') o.scale.multiplyScalar(k); });
+      if (acc === 10) nuovi.forEach(o => { o.scale.z *= 1; });
+    } else if (acc === 0 || acc === 6) {                                // molletta e fiocco: appoggiati sopra i capelli
+      nuovi.forEach(o => { const d = o.position.clone(), r = d.length(); if (r < 0.01) return; o.position.copy(d.multiplyScalar(Math.max(r, largo + 0.04) / r)); });
+    }
+  }
   function creaAvatar(look) {
     const p = paletteDa(look), ab = p.abito;
     const root = new T.Group(), corpo = new T.Group(); root.add(corpo);
@@ -1426,7 +1460,7 @@ window.CONFIG = {
     const matDoppia = (col) => new T.MeshToonMaterial({ color: new T.Color(col), gradientMap: gm, side: T.DoubleSide });
     function campana(phiLibero, theta, raggio) {
       const c = mesh(new T.SphereGeometry(raggio || 0.47, 32, 20, PI / 2 + phiLibero, 2 * PI - 2 * phiLibero, 0, PI * theta), matDoppia(p.capelli), { l: 0.022 });
-      c.position.set(0, 0.0, -0.02); capelli.add(c); return c;
+      c.position.set(0, 0.0, -0.02); c.userData.campana = 1; capelli.add(c); return c;
     }
     function frangia(lungMin, lungMax, nCiuffi, liscia) {
       if (liscia === undefined) liscia = p.stile >= 8;
@@ -1609,6 +1643,7 @@ window.CONFIG = {
     }
 
     capelli.children.slice(nCap0).forEach(o => { o.userData.accessorio = 1; }); testa.children.slice(nTes0).forEach(o => { o.userData.accessorio = 1; });
+    adattaAccessori(acc, capelli, testa, nCap0, nTes0, code);
     corpo.traverse(o => { if (o.isMesh && o.castShadow !== false) o.castShadow = true; });
 
     /* area invisibile per toccare l'avatar */
@@ -6317,6 +6352,10 @@ body.pb-attivo #pb-hud{display:block}
     PARTI.forEach(s => { if (c[j] === '-') { j++; return; } const r = Math.max(0, Math.min(4, parseInt(c[j], 10) || 0)), k = K[parseInt(c[j + 1], 36)] || 'portatore'; j += 2; v[s] = r === 4 && STELLARI[s][k] ? { r, k } : { r: Math.min(r, 3), set: SETS[k] ? k : 'portatore' }; });
     return v;
   };
+  // in piazza i pezzi della Cripta si vedono solo se lo decidi tu (spento all'inizio)
+  const CHIAVE_PIAZZA = 'theborg.cripta.piazza';
+  const inPiazza = si => { try { if (si !== undefined) localStorage.setItem(CHIAVE_PIAZZA, si ? '1' : '0'); return localStorage.getItem(CHIAVE_PIAZZA) === '1'; } catch (e) { return false; } };
+  const vestePiazza = () => { if (!inPiazza()) return null; try { const v = vesteDi(carica()); return Object.keys(v).length ? v : null; } catch (e) { return null; } };
   const nomePezzo = p => p.r === 4 && STELLARI[p.s][p.x] ? STELLARI[p.s][p.x].nome : EQUIP[p.s].nome + ' ' + (SETS[p.set] || SETS.portatore).nome;
   const descPezzo = p => p.r === 4 && STELLARI[p.s][p.x] ? STELLARI[p.s][p.x].potere : (SETS[p.set] || SETS.portatore).desc;
   const stessoPezzo = (a, b) => a.s === b.s && (a.r === 4 || b.r === 4 ? a.r === b.r && a.x === b.x : a.set === b.set);
@@ -6522,7 +6561,7 @@ body.pb-attivo #pb-hud{display:block}
   B.CriptaDati = {
     NUM_SALE, LIV_MAX, RARITA, PROB, PIETA, DOPPIONE, MUN, TIPI_MUN, ARMI, BOTTINO_ARMI, STELLARI_ARMI, PARTI, EQUIP, GRANATE, GRANATE_MAX,
     livMaxSala, dopoSala, livAtteso, fattoreLiv, scalaSala,
-    nuovo, carica, salva, pulisci, statistiche, armaDi, pezzo, nomeOggetto, nomePezzo, descPezzo, vesteDi, vesteBot, codificaVeste, decodificaVeste, SETS, NOMI_SET, STELLARI, equipaggia, indossa,
+    nuovo, carica, salva, pulisci, statistiche, armaDi, pezzo, nomeOggetto, nomePezzo, descPezzo, vesteDi, vesteBot, codificaVeste, decodificaVeste, inPiazza, vestePiazza, SETS, NOMI_SET, STELLARI, equipaggia, indossa,
     riempiZaino, aggiungiMun, compra, cadutaMun, tiraRarita, apriCassa, salaFatta, partenza, azzeraSale, tuttoProva
   };
 })();
@@ -12335,9 +12374,9 @@ float rumoreC(vec3 x) { vec3 i = floor(x); vec3 f = fract(x); f = f * f * (3.0 -
   /* ---------- zaino: armi, pezzi, granate, munizioni (in stanza d'attesa o in partita, senza pausa) ---------- */
   // foto del proprio avatar con i pezzi indossati (davanti e dietro), disegnata con lo stesso motore
   const fotoCache = {};
-  function fotoVestito() {
+  function fotoVestito(dati) {
     try {
-      const look = (window.Gioco && Gioco.stato && Gioco.stato.giocatore && Gioco.stato.giocatore.look) || {}, eq = CD.vesteDi(DATI);
+      const look = (window.Gioco && Gioco.stato && Gioco.stato.giocatore && Gioco.stato.giocatore.look) || {}, eq = CD.vesteDi(dati || DATI);
       const chiave = JSON.stringify(look) + CD.codificaVeste(eq); if (fotoCache[chiave]) return fotoCache[chiave];
       const r = B.app && B.app.renderer; if (!r || !B.creaAvatar) return null;
       const W = 220, H = 310, sc = new T.Scene(), cv = document.createElement('canvas'); cv.width = W * 2; cv.height = H; const cx = cv.getContext('2d');
@@ -12366,7 +12405,7 @@ float rumoreC(vec3 x) { vec3 i = floor(x); vec3 f = fract(x); f = f * f * (3.0 -
       return '<div class="zr"><div><b style="color:' + rar(it.r).col + '">' + A.nome + '</b> <small>' + A.tipo + ' · ' + rar(it.r).nome + ' · danno ' + dn + ' · ' + (m ? '<i style="color:' + m.col + '">' + m.nome.toLowerCase() + '</i>' : 'colpi infiniti') + '</small><p>' + A.desc + '</p></div>' +
         '<div class="zb"><button class="ma' + (su === 0 ? ' on' : '') + '" data-u="' + it.u + '" data-p="0">1</button><button class="ma' + (su === 1 ? ' on' : '') + '" data-u="' + it.u + '" data-p="1">2</button></div></div>';
     }).join('') + '</div>';
-    h += '<div class="kick">Equipaggiamento · vita ' + st.vita + ' · difesa ' + Math.round((1 - st.res) * 100) + '%' + (st.salti > 1 ? ' · doppio salto' : '') + '</div>' + (inPartita ? '' : (f => f ? '<img class="zfoto" alt="Il tuo Portatore con i pezzi indossati" src="' + f + '">' : '')(fotoVestito())) + '<div class="zl">' + CD.PARTI.map(s => {
+    h += '<div class="kick">Equipaggiamento · vita ' + st.vita + ' · difesa ' + Math.round((1 - st.res) * 100) + '%' + (st.salti > 1 ? ' · doppio salto' : '') + '</div>' + (inPartita ? '' : (f => f ? '<img class="zfoto" alt="Il tuo Portatore con i pezzi indossati" src="' + f + '">' : '')(fotoVestito()) + '<div class="zl"><div class="zr"><div><b>Mostra i pezzi in piazza</b> <small>' + (CD.inPiazza() ? 'tutti ti vedono con i pezzi della Cripta' : 'in piazza hai solo il tuo avatar') + '</small></div><div class="zb"><button class="piaz' + (CD.inPiazza() ? ' on' : '') + '">' + (CD.inPiazza() ? 'Sì' : 'No') + '</button></div></div></div>') + '<div class="zl">' + CD.PARTI.map(s => {
       const E = CD.EQUIP[s], miei = DATI.pezzi.filter(p => p.s === s).sort((a, b) => b.r - a.r);
       if (!miei.length) return '<div class="zr"><div><b>' + E.nome + '</b> <small>non ne hai ancora: si trova nelle casse</small></div></div>';
       return miei.map(p => {
@@ -12389,7 +12428,9 @@ float rumoreC(vec3 x) { vec3 i = floor(x); vec3 f = fract(x); f = f * f * (3.0 -
       if (inPartita && !statoArmi[u]) { const st = armaSt(u), A = ARMI[itemDi(u).k]; if (st && A.mun) st.cur = 0; }   // presa dallo zaino: va caricata
       ia = clamp(ia, 0, 1); salvaDati(); mostraArma(); rifai();
     });
-    el.querySelectorAll('.ind').forEach(b => b.onclick = () => { CD.indossa(DATI, b.dataset.u); salvaDati(); applicaStat(inPartita); rifai(); });
+    const rivesti = () => { if (!PROVA && CD.inPiazza() && B.app && B.app.rivesti) B.app.rivesti(); };
+    el.querySelectorAll('.ind').forEach(b => b.onclick = () => { CD.indossa(DATI, b.dataset.u); salvaDati(); applicaStat(inPartita); rivesti(); rifai(); });
+    el.querySelectorAll('.piaz').forEach(b => b.onclick = () => { CD.inPiazza(!CD.inPiazza()); if (B.app && B.app.rivesti) B.app.rivesti(); rifai(); });
     el.querySelectorAll('.dona').forEach(b => b.onclick = () => {
       const t = b.dataset.t, q = CD.MUN[t].pacco; if (DATI.zaino[t] < q) return;
       DATI.zaino[t] -= q; DONI.push([++nDono, b.dataset.k, t, q]); if (DONI.length > 8) DONI.shift(); salvaDati();
@@ -13207,7 +13248,9 @@ body.pc #rd-hud .tasto,body.pc #rd-hud .base{display:none}
   R._colpoB = (i, dn) => { svegliati(); return bersagli[i] ? colpoMio(bersagli[i], dn) : 'no'; };
   R._on = () => ({ mioId, SEGUI, ON, amici: [...amiciR.values()].map(r => ({ nick: r.nick, d: r.d })), gHit });
 
+  R.foto = dati => fotoVestito(dati);   // per lo zaino della piazza
   R.avvia = function () {
+    if (stato === 'menu' && !SEGUI) { DATI = CD.carica(PROVA); applicaStat(); }   // i pezzi cambiati dallo zaino della piazza
     if (!pronto) { creaHud(); creaArmi(); pronto = true; }
     if (B.CreatureRaid && !B.CreatureRaid.pronte()) B.CreatureRaid.preparaPiano(null, 7);   // scolpisce i nemici a pezzi mentre sei nel menu
     R.attivo = true; document.body.classList.add('raid-attivo');
@@ -13220,6 +13263,7 @@ body.pc #rd-hud .tasto,body.pc #rd-hud .base{display:none}
     R.attivo = false; document.body.classList.remove('raid-attivo'); stato = 'menu'; sparo = false; mv.x = mv.y = 0; mv.id = sg.id = fu.id = null; pannello('');
     try { if (document.pointerLockElement) document.exitPointerLock(); } catch (e) { }
     try { screen.orientation.unlock(); } catch (e) { } if (B.orienta) B.orienta(false);
+    if (CD.inPiazza() && B.app && B.app.rivesti) try { B.app.rivesti(); } catch (e) { }   // i pezzi nuovi si vedono subito in piazza
     if (R.onEsci) R.onEsci();
   };
   // per i test automatici
@@ -18978,8 +19022,10 @@ body.bb-attivo #controlli,body.bb-attivo #joy,body.bb-attivo #btn-contesto,body.
   function costruisciIo(look, nick) {
     if (io.av) { scene.remove(io.av.root); B.liberaAvatar(io.av); }
     io.nick = nick || io.nick; io.bolla = null;
-    io.av = B.unisciAvatar(B.creaAvatar(look)); scene.add(io.av.root);     // pezzi uniti come per gli abitanti: da ~110 a ~25 disegni
-    const et = B.etichetta(io.nick, { sfondo: '#f2c76e', altezza: 0.4 }); et.position.y = 2.55; io.av.root.add(et);
+    const grezzo = B.creaAvatar(look), eq = B.CriptaDati && B.CriptaDati.vestePiazza ? B.CriptaDati.vestePiazza() : null;   // pezzi della Cripta, se li vuoi in piazza
+    if (eq && B.ArmatureCripta) try { B.ArmatureCripta.veste(grezzo, eq); } catch (e) { }
+    io.av = B.unisciAvatar(grezzo); scene.add(io.av.root);     // pezzi uniti come per gli abitanti: da ~110 a ~25 disegni
+    // il proprio nome non si mostra sopra la testa: lo vedono solo gli altri
     io.av.root.userData.io = true;
     io.bk = null; if (io.bici) { montaBici(); io.av.bicT = io.av.bic = 1; }
   }
@@ -19334,7 +19380,8 @@ body.bb-attivo #controlli,body.bb-attivo #joy,body.bb-attivo #btn-contesto,body.
   B.app = {
     io, gC, vistaAlto, assegnaLuci, ricostruisciCasa, casaOspite, setBici, creaBici, npc, C, cam, scene, renderer, stanze, G, joy, entraStanza, usaPorta, portaVicina, misura, atmosfera, impostaZoom,
     inclina, emote, mostraBolla, ruota: d => { C.azT += d * PI / 2; setSegui(false); },
-    stanza: () => stanza, gioco: () => giocoAttivo
+    stanza: () => stanza, gioco: () => giocoAttivo,
+    rivesti: () => { if (G.stato.giocatore && io.av) costruisciIo(G.stato.giocatore.look); }
   };
   if (B.Arredo) B.Arredo.init(B.app);
   if (B.Miss) B.Miss.init(B.app);
@@ -20203,6 +20250,8 @@ body.bb-attivo #controlli,body.bb-attivo #joy,body.bb-attivo #btn-contesto,body.
 #pagina-zaino .zn-ogg b{font-size:12.5px}
 #pagina-zaino .zn-ogg small{color:var(--testo-tenue);font-size:11.5px}
 #pagina-zaino .zn-ogg .n{position:absolute;top:5px;right:6px;min-width:22px;height:22px;padding:0 5px;border-radius:11px;background:var(--ambra);color:#2a1a2e;font-weight:900;font-size:12px;display:grid;place-items:center}
+#pagina-zaino .zn-ogg.su{box-shadow:inset 0 0 0 2px var(--ambra)}
+#pagina-zaino .zn-foto{display:block;margin:0 auto 4px;width:240px;max-width:100%}
 #pagina-zaino .zn-vuoto{padding:14px;border-radius:14px;border:1.5px dashed rgba(255,255,255,.2);color:var(--testo-tenue);font-size:13px;text-align:center}
 #pagina-zaino .zn-bt{display:inline-flex;align-items:center;gap:6px;padding:9px 14px;border-radius:99px;border:0;background:var(--ambra);color:#2a1a2e;font-weight:800;font-size:14px;font-family:inherit;cursor:pointer}
 #pagina-zaino .zn-bt.sec{background:rgba(255,255,255,.12);color:var(--crema)}
@@ -20242,7 +20291,7 @@ body.orizz #pagina-zaino .zn-carte{grid-template-columns:repeat(auto-fill,minmax
     const tag = pagina.querySelector('.tag-demo'); if (tag) tag.remove();
     const avv = pagina.querySelector('.avviso'); if (avv) avv.remove();
     const schede = pagina.querySelector('.zaino-schede'); schede.innerHTML = '';
-    [['oggetti', 'Oggetti'], ['mobili', 'Mobili'], ['carte', 'Carte']].forEach(([id, t]) => {
+    [['oggetti', 'Oggetti'], ['mobili', 'Mobili'], ['carte', 'Carte'], ['cripta', 'Cripta']].forEach(([id, t]) => {
       const b = el('button', 'catena', t); b.type = 'button'; b.dataset.s = id;
       b.addEventListener('click', () => { scheda = id; disegna(); });
       schede.appendChild(b);
@@ -20409,6 +20458,34 @@ body.orizz #pagina-zaino .zn-carte{grid-template-columns:repeat(auto-fill,minmax
     c.appendChild(g);
   }
 
+  /* ---------- Cripta: i pezzi trovati nelle casse, da indossare anche qui ---------- */
+  const ICONE_PEZZI = { casco: '🪖', armatura: '🛡️', guanti: '🧤', scarpe: '👢', mantello: '🧣' };
+  function cripta(c) {
+    const CD = B.CriptaDati; if (!CD) { c.appendChild(vuoto('La Cripta non è disponibile.')); return; }
+    const S = CD.carica();
+    if (!S.pezzi.length) { c.appendChild(el('h3', '', 'Equipaggiamento della Cripta')); c.appendChild(vuoto('Non hai ancora pezzi: si trovano nelle casse della Cripta del Re senza Luce.')); return; }
+    const foto = B.Raid && B.Raid.foto ? B.Raid.foto(S) : null;
+    if (foto) { const i = new Image(); i.src = foto; i.alt = 'Il tuo avatar con i pezzi indossati'; i.className = 'zn-foto'; c.appendChild(i); }
+    const acceso = CD.inPiazza();
+    c.appendChild(el('h3', '', 'Mostra i pezzi in piazza'));
+    c.appendChild(el('p', 'zn-nota', acceso ? 'Tutti ti vedono con i pezzi indossati.' : 'In piazza hai solo il tuo avatar: i pezzi si vedono nella Cripta.'));
+    const r = el('div', 'zn-riga'), bt = el('button', 'zn-bt' + (acceso ? '' : ' sec'), acceso ? 'Sì, mostrali' : 'No, nascondili'); bt.type = 'button';
+    bt.addEventListener('click', () => { CD.inPiazza(!acceso); rivesti(); disegna(); }); r.appendChild(bt); c.appendChild(r);
+    CD.PARTI.forEach(s => {
+      const miei = S.pezzi.filter(p => p.s === s).sort((a, b) => b.r - a.r);
+      c.appendChild(el('h3', '', esc(CD.EQUIP[s].nome) + ' <small>' + (miei.length ? 'tocca per indossare o togliere' : 'nessuno') + '</small>'));
+      if (!miei.length) return;
+      const g = el('div', 'zn-griglia');
+      miei.forEach(p => {
+        const R = CD.RARITA[p.r], su = S.equip[s] === p.u;
+        const t = tile({ bg: R.col + '33', testo: ICONE_PEZZI[s] }, CD.nomePezzo(p), (su ? '✓ indossato · ' : '') + R.nome, 0, () => { CD.indossa(S, p.u); CD.salva(S); rivesti(); disegna(); });
+        t.title = CD.descPezzo(p); t.querySelector('b').style.color = R.col; if (su) t.classList.add('su');
+        g.appendChild(t);
+      });
+      c.appendChild(g);
+    });
+  }
+  function rivesti() { if (B.app && B.app.rivesti) B.app.rivesti(); }
   function disegna() {
     if (!costruito && !costruisci()) return;
     pagina.querySelectorAll('.zaino-schede .catena').forEach(b => b.classList.toggle('sel', b.dataset.s === scheda));
@@ -20418,7 +20495,7 @@ body.orizz #pagina-zaino .zn-carte{grid-template-columns:repeat(auto-fill,minmax
     const nMob = E ? (B.ARREDI || []).reduce((a, m) => a + E.posseduti(m.id), 0) : 0;
     pagina.querySelector('.zn-soldi').innerHTML = '<span class="zn-pill">' + B3.Eco.ico + ' <b>' + (E ? E.coins : 0) + '</b> ' + B3.Eco.nome + '</span><span class="zn-pill">🛋️ <b>' + nMob + '</b> mobili</span><span class="zn-pill">🃏 <b>' + nCarte + '</b> carte</span><span class="zn-pill">🐟 <b>' + pesci + '</b> nel secchio</span>';
     const c = document.getElementById('zaino-griglia'); c.innerHTML = '';
-    if (scheda === 'oggetti') oggetti(c); else if (scheda === 'mobili') mobili(c); else carte(c);
+    if (scheda === 'oggetti') oggetti(c); else if (scheda === 'mobili') mobili(c); else if (scheda === 'cripta') cripta(c); else carte(c);
   }
 
   B.Zaino = { disegna };
@@ -20608,6 +20685,9 @@ body.orizz #pagina-zaino .zn-carte{grid-template-columns:repeat(auto-fill,minmax
   const stessoLuogo = (a, b) => String(a).toLowerCase() === String(b).toLowerCase();
 
   /* ---------- quello che mando io ---------- */
+  // pezzi della Cripta da mostrare in piazza (solo se li ho accesi): codice corto di 10 caratteri
+  function codiceEq() { const CD = B.CriptaDati, v = CD && CD.vestePiazza ? CD.vestePiazza() : null; return v ? CD.codificaVeste(v) : undefined; }
+  const eqDa = x => typeof x === 'string' && x.length <= 12 ? x : '';
   function mia() {
     const io = app.io, st = app.stanza(), gioco = G.stato.giocatore;
     if (!gioco || !io.av) return null;
@@ -20616,7 +20696,7 @@ body.orizz #pagina-zaino .zn-carte{grid-template-columns:repeat(auto-fill,minmax
       vel: +Math.hypot(io.vx, io.vz).toFixed(2), sed: io.seduto ? (io.seduto.dorme ? 2 : 1) : 0, bk: io.bici ? 1 : 0, k: GIOCHI[dove] && GIOCHI[dove]().rete ? GIOCHI[dove]().rete() : null,
       mc: B.Mercato && B.Mercato.annunciRete ? B.Mercato.annunciRete() : null, mo: mieiMo.length ? { l: mieiMo } : undefined, re: mieiRe.length ? { l: mieiRe } : undefined,
       lt: Object.keys(mieiLetti).length ? Object.keys(mieiLetti).slice(-6).map(k => ({ a: k, n: mieiLetti[k] })) : undefined,
-      sc: scrivoA && performance.now() - tScrivo < 4000 ? testo(scrivoA, 20) : undefined };
+      sc: scrivoA && performance.now() - tScrivo < 4000 ? testo(scrivoA, 20) : undefined, eq: codiceEq() };
   }
   // q = numero progressivo (chi riceve scarta gli aggiornamenti vecchi arrivati in ritardo),
   // t = il mio orologio in ms e vx/vz = la velocita' vera tra un invio e l'altro: chi mi vede
@@ -20636,12 +20716,14 @@ body.orizz #pagina-zaino .zn-carte{grid-template-columns:repeat(auto-fill,minmax
   /* ---------- gli amici ---------- */
   function crea(peer, pr) {
     // come gli abitanti: pezzi uniti e niente ombra, se no ogni amico pesa sul telefono quanto mezza piazza
-    const look = lookDa(pr.look), av = B.unisciAvatar ? B.unisciAvatar(B.creaAvatar(look)) : B.creaAvatar(look);
+    const look = lookDa(pr.look), grezzo = B.creaAvatar(look), eq = eqDa(pr.eq);
+    if (eq && B.ArmatureCripta && B.CriptaDati) try { B.ArmatureCripta.veste(grezzo, B.CriptaDati.decodificaVeste(eq)); } catch (e) { }
+    const av = B.unisciAvatar ? B.unisciAvatar(grezzo) : grezzo;
     av.root.traverse(q => { if (q.isMesh) { q.castShadow = false; q.receiveShadow = false; } });
     const nick = testo(pr.nick, 20) || 'Amico';
     const et = B.etichetta(nick, { sfondo: '#7fd6a4', colore: '#163322', altezza: 0.38 }); et.position.y = 2.52; av.root.add(et);
     app.scene.add(av.root);
-    const a = { peer, av, nick, lookK: JSON.stringify(look), x: num(pr.x, 0), z: num(pr.z, 0), y: num(pr.y, 0), r: num(pr.r, 0), vel: 0, bolla: null, durBolla: 0, nMsg: pr.msg ? pr.msg.n : 0, nEm: pr.em ? pr.em.n : 0, nDm: maxDm(pr), nEv: maxN(pr.ev), nMo: maxN(pr.mo), nRe: maxN(pr.re), pr, q: null, off: null, buf: [], bk: null, vis: false };
+    const a = { peer, av, nick, eqK: eq, lookK: JSON.stringify(look), x: num(pr.x, 0), z: num(pr.z, 0), y: num(pr.y, 0), r: num(pr.r, 0), vel: 0, bolla: null, durBolla: 0, nMsg: pr.msg ? pr.msg.n : 0, nEm: pr.em ? pr.em.n : 0, nDm: maxDm(pr), nEv: maxN(pr.ev), nMo: maxN(pr.mo), nRe: maxN(pr.re), pr, q: null, off: null, buf: [], bk: null, vis: false };
     noti.set(nick.toLowerCase(), { nick, look });
     amici.set(peer, a); return a;
   }
@@ -20685,7 +20767,7 @@ body.orizz #pagina-zaino .zn-carte{grid-template-columns:repeat(auto-fill,minmax
     let a = amici.get(peer);
     // arrivato in ritardo dopo uno piu' nuovo: si butta (ogni aggiornamento contiene gia' tutto)
     if (a && a.q != null && typeof pr.q === 'number' && pr.q <= a.q && !(typeof pr.t === 'number' && pr.t < a.tm - 2000)) return;   // t molto piu' piccolo: ha ricaricato la pagina
-    if (a && (JSON.stringify(lookDa(pr.look)) !== a.lookK || (testo(pr.nick, 20) || 'Amico') !== a.nick)) { const vecchio = a; togli(peer); a = crea(peer, pr); a.nMsg = vecchio.nMsg; a.nEm = vecchio.nEm; a.nDm = vecchio.nDm; a.nEv = vecchio.nEv; a.nMo = vecchio.nMo; a.nRe = vecchio.nRe; }
+    if (a && (JSON.stringify(lookDa(pr.look)) !== a.lookK || eqDa(pr.eq) !== a.eqK || (testo(pr.nick, 20) || 'Amico') !== a.nick)) { const vecchio = a; togli(peer); a = crea(peer, pr); a.nMsg = vecchio.nMsg; a.nEm = vecchio.nEm; a.nDm = vecchio.nDm; a.nEv = vecchio.nEv; a.nMo = vecchio.nMo; a.nRe = vecchio.nRe; }
     if (!a) {
       a = crea(peer, pr);
       if (G.stato.giocatore) G.emetti('toast', a.nick + ' è online');
