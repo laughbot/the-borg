@@ -10,7 +10,7 @@
 (function () {
   'use strict';
   const B = window.B3, T = B.T, M = B.M, mesh = B.mesh, PI = Math.PI, rnd = B.rnd;
-  const P = { x: -35, z: 58, yaw: PI / 4, s: 1.3 };   // centro del portale; il davanti guarda a sud-est, verso la piazza e la telecamera
+  const P = { x: -35, z: 58, yaw: Math.atan2(0 - (-35), 30 - 58), s: 1.3 };   // centro del portale; il davanti (con i teschi) guarda verso la fontana (0, 30)
 
   const base = (col, extra) => new T.MeshBasicMaterial(Object.assign({ color: new T.Color(col) }, extra || {}));
   // macchia scura sul selciato: l'ombra del portale che "sporca" la piazza

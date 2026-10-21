@@ -2,7 +2,7 @@
 <html lang="it">
 <head>
   <meta charset="utf-8">
-  <meta name="versione" content="82ca93188255">
+  <meta name="versione" content="fb8e8f174d08">
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="mobile-web-app-capable" content="yes">
@@ -2303,9 +2303,8 @@ window.CONFIG = {
       { x: 18, z: -9.1, rot: 0, w: 7.0, d: 5, muro: '#e8d6b6', muroSopra: '#f1e3c8', tetto: '#2a3a85', nome: 'Caffetteria', tendaA: '#f4ead6', tendaB: '#e0675c', porta: 0.3, abbaino: -1.9, persiane: '#2f6a78', tendaLarg: 5.2 },
       { x: -22, z: -9.1, rot: 0, w: 6.2, d: 5, muro: '#c98a62', muroSopra: '#ebd3a8', tetto: '#38307a', nome: 'Sala Giochi', insegnaGiochi: true, tendaA: '#f6e8cc', tendaB: '#c8553d', porta: -0.2, persiane: '#7a3f6a', tendaLarg: 4.6 },
       { x: -32, z: -9.1, rot: 0, w: 3.4, d: 4.4, muro: '#cdb08a', muroSopra: '#e9d6b0', tetto: '#4a3a86', nome: 'Casa', tendaA: '#f6e8cc', tendaB: '#4f8ab8', porta: 0, persiane: '#2f6a78', tendaLarg: 2.6 },
-      { x: -22, z: 69.1, rot: PI, w: 3.6, d: 5, muro: '#bfc9d8', muroSopra: '#e3e8f0', tetto: '#2f5a4a', nome: 'Biblioteca', tendaA: '#f4ead6', tendaB: '#3f7a6a', porta: 0, persiane: '#4a3a6a', tendaLarg: 2.8 },
+      { x: -27.7, z: -9.1, rot: 0, w: 3.2, d: 4.7, muro: '#bfc9d8', muroSopra: '#e3e8f0', tetto: '#2f5a4a', nome: 'Biblioteca', tendaA: '#f4ead6', tendaB: '#3f7a6a', porta: 0, persiane: '#4a3a6a', tendaLarg: 2.8 },
       { x: 51.1, z: 50, rot: -PI / 2, w: 3.8, d: 4.6, muro: '#d8b4a0', muroSopra: '#f0dcc4', tetto: '#7a3a4a', nome: 'Fioraio', tendaA: '#f6e8cc', tendaB: '#e0675c', porta: 0, persiane: '#4f8a3a', tendaLarg: 3.0 },
-      { x: -51.1, z: 50, rot: PI / 2, w: 3.6, d: 5, muro: '#b8c8b0', muroSopra: '#dfe8d4', tetto: '#2e5a6a', nome: 'Gelateria', tendaA: '#f4ead6', tendaB: '#f08fb4', porta: 0, persiane: '#c8553d', tendaLarg: 2.8 },
       { x: -51.1, z: 4, rot: PI / 2, w: 4.6, d: 5, muro: '#c9a77c', muroSopra: '#ecd9b4', tetto: '#6a3d2a', nome: 'Arredamenti', tendaA: '#f4ead6', tendaB: '#b0703c', porta: 0, persiane: '#3f6a8a', tendaLarg: 3.6 },
       { x: -40, z: -9.1, rot: 0, w: 7.6, d: 5, muro: '#3b2f5c', muroSopra: '#51427a', tetto: '#1d1a3a', nome: 'Laugh Tale Collectibles', tendaA: '#f4ead6', tendaB: '#7a2fd6', porta: 0, persiane: '#e0b040', tendaLarg: 6.4, insegnaLtc: true }
     ];
@@ -16146,7 +16145,7 @@ body.orizz #pesca-pan{left:auto;right:136px;bottom:16px}
 (function () {
   'use strict';
   const B = window.B3, T = B.T, M = B.M, mesh = B.mesh, PI = Math.PI, rnd = B.rnd;
-  const P = { x: -35, z: 58, yaw: PI / 4, s: 1.3 };   // centro del portale; il davanti guarda a sud-est, verso la piazza e la telecamera
+  const P = { x: -35, z: 58, yaw: Math.atan2(0 - (-35), 30 - 58), s: 1.3 };   // centro del portale; il davanti (con i teschi) guarda verso la fontana (0, 30)
 
   const base = (col, extra) => new T.MeshBasicMaterial(Object.assign({ color: new T.Color(col) }, extra || {}));
   // macchia scura sul selciato: l'ombra del portale che "sporca" la piazza
