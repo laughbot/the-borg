@@ -2902,7 +2902,7 @@
      niente sconosciuti. Ognuno entra nella Cripta con la sua squadra da 1; si invita o ci si unisce alla
      squadra di un amico. Si parte dall'ultima sala salvata del capo (in modalita' prova da qualsiasi stanza),
      gli altri dicono "pronto". I posti liberi (fino a 6) li prendono i Custodi bot (provvisori: col server si giochera' in 6 amici). */
-  const testoComandi = () => '<p class="com">' + (B.touch ? (CF ? 'Sinistra: muoviti (spingi in avanti fino in fondo per correre). Destra: trascina per guardare. Tasti: fuoco (anche a sinistra), mirino, salto (in aria: doppio salto o volo, se hai le scarpe giuste), accovacciati (in corsa: scivolata; tieni premuto: a terra), ricarica, granata, pugno (corpo a corpo: colpisce chi ti è addosso, anche sotto, senza mirare), cambia arma. Lo zaino 🎒 è accanto alle armi. In pausa trovi Comandi per sensibilità, fuoco automatico e posizione dei tasti.' : 'Sinistra: muoviti. Destra: trascina per guardare. Tasto rosso: spara (mira assistita). Tasto ▲: salta. Tasto ⇄: cambia arma.') : '<b>WASD</b> per muoverti, <b>clic</b> per catturare il mouse, poi muovi il mouse per guardare e tieni premuto per sparare. <b>Spazio</b> salta, <b>Maiusc</b> corre, <b>Q</b> o <b>rotella</b> cambia arma, <b>I</b> apre lo zaino.' + (CF ? ' <b>Tasto destro</b> mirino, <b>R</b> ricarica, <b>G</b> granata, <b>V</b> corpo a corpo, <b>C</b> accovacciati o scivola, <b>Z</b> a terra.' : '')) + '</p>';
+  const testoComandi = () => '<p class="com">' + (B.touch ? (CF ? 'Sinistra: muoviti (spingi in avanti fino in fondo per correre). Destra: trascina per guardare. Tasti: fuoco (anche a sinistra), mirino, salto (in aria: doppio salto o volo, se hai le scarpe giuste), accovacciati (in corsa: scivolata; tieni premuto: a terra), ricarica, granata, pugno (corpo a corpo: colpisce chi ti è addosso, anche sotto, senza mirare), cambia arma. Lo zaino 🎒 è accanto alle armi. In pausa trovi Comandi per sensibilità, fuoco automatico e posizione dei tasti.' : 'Sinistra: muoviti. Destra: trascina per guardare. Tasto rosso: spara (mira assistita). Tasto ▲: salta. Tasto ⇄: cambia arma.') : '<b>WASD</b> per muoverti, il <b>mouse</b> muove la visuale (come negli sparatutto per PC: al primo clic il gioco lo cattura, <b>Esc</b> lo libera e apre il menu), <b>clic</b> per sparare. <b>Spazio</b> salta, <b>Maiusc</b> corre, <b>Q</b> o <b>rotella</b> cambia arma, <b>I</b> apre lo zaino.' + (CF ? ' <b>Tasto destro</b> mirino, <b>R</b> ricarica, <b>G</b> granata, <b>V</b> corpo a corpo, <b>C</b> accovacciati o scivola, <b>Z</b> a terra.' : '')) + '</p>';
   const rar = r => CD.RARITA[r];
   const nomeArmaHtml = it => '<span class="rar" style="color:' + rar(it.r).col + '">' + ARMI[it.k].nome + '</span>';
   function schedaPersonaggio() {
@@ -3486,13 +3486,17 @@ body.pc #rd-hud .tasto,body.pc #rd-hud .base{display:none}
       const cf = ui.pan.querySelector('#rd-cf'); if (cf) cf.onclick = () => { pannello('<div class="kick">Come funziona</div><h2>' + enc.nome + '</h2><ul>' + (enc.guida || []).map(g => '<li>' + g + '</li>').join('') + '</ul><div class="pul"><button id="rd-cfx">Indietro</button></div>'); ui.pan.querySelector('#rd-cfx').onclick = pausa; };
     };
     // su telefono i comandi di gioco fermano il "click": il tasto risponde al tocco stesso (pointerup)
-    const premiEsci = () => { if (stato === 'gioco') { if (ui.pan.hidden) pausa(); else pannello(''); } else if (B.solo) menu(); else R.esci(); };
+    let tLiberato = 0;   // Esc che libera il mouse apre gia' il menu: non richiuderlo subito
+    const premiEsci = (daTasto) => { if (daTasto === true && performance.now() - tLiberato < 500) return; if (stato === 'gioco') { if (ui.pan.hidden) pausa(); else pannello(''); } else if (B.solo) menu(); else R.esci(); };
     ui.esci.addEventListener('pointerdown', e => { e.stopPropagation(); });
     ui.esci.addEventListener('pointerup', e => { e.stopPropagation(); e.preventDefault(); premiEsci(); });
-    window.addEventListener('keydown', e => { if (R.attivo && stato === 'gioco' && !e.repeat && (e.key === 'Escape' || e.key === 'p' || e.key === 'P')) premiEsci(); });
+    window.addEventListener('keydown', e => { if (R.attivo && stato === 'gioco' && !e.repeat && (e.key === 'Escape' || e.key === 'p' || e.key === 'P')) premiEsci(true); });
     if (CF) {
       // comandi condivisi con gli altri sparatutto: sotto i pannelli, sopra il resto dell'HUD
-      C = CF.crea({ dove: hud, tasti: ['fuoco', 'mira', 'salto', 'giu', 'ricarica', 'granata', 'cambia', 'corpo'], granataMirata: true, audio, guarda: (dx, dy) => { io.yaw -= dx; io.pitch = clamp(io.pitch - dy, -1.35, 1.35); } });
+      C = CF.crea({ dove: hud, tasti: ['fuoco', 'mira', 'salto', 'giu', 'ricarica', 'granata', 'cambia', 'corpo'], granataMirata: true, audio, guarda: (dx, dy) => { io.yaw -= dx; io.pitch = clamp(io.pitch - dy, -1.35, 1.35); },
+        // PC: mouse catturato solo in partita, senza menu o zaino aperti; Esc lo libera e apre il menu
+        puoCatturare: () => stato === 'gioco' && ui.pan.hidden && (!ui.zaino || ui.zaino.hidden),
+        liberato: () => { tLiberato = performance.now(); if (ui.pan.hidden) pausa(); } });
       hud.insertBefore(C.el, ui.pan); corpo = CF.corpo(); R._riposo = () => C.riposo();
       ui.armi.addEventListener('pointerdown', e => { const s = e.target.closest('span'); if (!s) return; if (s.classList.contains('zn')) { zaino(); return; } cambiaArma([...ui.armi.children].indexOf(s)); });
       return;

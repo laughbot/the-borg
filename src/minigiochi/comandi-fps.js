@@ -153,9 +153,34 @@ body.pc .cf .cf-t,body.pc .cf .cf-base{display:none}
     // visuale: trascina a destra, anche tenendo premuto il fuoco
     const sens = () => (c.mira ? imp.sens * imp.sensMira : imp.sens);
     const guarda = (o, e) => { const [x, y] = loc(e); if (opz.guarda) opz.guarda((x - o.lx) * 0.0062 * sens(), (y - o.ly) * 0.0062 * sens()); o.lx = x; o.ly = y; };
+    // computer, come negli sparatutto per PC: il mouse resta "catturato" dal gioco e muove la visuale
+    // senza tenere premuto niente. Si cattura da solo al primo clic o tasto in partita (il browser
+    // vuole un gesto), si libera quando si apre un menu o lo zaino e si riprende quando si chiude.
+    // Esc libera il mouse: il gioco apre il suo menu (opz.liberato).
+    const puo = () => c.attivo && !c.tocco && (!opz.puoCatturare || opz.puoCatturare());
+    const preso = () => document.pointerLockElement === zr;
+    let lasciato = false, eraPreso = false, chiesto = 0;   // lasciato: l'ho liberato io (menu, zaino), niente menu all'uscita
+    function cattura() {
+      if (preso() || !puo() || performance.now() - chiesto < 50) return;   // non due richieste nello stesso istante
+      chiesto = performance.now();
+      try { const p = zr.requestPointerLock(); if (p && p.catch) p.catch(() => { chiesto = 0; }); } catch (x) { chiesto = 0; }
+    }
+    document.addEventListener('pointerlockerror', () => { chiesto = 0; });
+    c.cattura = cattura;
+    const dopoGesto = () => { if (!c.tocco && c.attivo) setTimeout(cattura, 0); };   // dopo i gestori del clic (es. "Torna a giocare")
+    document.addEventListener('click', dopoGesto);
+    window.addEventListener('keydown', e => { if (!e.repeat && e.key !== 'Escape') dopoGesto(); });
+    document.addEventListener('pointerlockchange', () => {
+      chiesto = 0; const prima = eraPreso; eraPreso = preso();
+      if (eraPreso || c.tocco || !prima) return;   // conta solo quando il mouse era davvero catturato e viene liberato
+      fuocoTocco = false; if (c.mira) { c.mira = false; if (T.mira) T.mira.classList.remove('attivo'); }
+      if (lasciato) { lasciato = false; return; }
+      if (puo() && opz.liberato) opz.liberato();   // Esc o cambio finestra: apre il menu
+    });
+    c.libera = () => { if (preso()) { lasciato = true; try { document.exitPointerLock(); } catch (x) { } } };
     zr.addEventListener('pointerdown', e => {
       if (!c.attivo) return;
-      if (!c.tocco) { if (document.pointerLockElement !== zr) { try { const p = zr.requestPointerLock(); if (p && p.catch) p.catch(() => { }); } catch (x) { } } if (e.button === 2) premiMira(true); else fuocoTocco = true; return; }
+      if (!c.tocco) { if (!preso()) { cattura(); e.preventDefault(); return; } if (e.button === 2) premiMira(true); else fuocoTocco = true; return; }
       if (sg.id !== null) return; sg.id = e.pointerId; try { zr.setPointerCapture(e.pointerId); } catch (x) { } [sg.lx, sg.ly] = loc(e); e.preventDefault();
     });
     zr.addEventListener('contextmenu', e => e.preventDefault());
@@ -240,7 +265,8 @@ body.pc .cf .cf-t,body.pc .cf .cf-base{display:none}
     });
     window.addEventListener('keyup', e => { kb[e.key.toLowerCase()] = false; });
     window.addEventListener('blur', () => { for (const k in kb) kb[k] = false; fuocoTocco = false; });
-    document.addEventListener('mousemove', e => { if (!c.attivo || c.tocco || document.pointerLockElement !== zr) return; if (opz.guarda) opz.guarda(e.movementX * 0.0024 * sens(), e.movementY * 0.0024 * sens()); });
+    document.addEventListener('mousemove', e => { if (!c.attivo || c.tocco || document.pointerLockElement !== zr) return; const mx = Math.max(-400, Math.min(400, e.movementX)), my = Math.max(-400, Math.min(400, e.movementY));   // alcuni browser danno uno scatto enorme appena catturato
+      if (opz.guarda) opz.guarda(mx * 0.0024 * sens(), my * 0.0024 * sens()); });
     window.addEventListener('mouseup', e => { if (c.tocco) return; if (e.button === 2) premiMira(false); else fuocoTocco = false; });
     window.addEventListener('wheel', e => { if (c.attivo && Math.abs(e.deltaY) > 2) c.eventi.cambia = true; }, { passive: true });
 
@@ -248,6 +274,7 @@ body.pc .cf .cf-t,body.pc .cf .cf-base{display:none}
        mirinoSu(): true se il mirino e' su un bersaglio (per il fuoco automatico) */
     let tCorsa = 0;
     c.leggi = function (dt, mirinoSu) {
+      if (preso() && !puo()) c.libera();   // si e' aperto un menu o lo zaino: il puntatore serve per cliccare
       let mx = c.mv.x, my = c.mv.y;
       if (kb.a || kb.arrowleft) mx -= 1; if (kb.d || kb.arrowright) mx += 1; if (kb.w || kb.arrowup) my -= 1; if (kb.s || kb.arrowdown) my += 1;
       const L = Math.hypot(mx, my); if (L > 1) { mx /= L; my /= L; }
@@ -264,7 +291,7 @@ body.pc .cf .cf-t,body.pc .cf .cf-base{display:none}
       c.sparo = premuto || !!auto;
       return c;
     };
-    c.mostra = function (si) { c.attivo = si; el.classList.toggle('fermo', !si); if (!si) { c.gMira = null; if (T.granata) T.granata.classList.remove('mirando', 'annulla'); c.mira = false; c.sparo = false; c.mv.x = c.mv.y = 0; fu.giu = fs.giu = false; fuocoTocco = false; mv.id = sg.id = fu.id = fs.id = null; corsaBlocco = false; for (const k in c.eventi) c.eventi[k] = false; if (T.mira) T.mira.classList.remove('attivo'); knob.style.transform = ''; base.classList.remove('on'); } };
+    c.mostra = function (si) { c.attivo = si; el.classList.toggle('fermo', !si); if (!si) { c.libera(); c.gMira = null; if (T.granata) T.granata.classList.remove('mirando', 'annulla'); c.mira = false; c.sparo = false; c.mv.x = c.mv.y = 0; fu.giu = fs.giu = false; fuocoTocco = false; mv.id = sg.id = fu.id = fs.id = null; corsaBlocco = false; for (const k in c.eventi) c.eventi[k] = false; if (T.mira) T.mira.classList.remove('attivo'); knob.style.transform = ''; base.classList.remove('on'); } };
     c.lasciaMira = () => { c.mira = false; if (T.mira) T.mira.classList.remove('attivo'); };
     /* informazioni a schermo: munizioni, ricarica, attese di granata/abilita' */
     // aggiorna il DOM solo quando un valore cambia: scrivere testo e stili a ogni frame rallenta molto Safari su iPhone
