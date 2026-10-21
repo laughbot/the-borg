@@ -258,7 +258,7 @@ body.orizz #pagina-zaino .zn-carte{grid-template-columns:repeat(auto-fill,minmax
       const g = el('div', 'zn-griglia');
       miei.forEach(p => {
         const R = CD.RARITA[p.r], su = S.equip[s] === p.u;
-        const t = tile({ bg: R.col + '33', testo: ICONE_PEZZI[s] }, CD.nomePezzo(p), (su ? '✓ indossato · ' : '') + R.nome, 0, () => { CD.indossa(S, p.u); CD.salva(S); rivesti(); disegna(); });
+        const t = tile({ bg: R.col + '33', testo: ICONE_PEZZI[s] }, CD.nomePezzo(p), (su ? '✓ indossato · ' : '') + R.nome, 0, () => { CD.indossa(S, p.u); if (S.equip[s] === p.u) CD.inPiazza(true); CD.salva(S); rivesti(); disegna(); });   // indossare dalla piazza vuol dire volerlo vedere: si accende "Mostra in piazza"
         t.title = CD.descPezzo(p); t.querySelector('b').style.color = R.col; if (su) t.classList.add('su');
         g.appendChild(t);
       });
