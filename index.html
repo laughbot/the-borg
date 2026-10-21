@@ -2,7 +2,7 @@
 <html lang="it">
 <head>
   <meta charset="utf-8">
-  <meta name="versione" content="9bb2bf6e1614">
+  <meta name="versione" content="3be82b25a346">
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="mobile-web-app-capable" content="yes">
@@ -21080,7 +21080,7 @@ body.orizz #pagina-zaino .zn-carte{grid-template-columns:repeat(auto-fill,minmax
   function stanzaPeer(codice) {
     const ID = 'theborg-v1-' + codice, srv = new URLSearchParams(location.search).get('peerserver');
     const opz = srv ? { host: srv.split(':')[0], port: +(srv.split(':')[1] || 9000), path: '/', secure: false } : {};
-    let peer = null, capo = false, mioId = null, aCapo = null, mia = {}, tCapo = 0;
+    let peer = null, capo = false, mioId = null, aCapo = null, mia = {}, tCapo = 0, errori = 0, ultimoErr = '';
     const conns = new Map(), altri = new Map(), subs = [], visto = new Map(), usciti = new Map();
     const voce = (id, p) => Object.freeze({ peer: id, by: null, isMe: false, sameTab: false, kind: 'viewer', guest: false, presence: p, updatedAt: Date.now() });
     const avvisa = ch => subs.forEach(f => f(Object.assign({ joined: [], left: [], updated: [] }, ch)));
@@ -21096,14 +21096,14 @@ body.orizz #pagina-zaino .zn-carte{grid-template-columns:repeat(auto-fill,minmax
     function prova() {
       // prima provo a essere il padrone di casa; se il posto e' gia' preso mi collego a lui
       peer = new window.Peer(ID, opz);
-      peer.on('open', id => { if (capo) return; capo = true; mioId = id; G.emetti('toast', 'Stanza amici "' + codice + '": sei il padrone di casa'); });
+      peer.on('open', id => { errori = 0; if (capo) return; capo = true; mioId = id; G.emetti('toast', 'Stanza amici "' + codice + '": sei il padrone di casa'); });
       peer.on('connection', c => {
         c.on('open', () => { conns.set(c.peer, c); visto.set(c.peer, Date.now()); usciti.delete(c.peer); manda(c, { t: 'tutti', p: tutti() }); });
         c.on('data', d => { if (!d || d.t !== 'p' || !piccolo(d.p)) return; visto.set(c.peer, Date.now()); metti(c.peer, d.p); aTutti({ t: 'p', id: c.peer, p: d.p }, c.peer); });
         c.on('close', () => { if (conns.get(c.peer) === c) lascia(c.peer); });
       });
       peer.on('error', e => {
-        console.warn('online capo', e.type);
+        console.warn('online capo', e.type); if (e.type !== 'unavailable-id') { errori++; ultimoErr = e.type; }
         // il posto di padrone di casa e' preso (anche dopo una ricollegata al server): divento ospite di chi ce l'ha
         if (e.type === 'unavailable-id') { if (capo) { capo = false; [...conns.keys()].forEach(lascia); [...altri.keys()].forEach(k => via(k, false)); } peer.destroy(); ospite(); }
         else if (!capo && !aCapo) { peer.destroy(); setTimeout(prova, 4000); }
@@ -21117,7 +21117,7 @@ body.orizz #pagina-zaino .zn-carte{grid-template-columns:repeat(auto-fill,minmax
         // non "affidabile": i messaggi non si mettono in fila dietro a uno perso (era il motivo degli amici fermi che poi
         // ricomparivano piu' avanti); quello che arriva in ritardo viene scartato grazie al numero progressivo
         mioId = id; aCapo = peer.connect(ID, { reliable: false }); tCapo = Date.now();
-        aCapo.on('open', () => { tCapo = Date.now(); manda(aCapo, { t: 'p', p: mia }); G.emetti('toast', 'Collegato alla stanza amici "' + codice + '"'); });
+        aCapo.on('open', () => { tCapo = Date.now(); errori = 0; manda(aCapo, { t: 'p', p: mia }); G.emetti('toast', 'Collegato alla stanza amici "' + codice + '"'); });
         aCapo.on('data', d => {
           if (!d) return; tCapo = Date.now();
           if (d.t === 'tutti' && d.p && typeof d.p === 'object') { const ks = Object.keys(d.p).slice(0, 32); ks.forEach(k => metti(k, d.p[k])); [...altri.keys()].forEach(k => { if (!ks.includes(k)) via(k, false); }); }
@@ -21128,7 +21128,7 @@ body.orizz #pagina-zaino .zn-carte{grid-template-columns:repeat(auto-fill,minmax
         aCapo.on('close', cambiaCapo);
       });
       peer.on('error', e => {
-        console.warn('online ospite', e.type);
+        console.warn('online ospite', e.type); errori++; ultimoErr = e.type;
         if (!aCapo) { peer.destroy(); setTimeout(prova, 3000); }
         else if (e.type === 'peer-unavailable' && !aCapo.open) cambiaCapo();   // il padrone di casa non c'e' piu': qualcuno prende il suo posto
       });
@@ -21153,7 +21153,7 @@ body.orizz #pagina-zaino .zn-carte{grid-template-columns:repeat(auto-fill,minmax
         return Promise.resolve();
       },
       onPeers(f) { subs.push(f); return () => { }; },
-      stato: () => ({ capo, mioId, aperto: !!(aCapo && aCapo.open), conns: conns.size, altri: altri.size })
+      stato: () => ({ capo, mioId, aperto: !!(aCapo && aCapo.open), conns: conns.size, altri: altri.size, errori, ultimoErr })
     };
   }
 
@@ -21168,6 +21168,37 @@ body.orizz #pagina-zaino .zn-carte{grid-template-columns:repeat(auto-fill,minmax
   // chi e' nel tuo stesso luogo (per i suggerimenti delle @menzioni)
   const qui = () => [...amici.values()].filter(a => stessoLuogo(a.pr.s, luogo()) && !bloccato(a)).map(a => ({ id: idAmico(a.nick), nick: a.nick }));
   B.Online = { visita, raggiungi, compra, qui, annunci: () => [...amici.values()].reduce((o, a) => o.concat(annunciDi(a)), []), inLinea: () => !!room, stato: () => room && room.stato ? room.stato() : null, amici: () => [...amici.values()].map(a => ({ nick: a.nick, s: a.pr.s, x: a.x, z: a.z, bici: !!a.bk })) };
+  /* ---------- indicatore della stanza amici (solo con il codice nel link) ----------
+     Dice sempre se il collegamento c'e': in collegamento, da solo, quanti amici, oppure non raggiungibile.
+     Toccandolo: chi c'e' e dove si trova, o "riprova" se il collegamento non riesce. */
+  if (CODICE) {
+    const chip = document.createElement('button'); chip.id = 'amici-stato'; chip.type = 'button';
+    const css = document.createElement('style');
+    css.textContent = '#amici-stato{position:fixed;left:50%;transform:translateX(-50%);top:calc(var(--h-alto,56px) + env(safe-area-inset-top,0px) + 6px);z-index:30;border:0;border-radius:999px;padding:5px 12px;font:600 12px/1.2 system-ui,sans-serif;color:#fff;background:rgba(20,24,40,.72);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);pointer-events:auto;white-space:nowrap}'
+      + '#amici-stato.ok{background:rgba(30,120,70,.82)}#amici-stato.err{background:rgba(170,40,40,.88)}'
+      + 'body[class*="-attivo"] #amici-stato,#amici-stato[hidden]{display:none}';
+    document.head.appendChild(css); document.body.appendChild(chip);
+    let stato = 'attesa';
+    const DOVE = { piazza: 'in piazza', raid: 'nella Cripta', paintball: 'a Paintball', kart: 'sui Go-Kart', carte: 'a Belinverse', bubble: 'a Borg Bubble', casa: 'a casa sua' };
+    const doveDi = s => { s = String(s || ''); if (s.indexOf('casa:') === 0) { const c = s.slice(5); return stessoLuogo(c, mioNick()) ? 'a casa tua' : 'a casa di ' + testo(c, 20); } if (DOVE[s]) return DOVE[s]; const st = app.stanze && app.stanze[s]; return st && st.nome ? 'in ' + st.nome : 'nel borgo'; };
+    chip.addEventListener('click', () => {
+      if (stato === 'err') { location.reload(); return; }
+      if (stato !== 'ok') { G.emetti('toast', 'Collegamento alla stanza amici "' + CODICE + '" in corso…'); return; }
+      const l = [...amici.values()];
+      G.emetti('toast', l.length ? l.map(a => a.nick + ' ' + doveDi(a.pr.s) + (stessoLuogo(a.pr.s, luogo()) ? ' (qui)' : '')).join(' · ') : 'Nella stanza "' + CODICE + '" ci sei solo tu: l\'amico deve aprire lo stesso link adesso');
+    });
+    const agg = () => {
+      chip.hidden = !G.stato.giocatore || ($('#hud') && $('#hud').hidden);
+      const st = room && room.stato ? room.stato() : null, n = amici.size;
+      let t, c;
+      if (room && (!st || st.capo || st.aperto)) { c = 'ok'; t = n ? '👥 ' + n + (n === 1 ? ' amico collegato' : ' amici collegati') : '👥 Stanza "' + CODICE + '": sei da solo'; }
+      else if (st && st.errori >= 2) { c = 'err'; t = '⚠️ Stanza amici non raggiungibile · tocca per riprovare'; }
+      else { c = 'attesa'; t = '⏳ Collegamento alla stanza amici…'; }
+      stato = c; chip.className = c === 'attesa' ? '' : c; if (chip.textContent !== t) chip.textContent = t;
+    };
+    const $ = q => document.querySelector(q);
+    setInterval(agg, 1000); agg();
+  }
   ciclo();
 })();
 
