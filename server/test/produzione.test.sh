@@ -15,7 +15,7 @@ for p in docker systemctl ufw apt-get; do
   printf '#!/bin/sh\necho "%s $*" >> "%s"\n' "$p" "$LOG" > "$T/finti/$p"; chmod +x "$T/finti/$p"
 done
 export PATH="$T/finti:$PATH"
-export THEBORG_CARTELLA=$T/opt/the-borg THEBORG_CONF=$T/etc THEBORG_REGISTRO=$T/installa.log
+export THEBORG_PROVA=1 THEBORG_CARTELLA=$T/opt/the-borg THEBORG_CONF=$T/etc THEBORG_REGISTRO=$T/installa.log
 export THEBORG_SYSTEMD=$T/systemd THEBORG_BACKUP=$T/backup THEBORG_REPO=$T/origine
 mkdir -p "$THEBORG_SYSTEMD"
 

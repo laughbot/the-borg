@@ -21,7 +21,7 @@ REGISTRO=${THEBORG_REGISTRO:-/var/log/the-borg-installa.log}
 exec > >(tee -a "$REGISTRO") 2>&1
 echo "=== The Borg: installazione $(date -Is) ==="
 
-[ "$(id -u)" = 0 ] || { echo "Serve root"; exit 1; }
+[ "$(id -u)" = 0 ] || [ -n "${THEBORG_PROVA:-}" ] || { echo "Serve root"; exit 1; }
 mkdir -p "$CONF"; chmod 700 "$CONF"
 
 CONSOLE_PASSWORD="${CONSOLE_PASSWORD:-}"; DOMINIO="${DOMINIO:-}"; RAMO="${RAMO:-main}"
