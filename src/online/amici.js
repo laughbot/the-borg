@@ -543,7 +543,8 @@
       if (stato === 'err') { location.reload(); return; }
       if (stato !== 'ok') { G.emetti('toast', 'Collegamento alla stanza amici "' + CODICE + '" in corso…'); return; }
       const l = [...amici.values()];
-      G.emetti('toast', l.length ? l.map(a => a.nick + ' ' + doveDi(a.pr.s) + (stessoLuogo(a.pr.s, luogo()) ? ' (qui)' : '')).join(' · ') : 'Nella stanza "' + CODICE + '" ci sei solo tu: l\'amico deve aprire lo stesso link adesso');
+      const st = room && room.stato ? room.stato() : null, ruolo = st ? (st.capo ? 'A' + st.conns : 'B' + (st.aperto ? '1' : '0')) : 'N';
+      G.emetti('toast', l.length ? l.map(a => a.nick + ' ' + doveDi(a.pr.s) + (stessoLuogo(a.pr.s, luogo()) ? ' (qui)' : '')).join(' · ') : 'Nella stanza "' + CODICE + '" ci sei solo tu: l\'amico deve aprire lo stesso link adesso (codice ' + ruolo + ')');
     });
     const agg = () => {
       chip.hidden = !G.stato.giocatore || ($('#hud') && $('#hud').hidden);
