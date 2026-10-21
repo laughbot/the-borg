@@ -3063,7 +3063,7 @@
 
   function intro(i) {
     audio(); prepara(i);
-    // si entra direttamente nella sala: niente spiegazioni a schermo (sono in Pausa → Come funziona); parte alla prima azione
+    // si entra direttamente nella sala: niente spiegazioni a schermo (sono in Menu → Come funziona); parte alla prima azione
     if (i !== ALLENAMENTO) { pannello(''); stato = 'gioco'; return; }
     stato = 'intro';
     const kick = i === ALLENAMENTO ? 'Allenamento · nessun premio' : (enc.percorso ? 'Percorso' : 'Sala ' + (i + 1) + ' di ' + NUM_SALE) + ' · ' + enc.luogo + ' · livello consigliato ' + FS.liv + (PROVA ? ' · prova' : '');
@@ -3180,7 +3180,7 @@
     pannello('<div class="kick bene">La luce torna nel borgo' + (PROVA ? ' · prova' : '') + '</div><h2>Il Re senza Luce è caduto</h2><p class="sotto">Gli Starlight rubati tornano su dal Cratere: i lampioni si riaccendono e la cometa torna calda. I Portatori di Lanterna ce l\'hanno fatta.</p><div class="pul"><button id="rd-menu">Stanza d\'attesa</button></div>');
     ui.pan.querySelector('#rd-menu').onclick = () => menu();
   }
-  // il bottino dell'ultima cassa (Pausa → Bottino)
+  // il bottino dell'ultima cassa (Menu → Bottino)
   function pannelloCassa(R) {
     const ultimo = encI === NUM_SALE - 1, lv = cassa && cassa.liv;
     const ogg = R.oggetti.map(o => { const n = CD.nomeOggetto(o), r = rar(o.r); return '<li><b style="color:' + r.col + '">' + n + '</b> <small>' + r.nome + (o.k ? ' · ' + ARMI[o.k].tipo : ' · ' + CD.EQUIP[o.s].nome.toLowerCase()) + (o.doppione ? ' · già ce l\'hai: diventa Starlight' : '') + '</small></li>'; }).join('');
@@ -3424,7 +3424,7 @@ body.pc #rd-hud .tasto,body.pc #rd-hud .base{display:none}
 @media (max-width:700px){#rd-zaino{width:100%}}
 @media (max-height:420px){#rd-obi .ln{font-size:12px;padding:3px 7px}#rd-pan ul{font-size:13px;gap:4px}#rd-pan{gap:7px}}
 /* niente scritte durante il gioco: obiettivi, avvisi e radio dei compagni non si mostrano (ognuno ricorda da se'
-   cosa fare; le regole sono in Pausa → Come funziona). Il nome della sala compare solo entrando. */
+   cosa fare; le regole sono in Menu → Come funziona). Il nome della sala compare solo entrando. */
 #rd-obi,#rd-toasts,#rd-radio,#rd-sq,#rd-chips{display:none!important}
 #rd-tit{opacity:0;transition:opacity .9s}#rd-tit.vedi{opacity:1}
 #rd-lato{position:absolute;inset:0;pointer-events:none}
@@ -3467,7 +3467,7 @@ body.pc #rd-hud .tasto,body.pc #rd-hud .base{display:none}
       '<div id="rd-mir"></div><div id="rd-tit"></div><div id="rd-obi"></div><div id="rd-boss" hidden></div><div id="rd-sq"></div><div id="rd-radio" aria-live="polite"></div><div id="rd-toasts"></div><div id="rd-giu" hidden></div>' +
       '<div id="rd-lato"><i></i><i></i></div><div id="rd-dir"></div><div id="rd-vita"><div id="rd-chips"></div><div id="rd-mun"></div><div id="rd-armi"></div><b class="bar"><i id="rd-hp"></i></b></div><button id="rd-apri" hidden>Apri</button><div id="rd-nasc" hidden>nascosto</div><div id="rd-racc" aria-live="polite"></div><div id="rd-zaino" hidden></div>' +
       (CF ? '' : '<div class="tasto" id="rd-salto" aria-label="Salta">▲</div><div class="tasto" id="rd-cambia" aria-label="Cambia arma">⇄</div><div class="tasto" id="rd-fuoco" aria-label="Spara">FUOCO</div>') +
-      '<button id="rd-esci">Pausa</button><div id="rd-pan" hidden></div>';
+      '<button id="rd-esci">Menu</button><div id="rd-pan" hidden></div>';
     (document.getElementById('hud') || document.getElementById('app') || document.body).appendChild(hud);
     ['mun', 'apri', 'nasc', 'dir', 'lato', 'zl', 'zr', 'lb', 'mir', 'tit', 'obi', 'boss', 'sq', 'radio', 'toasts', 'giu', 'chips', 'hp', 'salto', 'fuoco', 'esci', 'pan', 'vig', 'armi', 'cambia', 'num', 'racc', 'zaino'].forEach(k => { ui[k] = hud.querySelector('#rd-' + k); });
     ui.apri.addEventListener('pointerdown', e => { e.preventDefault(); e.stopPropagation(); if (vicinoCassa()) apriCassa(); });
@@ -3476,19 +3476,20 @@ body.pc #rd-hud .tasto,body.pc #rd-hud .base{display:none}
     window.addEventListener('keydown', e => { if (R.attivo && (stato === 'gioco') && !e.repeat && (e.key === 'i' || e.key === 'I' || e.key === 'Tab')) { zaino(); e.preventDefault(); } });
     const pausa = () => {
       const avanti = false;   // si va avanti solo attraversando il portale
-      stato = 'pausa'; sparo = false; zaino(false);
-      pannello('<div class="kick">Pausa</div><h2>' + enc.nome + '</h2><div class="pul">' + (avanti ? '<button id="rd-av2">Prossima sala</button>' : '') + '<button id="rd-ri2"' + (avanti ? ' class="sec"' : '') + '>Riprendi</button>' + (enc.guida ? '<button class="sec" id="rd-cf">Come funziona</button>' : '') + (ultimaCassa && cassa && cassa.aperta ? '<button class="sec" id="rd-bt">Bottino</button>' : '') + (C ? '<button class="sec" id="rd-cmd">Comandi</button>' : '') + '<button class="sec" id="rd-menu">Stanza d\'attesa</button>' + (B.solo ? '' : '<button class="sec" id="rd-x">Esci dalla Sala</button>') + '</div>');
-      ui.pan.querySelector('#rd-ri2').onclick = () => { pannello(''); stato = 'gioco'; }; ui.pan.querySelector('#rd-menu').onclick = () => menu();
+      // come in Destiny il menu NON ferma il gioco: con gli amici online tutto continua in tempo reale
+      sparo = false; zaino(false); if (stato !== 'gioco') return;
+      pannello('<div class="kick">Menu · il gioco non si ferma</div><h2>' + enc.nome + '</h2><div class="pul">' + (avanti ? '<button id="rd-av2">Prossima sala</button>' : '') + '<button id="rd-ri2"' + (avanti ? ' class="sec"' : '') + '>Torna a giocare</button>' + (enc.guida ? '<button class="sec" id="rd-cf">Come funziona</button>' : '') + (ultimaCassa && cassa && cassa.aperta ? '<button class="sec" id="rd-bt">Bottino</button>' : '') + (C ? '<button class="sec" id="rd-cmd">Comandi</button>' : '') + '<button class="sec" id="rd-menu">Stanza d\'attesa</button>' + (B.solo ? '' : '<button class="sec" id="rd-x">Esci dalla Sala</button>') + '</div>');
+      ui.pan.querySelector('#rd-ri2').onclick = () => { pannello(''); }; ui.pan.querySelector('#rd-menu').onclick = () => menu();
       const x = ui.pan.querySelector('#rd-x'); if (x) x.onclick = () => R.esci(); const cm = ui.pan.querySelector('#rd-cmd'); if (cm) cm.onclick = () => C.impostazioni(ui.pan, pausa);
       const av = ui.pan.querySelector('#rd-av2'); if (av) av.onclick = () => prossimaSala();
       const bt = ui.pan.querySelector('#rd-bt'); if (bt) bt.onclick = () => pannelloCassa(ultimaCassa);
       const cf = ui.pan.querySelector('#rd-cf'); if (cf) cf.onclick = () => { pannello('<div class="kick">Come funziona</div><h2>' + enc.nome + '</h2><ul>' + (enc.guida || []).map(g => '<li>' + g + '</li>').join('') + '</ul><div class="pul"><button id="rd-cfx">Indietro</button></div>'); ui.pan.querySelector('#rd-cfx').onclick = pausa; };
     };
     // su telefono i comandi di gioco fermano il "click": il tasto risponde al tocco stesso (pointerup)
-    const premiEsci = () => { if (stato === 'gioco') pausa(); else if (B.solo) menu(); else R.esci(); };
+    const premiEsci = () => { if (stato === 'gioco') { if (ui.pan.hidden) pausa(); else pannello(''); } else if (B.solo) menu(); else R.esci(); };
     ui.esci.addEventListener('pointerdown', e => { e.stopPropagation(); });
     ui.esci.addEventListener('pointerup', e => { e.stopPropagation(); e.preventDefault(); premiEsci(); });
-    window.addEventListener('keydown', e => { if (R.attivo && stato === 'gioco' && !e.repeat && (e.key === 'Escape' || e.key === 'p' || e.key === 'P')) pausa(); });
+    window.addEventListener('keydown', e => { if (R.attivo && stato === 'gioco' && !e.repeat && (e.key === 'Escape' || e.key === 'p' || e.key === 'P')) premiEsci(); });
     if (CF) {
       // comandi condivisi con gli altri sparatutto: sotto i pannelli, sopra il resto dell'HUD
       C = CF.crea({ dove: hud, tasti: ['fuoco', 'mira', 'salto', 'giu', 'ricarica', 'granata', 'cambia', 'corpo'], granataMirata: true, audio, guarda: (dx, dy) => { io.yaw -= dx; io.pitch = clamp(io.pitch - dy, -1.35, 1.35); } });
