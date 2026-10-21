@@ -45,7 +45,9 @@ Nel gioco (`src/online/amici.js`, modulo "ONLINE CON GLI AMICI") il server si sc
 2. altrimenti `B3.SERVER`, che verrà impostato all'indirizzo di produzione (es. `https://api.<dominio>`);
 3. senza server si resta su PeerJS come prima.
 
-## Server online (prova)
+## Server online
+
+La guida completa per dominio, sito del gioco e server è in `MESSA-ONLINE.md` nella cartella principale.
 
 Tutto quello che serve è in `produzione/`: Nakama, PostgreSQL e **Caddy** che prende da solo il certificato HTTPS. Si crea dal telefono, senza comandi.
 
@@ -59,7 +61,7 @@ Tutto quello che serve è in `produzione/`: Nakama, PostgreSQL e **Caddy** che p
 
 Indirizzi (finché non c'è il dominio vero si usa sslip.io, che trasforma l'IP in un nome con HTTPS):
 
-- Gioco: `https://<ip-con-trattini>.sslip.io` → nel gioco `?amici=prova&server=https://<ip-con-trattini>.sslip.io`, poi in `B3.SERVER`
+- Gioco: `https://<ip-con-trattini>.sslip.io` → nel gioco `?amici=prova&server=https://<ip-con-trattini>.sslip.io`. Con il dominio vero non serve: il gioco su `https://tuodominio.it` usa da solo `https://api.tuodominio.it` (`B3.serverDelDominio`)
 - Console: `https://console.<ip-con-trattini>.sslip.io` (utente `admin`, la password scelta)
 
 ### Cosa fa da solo

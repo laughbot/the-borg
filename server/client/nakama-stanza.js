@@ -35,6 +35,17 @@
     return id;
   }
 
+  // Il gioco pubblicato sul dominio vero (https://tuodominio.it o www.) usa il server
+  // https://api.tuodominio.it. Altrove (GitHub Pages, anteprime di Cloudflare, claude.ai,
+  // computer di casa) niente server automatico: si resta su PeerJS o su ?server=.
+  B.serverDelDominio = function (loc) {
+    if (!loc || loc.protocol !== 'https:') return '';
+    const host = String(loc.hostname || '').toLowerCase().replace(/^www\./, '');
+    if (!/^[a-z0-9-]+(\.[a-z0-9-]+)+$/.test(host) || /^[\d.]+$/.test(host)) return '';
+    if (/(^|\.)(github\.io|pages\.dev|claude\.ai|claudeusercontent\.com|anthropic\.com|sslip\.io|localhost)$/.test(host)) return '';
+    return 'https://api.' + host;
+  };
+
   B.stanzaNakama = function (codice, server, opz) {
     opz = opz || {};
     const url = indirizzi(server), dispositivo = opz.dispositivo || idDispositivo();

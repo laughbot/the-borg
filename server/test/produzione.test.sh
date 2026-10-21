@@ -14,6 +14,7 @@ mkdir -p "$T/finti"
 for p in docker systemctl ufw apt-get; do
   printf '#!/bin/sh\necho "%s $*" >> "%s"\n' "$p" "$LOG" > "$T/finti/$p"; chmod +x "$T/finti/$p"
 done
+printf '#!/bin/sh\necho "1.1.1.1 via 5.6.7.1 dev eth0 src 5.6.7.8 uid 0"\n' > "$T/finti/ip"; chmod +x "$T/finti/ip"
 export PATH="$T/finti:$PATH"
 export THEBORG_PROVA=1 THEBORG_CARTELLA=$T/opt/the-borg THEBORG_CONF=$T/etc THEBORG_REGISTRO=$T/installa.log
 export THEBORG_SYSTEMD=$T/systemd THEBORG_BACKUP=$T/backup THEBORG_REPO=$T/origine
@@ -65,6 +66,11 @@ verifica "Caddy non riavviato" '! grep -q "restart caddy" "$LOG"'
 echo "# prova" >> "$T/origine/server/produzione/Caddyfile"; salva caddy
 : > "$LOG"; bash "$AGG" > /dev/null
 verifica "cambia il Caddyfile: Caddy riavviato" 'grep -q "restart caddy" "$LOG" && ! grep -q "restart nakama" "$LOG"'
+
+echo "Dominio lasciato com'era nel cloud config"
+printf 'DOMINIO=api.tuodominio.it\n' > "$THEBORG_CONF/installa.conf"
+bash "$INST" > /dev/null 2>&1
+verifica "usa l'indirizzo automatico" 'grep -qx "DOMINIO=5-6-7-8.sslip.io" "$ENV"'
 
 echo "Password non valida"
 printf 'CONSOLE_PASSWORD=corta\n' > "$THEBORG_CONF/installa.conf"

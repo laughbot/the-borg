@@ -47,6 +47,7 @@ fi
 echo "$RAMO" > "$CONF/ramo"
 
 # --- indirizzo del server ---
+case "$DOMINIO" in *tuodominio*) echo "DOMINIO non cambiato nel cloud config: uso l'indirizzo automatico"; DOMINIO="";; esac
 if [ -z "$DOMINIO" ]; then
   IP=$(ip -4 route get 1.1.1.1 | awk '{for(i=1;i<NF;i++) if($i=="src") print $(i+1)}')
   [ -n "$IP" ] || { echo "Non trovo l'IP pubblico"; exit 1; }

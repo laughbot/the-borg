@@ -18,8 +18,9 @@
   'use strict';
   const B = window.B3, T = B.T, G = window.Gioco, PI = Math.PI;
   const CODICE = (new URLSearchParams(location.search).get('amici') || (location.hash.match(/amici=([^&]+)/) || [])[1] || '').toLowerCase().replace(/[^a-z0-9-]/g, '').slice(0, 24);
-  // server di gioco Nakama: ?server=host:porta per le prove, poi B3.SERVER quando c'e' quello vero; senza, si resta su PeerJS
-  const SERVER = (new URLSearchParams(location.search).get('server') || B.SERVER || '').trim();
+  // server di gioco Nakama: ?server=host:porta per le prove, poi B3.SERVER, poi quello del dominio
+  // (il gioco su https://tuodominio.it usa https://api.tuodominio.it); senza, si resta su PeerJS
+  const SERVER = (new URLSearchParams(location.search).get('server') || B.SERVER || B.serverDelDominio(location) || '').trim();
   if (!B.app || !(CODICE ? (SERVER ? B.stanzaNakama : window.Peer) : window.claude && window.claude.use)) return;
   const app = B.app, amici = new Map();   // peer -> amico
   const angDiff = (a, b) => { let d = (b - a) % (2 * PI); if (d > PI) d -= 2 * PI; if (d < -PI) d += 2 * PI; return d; };
