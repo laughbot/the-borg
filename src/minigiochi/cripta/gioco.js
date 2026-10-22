@@ -1860,6 +1860,8 @@
       return h;
     };
     E.dbg = () => ({ tit, tSg, fin, ciclo, pozze, ventre, schiena, sfere, boss });
+    // icona dell'occhio vicino alla vita: solo per chi ha lo Sguardo, con i secondi che restano
+    E.icona = () => tit && tit.io && !tit.morto && boss.vivo ? { s: Math.max(0, tSg), max: 16 } : null;
     E.foto = () => ({ ti: tit ? tit.k : null, ts: +tSg.toFixed(1), fi: +fin.toFixed(1), ci: ciclo, sv: sfere.map(x => x.vivo ? 1 : 0), po: pozze.map(p => [+p.x.toFixed(1), +p.z.toFixed(1), +p.t.toFixed(1)]) });
     E.specchio = q => {
       tit = unita(q.ti); tSg = nnum(q.ts, tSg); fin = nnum(q.fi, fin); ciclo = nnum(q.ci, ciclo) | 0; schiena.vivo = !tit;
@@ -3249,6 +3251,10 @@
   }
   function aggHud(forza) {
     tHud -= 1 / 60; if (tHud > 0 && !forza) return; tHud = 0.1;
+    if (ui.sg) {   // icona a tempo (lo Sguardo di Bruthak): niente scritte, solo occhio, cerchio che si svuota e secondi
+      const v = enc && stato === 'gioco' && enc.icona ? enc.icona() : null; ui.sg.hidden = !v;
+      if (v) { const n = Math.ceil(v.s); if (ui.sgN.textContent !== String(n)) ui.sgN.textContent = n; ui.sg.style.setProperty('--k', clamp(v.s / v.max, 0, 1).toFixed(3)); ui.sg.classList.toggle('fine', v.s <= 5 && v.s > 2); ui.sg.classList.toggle('ultimi', v.s <= 2); }
+    }
     if (!enc) return;
     ui.tit.innerHTML = '<small>' + enc.luogo + '</small>' + enc.nome;
     ui.obi.innerHTML = cassa ? linea(cassa.aperta ? 'Sala superata' : 'Apri la cassa', 'oro') : enc.hud();
@@ -3435,6 +3441,14 @@ body.pc #rd-hud .tasto,body.pc #rd-hud .base{display:none}
 #rd-mun em{font-style:normal;font-size:11px;font-weight:700;letter-spacing:.06em;opacity:.8;margin-left:8px}
 #rd-armi .zn{opacity:1;font-size:16px;padding:2px 12px}
 #rd-pan .zfoto,.zfoto{display:block;margin:4px auto 8px;width:240px;max-width:100%;height:auto}
+#rd-sg{position:absolute;right:calc(100% + 10px);bottom:-4px;width:54px;height:54px;border-radius:50%;display:grid;place-items:center;--k:1;
+  background:conic-gradient(#ff4a3a calc(var(--k) * 360deg), rgba(40,10,10,.55) 0);box-shadow:0 0 12px rgba(255,60,40,.55)}
+#rd-sg::before{content:'';position:absolute;inset:4px;border-radius:50%;background:#1a0d0f}
+#rd-sg svg{position:relative;width:26px;height:26px;margin-top:-10px;fill:#ffb347;stroke:#2a0805;stroke-width:1.2}
+#rd-sg svg circle{fill:#2a0805}
+#rd-sg b{position:absolute;bottom:7px;left:0;right:0;text-align:center;font:900 15px/1 system-ui,sans-serif;color:#fff;text-shadow:0 1px 2px #000;font-variant-numeric:tabular-nums}
+#rd-sg.fine{animation:rdSg .6s ease-in-out infinite}#rd-sg.ultimi{animation:rdSg .28s ease-in-out infinite}
+@keyframes rdSg{50%{transform:scale(1.14);box-shadow:0 0 22px rgba(255,60,40,.95)}}
 #rd-nasc{position:absolute;left:50%;top:18%;transform:translateX(-50%);z-index:5;font:800 12px system-ui,sans-serif;letter-spacing:.2em;text-transform:uppercase;color:#c9bfff;text-shadow:0 0 8px #6a5cff;opacity:.85}
 #rd-apri{position:absolute;left:50%;bottom:32%;transform:translateX(-50%);z-index:9;pointer-events:auto;font:800 18px system-ui,sans-serif;letter-spacing:.12em;text-transform:uppercase;padding:12px 34px;border-radius:999px;border:2px solid #fff1c4;background:linear-gradient(#e2b24f,#b8862e);color:#1b1407;box-shadow:0 0 24px rgba(255,210,122,.7)}
 #rd-racc{right:auto!important;left:50%!important;transform:translateX(-50%);bottom:calc(96px + env(safe-area-inset-bottom,0px))!important;align-items:center!important;z-index:5}
@@ -3465,11 +3479,11 @@ body.pc #rd-hud .tasto,body.pc #rd-hud .base{display:none}
     hud = document.createElement('div'); hud.id = 'rd-hud';
     hud.innerHTML = '<div id="rd-vig"></div><div id="rd-num"></div>' + (CF ? '' : '<div class="zona" id="rd-zl"></div><div class="zona" id="rd-zr"></div><div class="base" id="rd-lb"><i></i></div>') +
       '<div id="rd-mir"></div><div id="rd-tit"></div><div id="rd-obi"></div><div id="rd-boss" hidden></div><div id="rd-sq"></div><div id="rd-radio" aria-live="polite"></div><div id="rd-toasts"></div><div id="rd-giu" hidden></div>' +
-      '<div id="rd-lato"><i></i><i></i></div><div id="rd-dir"></div><div id="rd-vita"><div id="rd-chips"></div><div id="rd-mun"></div><div id="rd-armi"></div><b class="bar"><i id="rd-hp"></i></b></div><button id="rd-apri" hidden>Apri</button><div id="rd-nasc" hidden>nascosto</div><div id="rd-racc" aria-live="polite"></div><div id="rd-zaino" hidden></div>' +
+      '<div id="rd-lato"><i></i><i></i></div><div id="rd-dir"></div><div id="rd-vita"><div id="rd-sg" hidden><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M2 12s3.6-6 10-6 10 6 10 6-3.6 6-10 6S2 12 2 12Z"/><circle cx="12" cy="12" r="3.2"/></svg><b></b></div><div id="rd-chips"></div><div id="rd-mun"></div><div id="rd-armi"></div><b class="bar"><i id="rd-hp"></i></b></div><button id="rd-apri" hidden>Apri</button><div id="rd-nasc" hidden>nascosto</div><div id="rd-racc" aria-live="polite"></div><div id="rd-zaino" hidden></div>' +
       (CF ? '' : '<div class="tasto" id="rd-salto" aria-label="Salta">▲</div><div class="tasto" id="rd-cambia" aria-label="Cambia arma">⇄</div><div class="tasto" id="rd-fuoco" aria-label="Spara">FUOCO</div>') +
       '<button id="rd-esci">Menu</button><div id="rd-pan" hidden></div>';
     (document.getElementById('hud') || document.getElementById('app') || document.body).appendChild(hud);
-    ['mun', 'apri', 'nasc', 'dir', 'lato', 'zl', 'zr', 'lb', 'mir', 'tit', 'obi', 'boss', 'sq', 'radio', 'toasts', 'giu', 'chips', 'hp', 'salto', 'fuoco', 'esci', 'pan', 'vig', 'armi', 'cambia', 'num', 'racc', 'zaino'].forEach(k => { ui[k] = hud.querySelector('#rd-' + k); });
+    ['mun', 'apri', 'nasc', 'sg', 'dir', 'lato', 'zl', 'zr', 'lb', 'mir', 'tit', 'obi', 'boss', 'sq', 'radio', 'toasts', 'giu', 'chips', 'hp', 'salto', 'fuoco', 'esci', 'pan', 'vig', 'armi', 'cambia', 'num', 'racc', 'zaino'].forEach(k => { ui[k] = hud.querySelector('#rd-' + k); }); ui.sgN = ui.sg.querySelector('b');
     ui.apri.addEventListener('pointerdown', e => { e.preventDefault(); e.stopPropagation(); if (vicinoCassa()) apriCassa(); });
     window.addEventListener('keydown', e => { if (R.attivo && stato === 'gioco' && !e.repeat && (e.key === 'e' || e.key === 'E') && vicinoCassa()) apriCassa(); });
     ui.obi.addEventListener('pointerdown', e => { if (innerHeight > 500) return; ui.obi.classList.toggle('tutto'); e.stopPropagation(); });   // telefono: tocca per vedere tutti gli obiettivi
