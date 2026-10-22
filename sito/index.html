@@ -1,0 +1,370 @@
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>The Borg — il borgo online da vivere con gli amici</title>
+<meta name="description" content="Un borgo online gratuito: ti fai la casa, giochi con gli amici in Sala Giochi e scendi nella Cripta del Re senza Luce. Dal browser, su telefono e computer.">
+<meta name="theme-color" content="#150e22">
+<meta property="og:title" content="The Borg">
+<meta property="og:description" content="Il borgo online da vivere con gli amici. Gratis, dal browser.">
+<meta property="og:image" content="img/piazza-tramonto.webp">
+<link rel="icon" href="gioca/icona-192.png">
+<link rel="apple-touch-icon" href="gioca/apple-touch-icon.png">
+<script>
+  // un link d'invito degli amici (?amici=… o #amici=…) arrivato sulla home porta dritto al gioco
+  if (/[?&#]amici=/.test(location.search + location.hash)) location.replace('gioca/' + location.search + location.hash);
+</script>
+<link rel="preload" href="font/lilita-one.woff" as="font" type="font/woff" crossorigin>
+<style>
+/* Una pagina che segue la storia del gioco: si parte dal tramonto in piazza,
+   si scende nel buio della Cripta e si torna alla luce con gli amici.
+   I colori delle sezioni cambiano in quest'ordine. */
+@font-face { font-family: "Lilita One"; src: url("font/lilita-one.woff") format("woff"); font-weight: 400; font-display: swap; }
+@font-face { font-family: "Rubik"; src: url("font/rubik.woff") format("woff"); font-weight: 300 800; font-display: swap; }
+
+:root {
+  --notte: #150e22;
+  --cripta: #0d0814;
+  --prugna: #241a36;
+  --prugna-chiaro: #33264b;
+  --crema: #fbf3dc;
+  --crema-tenue: #cbbfd8;
+  --oro: #f2c76e;
+  --oro-scuro: #c8913a;
+  --tramonto: #f39a5b;
+  --brace: #e5483b;
+  --stella: #fff4cf;
+  --linea: rgba(251, 243, 220, .14);
+  --titoli: "Lilita One", "Trebuchet MS", system-ui, sans-serif;
+  --testo: "Rubik", system-ui, -apple-system, "Segoe UI", sans-serif;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; scroll-padding-top: calc(72px + env(safe-area-inset-top, 0px)); -webkit-text-size-adjust: 100%; }
+body { margin: 0; background: var(--notte); color: var(--crema); font: 400 17px/1.6 var(--testo); }
+img { display: block; max-width: 100%; height: auto; }
+a { color: inherit; }
+h1, h2, h3 { font-family: var(--titoli); font-weight: 400; line-height: 1.05; margin: 0; text-wrap: balance; }
+h2 { font-size: clamp(34px, 5.4vw, 56px); }
+h3 { font-size: 26px; }
+p { margin: 0; }
+:focus-visible { outline: 3px solid var(--stella); outline-offset: 3px; border-radius: 6px; }
+.giro { max-width: 1140px; margin: 0 auto; padding-inline: max(16px, env(safe-area-inset-left, 0px)) max(16px, env(safe-area-inset-right, 0px)); }
+.tenue { color: var(--crema-tenue); }
+.salta { position: absolute; left: -999px; top: 8px; z-index: 50; background: var(--oro); color: #2a1a08; padding: 10px 14px; border-radius: 10px; font-weight: 700; }
+.salta:focus { left: 8px; }
+
+/* ---------- tasti ---------- */
+.tasto { display: inline-flex; align-items: center; justify-content: center; gap: 8px; text-decoration: none; font: 700 17px/1 var(--testo); border-radius: 999px; padding: 16px 28px; transition: transform .12s ease, box-shadow .12s ease; }
+.tasto.oro { background: linear-gradient(180deg, #ffe09a, var(--oro) 45%, var(--oro-scuro)); color: #2a1a08; box-shadow: 0 4px 0 #8a5a1c, 0 10px 26px rgba(242, 199, 110, .28); }
+.tasto.oro:hover { transform: translateY(-2px); box-shadow: 0 6px 0 #8a5a1c, 0 14px 30px rgba(242, 199, 110, .38); }
+.tasto.oro:active { transform: translateY(3px); box-shadow: 0 1px 0 #8a5a1c; }
+.tasto.grande { font-size: 20px; padding: 19px 38px; }
+.tasto.piccolo { font-size: 15px; padding: 10px 18px; box-shadow: 0 3px 0 #8a5a1c; }
+
+/* ---------- testata ---------- */
+.testata { position: sticky; top: 0; z-index: 10; padding-top: env(safe-area-inset-top, 0px); background: rgba(21, 14, 34, .86); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); border-bottom: 1px solid var(--linea); }
+.testata .giro { display: flex; align-items: center; gap: 24px; min-height: 60px; }
+.marchio img { width: 84px; }
+.menu { display: flex; gap: 22px; margin-left: auto; font-size: 15px; font-weight: 500; }
+.menu a { text-decoration: none; color: var(--crema-tenue); padding: 6px 0; }
+.menu a:hover { color: var(--crema); }
+@media (max-width: 820px) { .menu { display: none; } .testata .tasto { margin-left: auto; } }
+
+/* ---------- apertura: la piazza al tramonto ---------- */
+.apertura { position: relative; isolation: isolate; overflow: hidden; min-height: min(86vh, 760px); display: grid; align-items: end; }
+.apertura > img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; object-position: 62% 45%; z-index: -2; }
+.apertura::before { content: ""; position: absolute; inset: 0; z-index: -1; background:
+  linear-gradient(90deg, rgba(21, 14, 34, .9) 0%, rgba(21, 14, 34, .5) 40%, rgba(21, 14, 34, 0) 68%),
+  linear-gradient(0deg, var(--notte) 0%, rgba(21, 14, 34, 0) 38%); }
+.apertura .giro { width: 100%; padding-block: 80px 96px; display: grid; gap: 24px; justify-items: start; }
+.apertura h1 img { width: min(500px, 86vw); filter: drop-shadow(0 10px 30px rgba(0, 0, 0, .55)); }
+.apertura .tesi { font-size: clamp(19px, 2.4vw, 24px); line-height: 1.45; max-width: 31ch; text-shadow: 0 2px 14px rgba(0, 0, 0, .7); }
+.apertura .nota { font-size: 14px; color: var(--crema-tenue); max-width: 46ch; text-shadow: 0 1px 8px rgba(0, 0, 0, .8); }
+@media (max-width: 720px) {
+  .apertura { min-height: 0; }
+  .apertura > img { object-position: 72% 50%; }
+  .apertura::before { background: linear-gradient(0deg, var(--notte) 6%, rgba(21, 14, 34, .72) 52%, rgba(21, 14, 34, .3) 100%); }
+  .apertura .giro { padding-block: 120px 56px; }
+}
+
+/* ---------- la leggenda: il pezzo memorabile della pagina ---------- */
+.leggenda { padding-block: 96px 88px; }
+.leggenda .giro { display: grid; grid-template-columns: 120px minmax(0, 620px); gap: 48px; justify-content: center; align-items: center; }
+.leggenda h2 { margin-bottom: 26px; }
+.leggenda p + p { margin-top: 16px; }
+.leggenda p { color: var(--crema-tenue); font-size: 19px; max-width: 58ch; }
+.leggenda p.chiusa { color: var(--stella); font-size: 21px; margin-top: 26px; }
+/* lo Starlight: il bastoncino di luce del gioco */
+.starlight { justify-self: center; position: relative; width: 22px; height: 300px; border-radius: 22px; background: linear-gradient(180deg, #fffdf3, var(--stella) 40%, #ffe3a0); box-shadow: 0 0 18px 6px rgba(255, 244, 207, .55), 0 0 70px 26px rgba(255, 214, 140, .28), 0 0 160px 60px rgba(242, 199, 110, .14); animation: respira 4.5s ease-in-out infinite; }
+.starlight::after { content: ""; position: absolute; left: 50%; bottom: -28px; width: 120px; height: 28px; transform: translateX(-50%); background: radial-gradient(closest-side, rgba(255, 228, 160, .35), transparent); }
+@keyframes respira { 50% { box-shadow: 0 0 22px 8px rgba(255, 244, 207, .7), 0 0 90px 34px rgba(255, 214, 140, .34), 0 0 190px 70px rgba(242, 199, 110, .18); } }
+@media (max-width: 720px) {
+  .leggenda { padding-block: 72px 64px; }
+  .leggenda .giro { grid-template-columns: 1fr; gap: 40px; }
+  .starlight { width: 160px; height: 18px; justify-self: start; margin-left: 4px; }
+  .starlight::after { display: none; }
+}
+
+/* ---------- il portale in piazza ---------- */
+.portale { position: relative; isolation: isolate; margin: 0; }
+.portale img { width: 100%; height: min(70vh, 640px); object-fit: cover; object-position: 50% 30%; }
+.portale::after { content: ""; position: absolute; inset: 0; background: linear-gradient(180deg, var(--notte) 0%, rgba(21, 14, 34, 0) 22%, rgba(13, 8, 20, 0) 62%, var(--cripta) 100%); pointer-events: none; }
+.portale figcaption { position: absolute; z-index: 1; left: 0; right: 0; bottom: 28px; }
+.portale figcaption p { max-width: 36ch; font-size: 17px; text-shadow: 0 2px 12px rgba(0, 0, 0, .9); }
+.portale figcaption i { color: var(--tramonto); }
+@media (max-width: 720px) { .portale img { height: 54vh; object-position: 42% 20%; } }
+
+/* ---------- la Cripta ---------- */
+.cripta { background: radial-gradient(90% 70% at 30% 100%, rgba(229, 72, 59, .16), transparent 70%), var(--cripta); padding-block: 72px 100px; }
+.cripta .giro { display: grid; grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr); gap: 48px; align-items: center; }
+.cripta figure { margin: 0; border-radius: 18px; overflow: hidden; border: 1px solid rgba(229, 72, 59, .35); box-shadow: 0 30px 80px rgba(0, 0, 0, .6), 0 0 60px rgba(229, 72, 59, .12); }
+.cripta h2 { margin-bottom: 14px; }
+.cripta .intro { color: var(--crema-tenue); }
+.regole { list-style: none; margin: 28px 0 0; padding: 0; display: grid; gap: 18px; }
+.regole li { display: grid; grid-template-columns: 68px 1fr; gap: 14px; align-items: baseline; }
+.regole b { font-family: var(--titoli); font-weight: 400; font-size: 34px; line-height: 1; color: var(--brace); text-align: right; }
+.regole span { color: var(--crema-tenue); }
+.cripta .tasto { margin-top: 32px; }
+@media (max-width: 900px) { .cripta .giro { grid-template-columns: 1fr; gap: 36px; } }
+
+/* ---------- il borgo: si torna alla luce ---------- */
+.borgo { background: linear-gradient(180deg, var(--cripta) 0%, var(--notte) 18%, var(--prugna) 100%); padding-block: 100px 90px; }
+.capo { max-width: 60ch; margin-bottom: 40px; display: grid; gap: 14px; }
+.capo p { color: var(--crema-tenue); }
+.mosaico { display: grid; grid-template-columns: 1.4fr 1fr; grid-template-rows: auto auto; gap: 28px 32px; }
+.mosaico .primo { grid-row: span 2; }
+.posto figure { margin: 0 0 16px; border-radius: 16px; overflow: hidden; background: var(--prugna-chiaro); }
+.posto figure img { width: 100%; aspect-ratio: 16 / 10; object-fit: cover; }
+.posto.primo figure img { aspect-ratio: 4 / 3.35; }
+.posto h3 { margin-bottom: 6px; }
+.posto p { color: var(--crema-tenue); font-size: 16px; max-width: 46ch; }
+@media (max-width: 820px) { .mosaico { grid-template-columns: 1fr; } .mosaico .primo { grid-row: auto; } .posto.primo figure img { aspect-ratio: 16 / 10; } }
+
+/* ---------- sala giochi ---------- */
+.giochi { background: var(--prugna); padding-block: 40px 100px; }
+.tre { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 32px; }
+.tre .posto figure img { aspect-ratio: 4 / 3; }
+.tre .posto.arcade figure { background: #000; }
+.tre .posto.arcade figure img { object-fit: contain; }
+@media (max-width: 900px) { .tre { grid-template-columns: 1fr; } }
+
+/* ---------- Belinverse ---------- */
+.carte { background: linear-gradient(180deg, var(--prugna) 0%, var(--prugna-chiaro) 100%); padding-block: 90px; overflow: hidden; }
+.carte .giro { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 40px; align-items: center; }
+.carte .capo { margin: 0; }
+.punti { list-style: none; margin: 8px 0 0; padding: 0; display: grid; gap: 10px; }
+.punti li { display: flex; gap: 12px; align-items: baseline; color: var(--crema-tenue); }
+.punti li::before { content: ""; flex: none; width: 9px; height: 9px; border-radius: 2px; transform: rotate(45deg) translateY(-2px); background: var(--oro); }
+.ventaglio { position: relative; height: 400px; }
+.ventaglio img { position: absolute; top: 24px; left: 50%; width: 210px; max-width: 44%; border-radius: 12px; box-shadow: 0 18px 40px rgba(0, 0, 0, .5); transform-origin: 50% 115%; }
+.ventaglio img:nth-child(1) { transform: translateX(-50%) rotate(-15deg) translateX(-58%); }
+.ventaglio img:nth-child(2) { transform: translateX(-50%); z-index: 1; }
+.ventaglio img:nth-child(3) { transform: translateX(-50%) rotate(15deg) translateX(58%); }
+@media (max-width: 900px) { .carte .giro { grid-template-columns: 1fr; } .ventaglio { height: 330px; } }
+
+/* ---------- amici e sicurezza ---------- */
+.amici { background: var(--prugna-chiaro); padding-block: 40px 100px; }
+.amici .giro { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 56px; align-items: start; }
+.amici h2 { margin-bottom: 16px; }
+.amici .tenue { max-width: 46ch; }
+.tranquilli { background: rgba(21, 14, 34, .45); border: 1px solid var(--linea); border-radius: 20px; padding: 28px 28px 30px; }
+.tranquilli h3 { margin-bottom: 18px; }
+.tranquilli ul { margin: 0; padding: 0; list-style: none; display: grid; gap: 14px; }
+.tranquilli li { display: grid; grid-template-columns: 22px 1fr; gap: 12px; color: var(--crema-tenue); font-size: 16px; }
+.tranquilli svg { width: 22px; height: 22px; margin-top: 2px; color: var(--oro); }
+@media (max-width: 900px) { .amici .giro { grid-template-columns: 1fr; gap: 36px; } }
+
+/* ---------- finale: la luce torna ---------- */
+.finale { background: linear-gradient(180deg, var(--prugna-chiaro) 0%, #6b3b5a 45%, var(--tramonto) 100%); padding-block: 110px 120px; text-align: center; }
+.finale .giro { display: grid; gap: 22px; justify-items: center; }
+.finale h2 { max-width: 15ch; text-shadow: 0 3px 20px rgba(60, 20, 30, .35); }
+.finale p { max-width: 44ch; }
+.store { display: flex; flex-wrap: wrap; gap: 12px; justify-content: center; margin-top: 8px; }
+.store span { display: grid; gap: 2px; text-align: left; padding: 9px 18px; border-radius: 12px; border: 1px solid rgba(251, 243, 220, .45); font-weight: 700; line-height: 1.15; }
+.store small { font-weight: 500; font-size: 12px; color: var(--crema); opacity: .85; }
+
+footer { background: var(--notte); }
+footer .giro { padding-block: 28px calc(32px + env(safe-area-inset-bottom, 0px)); display: flex; flex-wrap: wrap; gap: 14px 28px; justify-content: space-between; color: var(--crema-tenue); font-size: 14px; }
+footer nav { display: flex; flex-wrap: wrap; gap: 20px; }
+
+@media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } * { animation: none !important; transition: none !important; } }
+</style>
+</head>
+<body>
+<a class="salta" href="#leggenda">Salta al contenuto</a>
+
+<header class="testata">
+  <div class="giro">
+    <a class="marchio" href="#" aria-label="The Borg, torna su"><img src="img/logo.webp" alt="The Borg" width="560" height="259"></a>
+    <nav class="menu" aria-label="Sezioni">
+      <a href="#cripta">La Cripta</a>
+      <a href="#borgo">Il borgo</a>
+      <a href="#giochi">Sala Giochi</a>
+      <a href="#belinverse">Belinverse</a>
+      <a href="#amici">Con gli amici</a>
+    </nav>
+    <a class="tasto oro piccolo" href="gioca/">Gioca</a>
+  </div>
+</header>
+
+<main>
+  <section class="apertura">
+    <img src="img/piazza-tramonto.webp" alt="La piazza del borgo al tramonto, con la ruota panoramica e il laghetto" width="1600" height="862" fetchpriority="high">
+    <div class="giro">
+      <h1><img src="img/logo.webp" alt="The Borg" width="560" height="259"></h1>
+      <p class="tesi">Un borgo online da vivere con gli amici: ti fai la casa, giochi in Sala Giochi e la sera scendi nella Cripta.</p>
+      <a class="tasto oro grande" href="gioca/">Gioca gratis</a>
+      <p class="nota">Si gioca dal browser, su telefono e computer, senza installare niente. Dai 14 anni in su.</p>
+    </div>
+  </section>
+
+  <section class="leggenda" id="leggenda" aria-labelledby="titolo-leggenda">
+    <div class="giro">
+      <div class="starlight" aria-hidden="true"></div>
+      <div>
+        <h2 id="titolo-leggenda">Il borgo si sta spegnendo</h2>
+        <p>Una notte è caduta una cometa e il borgo si è riempito di Starlight, bastoncini di luce che ancora oggi brillano in piazza.</p>
+        <p>Quella luce è filtrata giù dal Cratere, fino al regno del Re senza Luce. Lui l'ha vista per la prima volta, e l'ha voluta tutta per sé.</p>
+        <p>I suoi servitori sono saliti a rubarla. Da allora i lampioni tremano e la cometa nel Cratere è quasi fredda.</p>
+        <p class="chiusa">Una vecchia leggenda parla dei Portatori di Lanterna, che scendono nel buio e riportano indietro la luce. Adesso tocca a te.</p>
+      </div>
+    </div>
+  </section>
+
+  <figure class="portale">
+    <img src="img/portale.webp" alt="Di notte, in un angolo della piazza, il portale infernale della Cripta accanto al Cratere della Cometa" width="1600" height="866" loading="lazy">
+    <figcaption class="giro"><p>Il portale si apre in un angolo della piazza, accanto al Cratere. Sulla lapide c'è scritto <i>Lasciate ogni speranza, voi ch'entrate</i>.</p></figcaption>
+  </figure>
+
+  <section class="cripta" id="cripta" aria-labelledby="titolo-cripta">
+    <div class="giro">
+      <figure><img src="img/cripta.webp" alt="Dentro la Cripta: la squadra davanti a un portale sigillato, con i guardiani che avanzano" width="1100" height="620" loading="lazy"></figure>
+      <div>
+        <h2 id="titolo-cripta">La Cripta del Re senza Luce</h2>
+        <p class="intro">Un raid in prima persona da giocare in squadra. È difficile apposta: si impara una sala alla volta.</p>
+        <ul class="regole">
+          <li><b>14</b><span>sale in tre atti, dalla Soglia delle Lanterne fino al trono del Re</span></li>
+          <li><b>6</b><span>amici al massimo in squadra; se manca qualcuno entrano compagni guidati dal gioco</span></li>
+          <li><b>5</b><span>rarità per armi ed equipaggiamento, che si trovano solo nelle casse a fine sala</span></li>
+          <li><b>30</b><span>livelli per il tuo Portatore, e il progresso si salva alla fine di ogni sala</span></li>
+        </ul>
+        <a class="tasto oro" href="gioca/">Diventa un Portatore</a>
+      </div>
+    </div>
+  </section>
+
+  <section class="borgo" id="borgo" aria-labelledby="titolo-borgo">
+    <div class="giro">
+      <div class="capo">
+        <h2 id="titolo-borgo">Su in piazza, si sta bene</h2>
+        <p>Cammini tra le bancarelle, ti siedi sulle panchine, chiacchieri in chat e saluti chi passa. Poi torni a casa e la arredi come vuoi.</p>
+      </div>
+      <div class="mosaico">
+        <article class="posto primo">
+          <figure><img src="img/ruota-notte.webp" alt="La ruota panoramica illuminata di sera" width="1000" height="539" loading="lazy"></figure>
+          <h3>La ruota panoramica</h3>
+          <p>Sali in cabina e guarda il borgo dall'alto. Di sera si accendono i lampioni e le finestre delle case.</p>
+        </article>
+        <article class="posto">
+          <figure><img src="img/casa.webp" alt="Una casa arredata sospesa tra le nuvole" width="1000" height="700" loading="lazy"></figure>
+          <h3>La tua casa tra le nuvole</h3>
+          <p>Compri i mobili al negozio, li sistemi dove vuoi e inviti gli amici: suonano il campanello e tu decidi se aprire.</p>
+        </article>
+        <article class="posto">
+          <figure><img src="img/laghetto.webp" alt="Il laghetto con il pontile" width="1000" height="539" loading="lazy"></figure>
+          <h3>Pesca e mercatino</h3>
+          <p>Otto specie di pesci da prendere, da vendere in pescheria o da trasformare in trofei per la casa.</p>
+        </article>
+      </div>
+    </div>
+  </section>
+
+  <section class="giochi" id="giochi" aria-labelledby="titolo-giochi">
+    <div class="giro">
+      <div class="capo">
+        <h2 id="titolo-giochi">Una partita veloce in Sala Giochi</h2>
+        <p>Chi è in sala con te gioca con te, in tempo reale. Se sei da solo, sfidi il computer.</p>
+      </div>
+      <div class="tre">
+        <article class="posto">
+          <figure><img src="img/kart.webp" alt="Un go-kart in pista" width="1000" height="469" loading="lazy"></figure>
+          <h3>Go-Kart</h3>
+          <p>Quattro piste e gare a tutto gas contro gli amici, curva dopo curva.</p>
+        </article>
+        <article class="posto">
+          <figure><img src="img/paintball.webp" alt="Il campo da paintball con i ripari colorati" width="1000" height="539" loading="lazy"></figure>
+          <h3>Paintball</h3>
+          <p>Due squadre, ripari colorati, e alla fine si vede chi ha sporcato di più.</p>
+        </article>
+        <article class="posto arcade">
+          <figure><img src="img/borg-bubble.webp" alt="Un livello di Borg Bubble con l'avatar del giocatore e i nemici" width="673" height="591" loading="lazy"></figure>
+          <h3>Borg Bubble</h3>
+          <p>Il cabinato arcade: chiudi i nemici nelle bolle e falli scoppiare, da solo o in due. I personaggi sono i vostri avatar.</p>
+        </article>
+      </div>
+    </div>
+  </section>
+
+  <section class="carte" id="belinverse" aria-labelledby="titolo-belinverse">
+    <div class="giro">
+      <div class="capo">
+        <h2 id="titolo-belinverse">Belinverse 2</h2>
+        <p>Il gioco di carte collezionabili del borgo. Apri i pacchetti, costruisci il mazzo e sfida gli altri al tavolo. In mezzo alla piazza c'è anche Laugh Tale Collectibles, il negozio di carte.</p>
+        <ul class="punti">
+          <li>110 carte, dalle comuni alle rarissime</li>
+          <li>Pacchetti da aprire e uno zaino per la collezione</li>
+          <li>Le doppie si vendono agli amici al mercatino</li>
+        </ul>
+      </div>
+      <div class="ventaglio">
+        <img src="img/carta-101.webp" alt="Carta di Belinverse" width="400" height="560" loading="lazy">
+        <img src="img/carta-104.webp" alt="Carta di Belinverse" width="400" height="560" loading="lazy">
+        <img src="img/carta-048.webp" alt="Carta di Belinverse" width="400" height="560" loading="lazy">
+      </div>
+    </div>
+  </section>
+
+  <section class="amici" id="amici" aria-labelledby="titolo-amici">
+    <div class="giro">
+      <div>
+        <h2 id="titolo-amici">Mandi un link e siete in piazza insieme</h2>
+        <p class="tenue">Vi vedete camminare, vi scrivete in privato, vi visitate le case e giocate le stesse partite. Nessuna iscrizione: scegli un nome, crei il tuo avatar e sei dentro.</p>
+      </div>
+      <div class="tranquilli">
+        <h3>Pensato per giocare tranquilli</h3>
+        <ul>
+          <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12a8 8 0 0 1-11.6 7.1L4 20l1-4.6A8 8 0 1 1 21 12z"/></svg><span>La chat copre le parolacce e blocca insulti, contenuti volgari e dati personali come numeri di telefono e indirizzi.</span></li>
+          <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M5.6 5.6l12.8 12.8"/></svg><span>Chiunque si può segnalare o bloccare con un tocco.</span></li>
+          <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M16 20v-1a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v1"/><circle cx="9" cy="8" r="4"/><path d="M22 20v-1a4 4 0 0 0-3-3.9M16 4.1a4 4 0 0 1 0 7.8"/></svg><span>Nella Cripta le squadre sono solo tra amici, mai con sconosciuti.</span></li>
+          <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="2" width="6" height="20" rx="3"/></svg><span>Gli Starlight, la moneta del borgo, si guadagnano solo giocando: non si comprano.</span></li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <section class="finale" aria-labelledby="titolo-finale">
+    <div class="giro">
+      <h2 id="titolo-finale">Riporta la luce nel borgo</h2>
+      <p>Entra come ospite adesso. Le app per telefono arrivano presto.</p>
+      <a class="tasto oro grande" href="gioca/">Gioca gratis</a>
+      <div class="store" aria-label="App in arrivo">
+        <span><small>Presto su</small>App Store</span>
+        <span><small>Presto su</small>Google Play</span>
+      </div>
+    </div>
+  </section>
+</main>
+
+<footer>
+  <div class="giro">
+    <span>© 2026 The Borg</span>
+    <nav aria-label="Informazioni">
+      <span>Privacy (in arrivo)</span>
+      <span>Termini (in arrivo)</span>
+    </nav>
+  </div>
+</footer>
+</body>
+</html>

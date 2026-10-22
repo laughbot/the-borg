@@ -6,7 +6,8 @@
 
 | Indirizzo | Cosa c'è | Dove sta |
 |---|---|---|
-| `https://tuodominio.it` (e `www.`) | Il gioco | Cloudflare Pages (gratis) |
+| `https://tuodominio.it` (e `www.`) | La home di presentazione (cartella `sito/`) | Cloudflare Pages (gratis) |
+| `https://tuodominio.it/gioca/` | Il gioco | Cloudflare Pages |
 | `https://api.tuodominio.it` | Server online: stanze amici, poi account e salvataggi | VPS Hetzner (pochi euro al mese) |
 | `https://console.api.tuodominio.it` | Console di amministrazione del server | stesso VPS |
 
