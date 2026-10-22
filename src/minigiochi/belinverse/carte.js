@@ -1,7 +1,7 @@
 /* =====================================================================
    THE BORG 3D - BELINVERSE 2 (Set 001): elenco carte.
    Trascritte dal PDF "BELINVERSE2_regolamento_e_carte". Le immagini sono in
-   img/belinverse/<id>.webp (500x700) (nel file unico: window.BELIN_IMG).
+   img/belinverse/<id>.webp (500x700): si scaricano solo quando servono.
    t: C = Character, E = Equipaggiamento, V = Evento, L = Belinone, T = Tira
    Effetti (liste di operazioni):
      etb = quando entra, att = quando attacca (+Potenza nel combattimento),
