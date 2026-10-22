@@ -20,7 +20,7 @@
     { sel: '#btn-arreda', t: 'Arreda la casa', d: 'Qui in casa tocca questo pulsante per spostare i mobili col dito, girarli e cambiare pavimento e pareti. Parti con una stanza vuota ma con tutti i mobili base nello zaino.' },
     { sel: '#chat', t: 'Chat della piazza', d: 'In piazza puoi scrivere agli altri. Tocca un personaggio per vedere il profilo, scrivergli in privato, segnalarlo o bloccarlo.' },
     { sel: '#tabbar', t: 'Il menu', d: 'Mondo, Chat privata, Amici, Zaino e Profilo (qui cambi aspetto e atmosfera, e puoi rivedere questo tutorial).' },
-    { t: 'Dove andare in piazza 🏛️', d: 'Esci da casa dalla porta in alto: in piazza trovi il negozio Arredamenti (lato ovest), Laugh Tale Collectibles con la sala giochi TCG, la Sala Giochi con kart e paintball, la Biblioteca e il belvedere. Quando sei vicino a una porta compare un pulsante giallo per entrare.' },
+    { t: 'Dove andare in piazza 🏛️', d: 'Esci da casa dalla porta in alto: in piazza trovi il negozio Arredamenti (lato ovest), Laugh Tale Collectibles con la sala giochi TCG, la Sala Giochi con kart, paintball e nascondino, la Biblioteca e il belvedere. Quando sei vicino a una porta compare un pulsante giallo per entrare.' },
     { t: 'Tutto pronto! 🎉', d: 'Divertiti e fai amicizia. Ricorda: gli altri abitanti e la chat sono ancora simulati (DEMO).', fine: true }
   ];
 

@@ -17,6 +17,7 @@ jobs:
       - run: node strumenti/costruisci.mjs --controlla
       - run: node test/filtro.test.mjs
       - run: node test/cripta.test.mjs
+      - run: node test/nascondino.test.mjs
       - run: node test/sito.test.mjs
       - run: bash server/test/produzione.test.sh
       - name: Controlla la configurazione del server online

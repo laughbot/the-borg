@@ -172,6 +172,14 @@
       note.forEach((n, i) => { const o = ctx.createOscillator(), g = ctx.createGain(); o.type = 'triangle'; o.frequency.value = NOTE(n); g.gain.setValueAtTime(0.0001, t + i * 0.13); g.gain.linearRampToValueAtTime(0.18, t + i * 0.13 + 0.02); g.gain.exponentialRampToValueAtTime(0.0001, t + i * 0.13 + 0.4); o.connect(g); g.connect(effG); o.start(t + i * 0.13); o.stop(t + i * 0.13 + 0.45); });
       return;
     }
+    // nascondino: fischio dei nascosti (due note che salgono), "boing" di chi tocca un oggetto vero, campanella di chi e' trovato
+    if (tipo === 'fischio' || tipo === 'boing' || tipo === 'trovato') {
+      const nota = (f0, f1, t0, dur, forma, v) => { const o = ctx.createOscillator(), g = ctx.createGain(); o.type = forma; o.frequency.setValueAtTime(f0, t + t0); o.frequency.exponentialRampToValueAtTime(f1, t + t0 + dur * 0.8); g.gain.setValueAtTime(0.0001, t + t0); g.gain.linearRampToValueAtTime(v * vol, t + t0 + 0.02); g.gain.exponentialRampToValueAtTime(0.0001, t + t0 + dur); o.connect(g); g.connect(effG); o.start(t + t0); o.stop(t + t0 + dur + 0.05); };
+      if (tipo === 'fischio') { nota(1250, 1500, 0, 0.18, 'sine', 0.16); nota(1500, 1900, 0.2, 0.26, 'sine', 0.16); }
+      else if (tipo === 'boing') { nota(420, 110, 0, 0.42, 'sine', 0.24); nota(840, 220, 0, 0.3, 'triangle', 0.06); }
+      else [76, 83, 88].forEach((n, i) => nota(NOTE(n), NOTE(n) * 1.002, i * 0.09, 0.35, 'triangle', 0.15));
+      return;
+    }
     if (!bufRumore) { bufRumore = ctx.createBuffer(1, ctx.sampleRate * 0.4, ctx.sampleRate); const d = bufRumore.getChannelData(0); for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1; }
     const n = ctx.createBufferSource(), f = ctx.createBiquadFilter(), g = ctx.createGain(); n.buffer = bufRumore;
     if (tipo === 'pop') { f.type = 'bandpass'; f.frequency.value = 1500; f.Q.value = 0.8; g.gain.setValueAtTime(0.22 * vol, t); g.gain.exponentialRampToValueAtTime(0.0001, t + 0.07); }
