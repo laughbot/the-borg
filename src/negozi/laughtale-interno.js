@@ -179,7 +179,7 @@
         scatola(g, 2.4, 0.02, 1.4, '#2f6b4a', 0, 0.87, 0, 0);
         [[-1.15, -0.65], [1.15, -0.65], [-1.15, 0.65], [1.15, 0.65]].forEach(q => scatola(g, 0.12, 0.8, 0.12, legnoS, q[0], 0.4, q[1], 0.012));
         const carta = (id, x, z, r) => {
-          const m = new T.MeshBasicMaterial({ color: 0xffffff }); new T.TextureLoader().load((window.BELIN_IMG && window.BELIN_IMG[id]) || ('img/belinverse/' + id + '.webp'), t => { m.map = t; m.needsUpdate = true; });
+          const m = new T.MeshBasicMaterial({ color: 0xffffff }); if (location.protocol !== 'file:' || (window.BELIN_IMG && window.BELIN_IMG[id])) new T.TextureLoader().load((window.BELIN_IMG && window.BELIN_IMG[id]) || ('img/belinverse/' + id + '.webp'), t => { m.map = t; m.needsUpdate = true; });
           const c = new T.Mesh(new T.PlaneGeometry(0.25, 0.35), m); c.rotation.x = -PI / 2; c.rotation.z = r; c.position.set(x, 0.885, z); g.add(c);
         };
         [['101', -0.95, 0.35, 0], ['043', -0.45, 0.3, 0.05], ['022', -0.1, 0.32, -0.04], ['109', 0.95, -0.35, PI], ['031', 0.45, -0.3, PI + 0.06], ['089', 0.1, -0.32, PI - 0.05], ['T01', -0.8, -0.2, 0.3], ['T01', 0.8, 0.2, 0.2]].forEach(q => carta(q[0], q[1], q[2], q[3]));

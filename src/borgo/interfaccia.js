@@ -485,6 +485,7 @@
 
   /* ---------- profilo personale ---------- */
   function aggiornaProfilo() {
+    { const be = document.getElementById('btn-errori'), k = window.BorgErrori ? window.BorgErrori.elenco().length : 0; if (be) be.textContent = 'Copia rapporto errori' + (k ? ' (' + k + ')' : ''); }
     $('#profilo-nick').textContent = G.stato.giocatore.nick;
     document.querySelectorAll('#atmosfere .catena').forEach(b => b.classList.toggle('sel', b.dataset.id === G.stato.atmosfera));
     document.querySelectorAll('#grafica .catena').forEach(b => b.classList.toggle('sel', b.dataset.id === G.stato.grafica));
@@ -638,6 +639,20 @@
         try { Object.keys(localStorage).forEach(k => { if ((k.indexOf('borg') === 0 || k.indexOf('theborg') === 0 || k === CFG.chiaveSalvataggio) && tieni.indexOf(k) < 0) localStorage.removeItem(k); }); } catch (e) { /* ok */ }
         location.reload();
       }); }
+    // copia gli ultimi errori del telefono (versione, telefono, dove si è rotto) da incollare in chat
+    { const b = $('#btn-errori');
+      const scrivi = () => { const k = window.BorgErrori ? window.BorgErrori.elenco().length : 0; b.textContent = 'Copia rapporto errori' + (k ? ' (' + k + ')' : ''); };
+      const copiaVecchio = t => { const ta = document.createElement('textarea'); ta.value = t; ta.setAttribute('readonly', ''); ta.style.cssText = 'position:fixed;top:0;left:0;opacity:0'; document.body.appendChild(ta); ta.select(); let ok = false; try { ok = document.execCommand('copy'); } catch (e) { /* ok */ } ta.remove(); return ok; };
+      if (b && window.BorgErrori) {
+        scrivi();
+        b.addEventListener('click', () => {
+          scrivi();
+          const t = window.BorgErrori.rapporto();
+          const fatto = () => UI.toast('Rapporto errori copiato');
+          if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(t).then(fatto, () => { copiaVecchio(t) ? fatto() : UI.toast('Non riesco a copiare il rapporto'); });
+          else copiaVecchio(t) ? fatto() : UI.toast('Non riesco a copiare il rapporto');
+        });
+      } }
 
     // eventi dal gioco
     G.su('toast', t => { if ((B.Kart && B.Kart.attivo) || (B.Paintball && B.Paintball.attivo) || (B.Raid && B.Raid.attivo)) return; UI.toast(t); });

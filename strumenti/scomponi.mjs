@@ -27,6 +27,7 @@ export const BLOCCHI = [
   ['THE BORG - AGGIORNAMENTI', 'src/avvio/aggiorna.js'],
   ["BORGO LUME - STILE DELL'INTERFACCIA", 'src/stile.css'],
   ['se qualcosa si rompe sul telefono', 'src/avvio/errori-telefono.js'],
+  ['THE BORG - APP IN SECONDO PIANO', 'src/avvio/secondo-piano.js'],
   ['Scripts "build/three.js" and "build/three.min.js" are deprecated', 'src/librerie/three.js'],
   ['BORGO LUME 3D - CONFIGURAZIONE', 'src/borgo/configurazione.js'],
   ['BORGO LUME 3D - BASE:', 'src/borgo/base.js'],
@@ -62,7 +63,8 @@ export const BLOCCHI = [
   ['THE BORG 3D - MISSIONI', 'src/borgo/missioni.js'],
   ["THE BORG 3D - ATTIVITA' DELLA PIAZZA", 'src/borgo/attivita-piazza.js'],
   ['THE BORG 3D - PORTALE DELLA CRIPTA', 'src/borgo/portale-cripta.js'],
-  ['window.BELIN_IMG=', 'src/dati/belinverse-immagini.js'],
+  // le immagini di Belinverse ora sono in img/belinverse/: se arriva un index.html vecchio che le contiene ancora, finiscono qui (non vanno rimesse in src/)
+  ['window.BELIN_IMG=', 'vecchio/belinverse-immagini.js'],
   ['BELINVERSE 2 (Set 001)', 'src/minigiochi/belinverse/carte.js'],
   ['BELINVERSE 2: il gioco di carte', 'src/minigiochi/belinverse/gioco.js'],
   ['BORG BUBBLE: i livelli', 'src/minigiochi/borg-bubble/livelli.js'],
