@@ -517,7 +517,7 @@
 
   /* ---------- avvio ---------- */
   UI.init = function () {
-    document.title = CFG.nomeApp;
+    document.title = CFG.nomeApp + ' 3D';
     $('#titolo-app').textContent = CFG.nomeApp;
     $('#versione').textContent = CFG.nomeApp + ' · ' + CFG.versione;
 

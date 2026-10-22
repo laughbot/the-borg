@@ -118,7 +118,7 @@
     tribuna(0, 26); tribuna(250, 16);
 
     // cartelloni pubblicitari, lampioni, bandierine
-    const tx = [['BORGOPIA', '#7a2fd6', '#e0449a'], ['SALA GIOCHI', '#e0443a', '#ffb23a'], ['NEGOZIO TCG', '#1a6bd6', '#3ac4e0'], ['GO-KART', '#2aa86a', '#9fe04a'], ['CAFFETTERIA', '#c8553d', '#ffd36a'], ['BIBLIOTECA', '#3f7a6a', '#8fe0c0'], ['TURBO!', '#e8453b', '#ffd36a'], ['BORGO', '#3b5fc4', '#9fc4ff']];
+    const tx = [['THE BORG', '#7a2fd6', '#e0449a'], ['SALA GIOCHI', '#e0443a', '#ffb23a'], ['NEGOZIO TCG', '#1a6bd6', '#3ac4e0'], ['GO-KART', '#2aa86a', '#9fe04a'], ['CAFFETTERIA', '#c8553d', '#ffd36a'], ['BIBLIOTECA', '#3f7a6a', '#8fe0c0'], ['TURBO!', '#e8453b', '#ffd36a'], ['BORGO', '#3b5fc4', '#9fc4ff']];
     for (let k = 0; k < 14; k++) {
       const i = (30 + k * 33) % N; if (i > N - 20 || i < 20) continue; const side = k % 2 ? 1 : -1, c = P.sp[i], n = P.nor[i], x = c.x + n.x * side * (MURO + 3.4), z = c.z + n.z * side * (MURO + 3.4); if (inLago(x, z)) continue;
       const g = new T.Group(), t = tx[k % tx.length]; g.position.set(x, 0, z);

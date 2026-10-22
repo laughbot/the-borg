@@ -1,4 +1,4 @@
-# Borgopia
+# The Borg
 
 Un piccolo borgo 3D da vivere insieme: avatar, casa da arredare, chat, minigiochi e il negozio Laugh Tale Collectibles. Gira nel browser e diventerà un'app per Google Play e App Store.
 

@@ -39,7 +39,7 @@
     svuota() { try { localStorage.removeItem(CHIAVE); } catch (e) { /* ok */ } },
     rapporto() {
       const el = leggi(), v = document.querySelector('meta[name="versione"]');
-      const righe = ['Borgopia - rapporto errori', 'Versione: ' + (v ? v.content : '?'), 'Telefono: ' + navigator.userAgent, 'Schermo: ' + screen.width + 'x' + screen.height + ' @' + (window.devicePixelRatio || 1), ''];
+      const righe = ['The Borg - rapporto errori', 'Versione: ' + (v ? v.content : '?'), 'Telefono: ' + navigator.userAgent, 'Schermo: ' + screen.width + 'x' + screen.height + ' @' + (window.devicePixelRatio || 1), ''];
       if (!el.length) righe.push('Nessun errore registrato.');
       el.forEach(x => {
         righe.push('[' + new Date(x.t).toLocaleString('it-IT') + ']' + (x.x ? ' ×' + x.x : '') + (x.v && v && x.v !== v.content ? ' (versione ' + x.v + ')' : ''));

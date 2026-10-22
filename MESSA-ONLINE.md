@@ -1,4 +1,4 @@
-# Borgopia — Messa online (dominio, sito e server)
+# The Borg — Messa online (dominio, sito e server)
 
 *21 ottobre 2026. Tutto si fa dal telefono. I nomi dei menu di Cloudflare e Hetzner possono cambiare un po' nel tempo: se non trovi una voce, chiedi in chat.*
 
@@ -37,7 +37,7 @@ Su GitHub unisci la PR del server (#45). L'installazione del server scarica i fi
 
 ## 3. Server (Hetzner)
 
-1. Crea un account su **console.hetzner.cloud** e un progetto "Borgopia".
+1. Crea un account su **console.hetzner.cloud** e un progetto "The Borg".
 2. *Aggiungi server*: posizione Germania o Finlandia, immagine **Ubuntu 24.04**, il tipo x86 più piccolo.
 3. Nel riquadro **Cloud config** incolla il testo di `server/produzione/cloud-config.yml` e cambia:
    - `CONSOLE_PASSWORD`: almeno 12 caratteri, solo lettere e numeri (tienila da parte);

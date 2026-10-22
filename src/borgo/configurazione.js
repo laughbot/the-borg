@@ -2,7 +2,7 @@
    BORGO LUME 3D - CONFIGURAZIONE (dati, testi, utenti dimostrativi)
    ===================================================================== */
 window.CONFIG = {
-  nomeApp: 'Borgopia',
+  nomeApp: 'The Borg',
   versione: 'prototipo 3D 0.2',
   chiaveSalvataggio: 'borgoLume.profilo.v2',
   atmosfereOrdine: ['tramonto', 'giorno', 'notte'],
