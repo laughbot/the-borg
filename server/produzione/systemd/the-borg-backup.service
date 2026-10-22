@@ -1,0 +1,7 @@
+[Unit]
+Description=The Borg: copia del database
+After=docker.service
+
+[Service]
+Type=oneshot
+ExecStart=/bin/bash /opt/the-borg/server/produzione/backup.sh

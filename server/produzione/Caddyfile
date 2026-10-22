@@ -1,0 +1,12 @@
+# Caddy fa da porta d'ingresso: prende da solo i certificati HTTPS (Let's Encrypt)
+# e passa le richieste a Nakama. DOMINIO arriva da /etc/the-borg/.env.
+
+{$DOMINIO} {
+	encode gzip
+	reverse_proxy nakama:7350
+}
+
+console.{$DOMINIO} {
+	encode gzip
+	reverse_proxy nakama:7351
+}

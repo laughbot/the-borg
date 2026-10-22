@@ -1,0 +1,19 @@
+#cloud-config
+# =====================================================================
+# THE BORG: da incollare nel riquadro "Cloud config" quando si crea il
+# server su Hetzner (Ubuntu 24.04). Da cambiare:
+#  - CONSOLE_PASSWORD: almeno 12 caratteri, solo lettere e numeri. Serve per
+#    la console di amministrazione (utente: admin).
+#  - DOMINIO: api. seguito dal vostro dominio (es. api.theborg.it). Lasciato
+#    vuoto, il server usa l'indirizzo automatico <ip>.sslip.io.
+# Il resto si installa da solo in ~5 minuti.
+# =====================================================================
+write_files:
+  - path: /etc/the-borg/installa.conf
+    permissions: "0600"
+    content: |
+      CONSOLE_PASSWORD=CambiaQuestaPassword2026
+      DOMINIO=api.tuodominio.it
+runcmd:
+  - curl -fsSL https://raw.githubusercontent.com/laughbot/the-borg/main/server/produzione/installa.sh -o /root/installa-the-borg.sh
+  - bash /root/installa-the-borg.sh

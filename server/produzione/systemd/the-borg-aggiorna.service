@@ -1,0 +1,8 @@
+[Unit]
+Description=The Borg: scarica il codice nuovo da GitHub e riavvia il server se serve
+After=network-online.target docker.service
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+ExecStart=/bin/bash /opt/the-borg/server/produzione/aggiorna.sh

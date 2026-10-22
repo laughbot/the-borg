@@ -1,0 +1,19 @@
+# Configurazione Nakama per il server online.
+# Niente segreti qui: chiavi e password arrivano da /etc/the-borg/.env sul server
+# (vedi docker-compose.yml in questa cartella).
+name: the-borg
+logger:
+  level: INFO
+runtime:
+  js_entrypoint: the-borg.js
+session:
+  token_expiry_sec: 7200
+  refresh_token_expiry_sec: 2592000
+socket:
+  # chiave pubblica: sta in ogni copia del gioco, non e' un segreto
+  server_key: defaultkey
+  max_message_size_bytes: 32768   # la presenza arriva in base64: 8 KB di dati sono ~11 KB di messaggio
+match:
+  max_empty_sec: 0
+console:
+  username: admin
