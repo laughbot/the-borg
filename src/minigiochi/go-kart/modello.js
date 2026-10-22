@@ -39,7 +39,7 @@
   function texSchiena(c2, scritta) {
     const [cv, x] = B.tela(256, 224); x.fillStyle = 'rgba(0,0,0,0)'; x.fillRect(0, 0, 256, 224);
     x.fillStyle = '#ffffff'; x.fillRect(10, 20, 236, 10); x.fillRect(10, 194, 236, 10); x.fillStyle = c2; x.fillRect(10, 34, 236, 6);
-    x.font = 'bold 54px Georgia, serif'; x.textAlign = 'center'; x.textBaseline = 'middle'; x.lineWidth = 8; x.strokeStyle = '#17141d'; x.strokeText('THE BORG', 128, 112); x.fillStyle = '#ffffff'; x.fillText('THE BORG', 128, 112);
+    x.font = 'bold 54px Georgia, serif'; x.textAlign = 'center'; x.textBaseline = 'middle'; x.lineWidth = 8; x.strokeStyle = '#17141d'; x.strokeText('BORGOPIA', 128, 112); x.fillStyle = '#ffffff'; x.fillText('BORGOPIA', 128, 112);
     return B.tex(cv);
   }
   function lathePneu(R, w) {
