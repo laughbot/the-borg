@@ -368,7 +368,7 @@
     if (!leggera()) for (let z = o.z0 + 6; z < o.z1; z += 14) { const s = sprite(texPunto, 0x5fbf6a, 14, 8, 0.22); s.position.set(cx + rnd(-2, 2), y0 + 3, z); scena.add(s); }
     [-1, 1].forEach(s => {
       const g = new T.PlaneGeometry(d + 6, h - y0 + 2, Math.round(d / 2), 14), p = g.attributes.position, v = new T.Vector3();
-      for (let i = 0; i < p.count; i++) { v.fromBufferAttribute(p, i); const n = nz(v.x * 0.35, v.y * 0.3, s * 3), k = 0.6 + 2.0 * (0.5 + 0.5 * n); p.setXYZ(i, v.x, v.y, -k); }
+      for (let i = 0; i < p.count; i++) { v.fromBufferAttribute(p, i); const n = nz(v.x * 0.35, v.y * 0.3, s * 3), k = 0.15 + 1.6 * (0.5 + 0.5 * n); p.setXYZ(i, v.x, v.y, k); }   // la roccia sporge verso l'esterno: dentro il passaggio non entra mai (i pistoni non portano piu' dentro il muro)
       g.computeVertexNormals();
       const m = new T.Mesh(g, matRoccia(d / 8, (h - y0) / 8)); m.rotation.y = s * PI / 2; m.position.set(s < 0 ? o.x0 : o.x1, (h + y0) / 2, cz); scena.add(m);
     });
