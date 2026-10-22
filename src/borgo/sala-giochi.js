@@ -178,6 +178,29 @@
       porte.push({ id: 'porta-kart', nome: 'Go-Kart', x: px - 1.0, z: pz, r: 2.3, gioco: 'kart', testo: 'Gioca a Go-Kart' });
     })();
 
+    /* ---------- SALA CENTRALE: NASCONDINO TRASFORMISTA (porta di legno con oggetti che sbirciano) ---------- */
+    (function () {
+      const px = -9.5, pz = HZ0 + 2.0;
+      const g = new T.Group(); g.position.set(px, 0, pz); scena.add(g);
+      scatola(g, 5.2, 0.16, 2.4, '#2a2048', 0, 0.08, 0, 0.02);
+      [-1.4, 1.4].forEach(x => scatola(g, 0.4, 3.2, 0.4, legno, x, 1.6, 0, 0.02));
+      scatola(g, 3.4, 0.4, 0.5, legnoS, 0, 3.3, 0, 0.02);
+      const tenda = new T.Mesh(new T.PlaneGeometry(2.4, 3.0), new T.MeshToonMaterial({ color: new T.Color('#7a2fd6'), gradientMap: gm, side: T.DoubleSide })); tenda.position.set(0, 1.55, 0); g.add(tenda);
+      const [cv, cx] = B.tela(512, 128); cx.fillStyle = '#17171f'; B.rr(cx, 4, 4, 504, 120, 18); cx.fill(); cx.lineWidth = 7; cx.strokeStyle = '#ffd36a'; cx.stroke();
+      cx.font = '900 62px Arial Black, Impact, sans-serif'; cx.textAlign = 'center'; cx.textBaseline = 'middle'; cx.lineWidth = 9; cx.strokeStyle = '#4a1f8a'; cx.strokeText('NASCONDINO', 256, 68); cx.fillStyle = '#ffd36a'; cx.fillText('NASCONDINO', 256, 68);
+      const ins = new T.Mesh(new T.PlaneGeometry(4.0, 1.0), new T.MeshBasicMaterial({ map: B.tex(cv) })); ins.position.set(0, 4.05, 0.05); g.add(ins);
+      // tre oggetti accanto alla porta: uno ha gli occhi (e' un giocatore nascosto!)
+      const occhi = (gg, y, z) => [-0.11, 0.11].forEach(x => { gg.add(mesh(new T.SphereGeometry(0.075, 8, 6), M('#ffffff'), { x, y, z })); gg.add(mesh(new T.SphereGeometry(0.035, 6, 4), M('#1b1530'), { x, y, z: z + 0.06 })); });
+      const bar = new T.Group(); bar.position.set(-2.1, 0, 0.7); g.add(bar); cil(bar, 0.4, 0.4, 1.1, '#8a5a36', 0, 0.55, 0, 14); [0.12, 0.98].forEach(y => cil(bar, 0.42, 0.42, 0.07, '#3a3540', 0, y, 0, 14)); occhi(bar, 0.78, 0.36);
+      anim.push(t => { bar.position.y = Math.max(0, Math.sin(t * 1.3)) * 0.06; bar.rotation.y = Math.sin(t * 0.7) * 0.25; });
+      scatola(g, 0.9, 0.85, 0.9, '#b07a45', 2.1, 0.43, 0.6);
+      const vaso = new T.Group(); vaso.position.set(2.0, 0, -0.5); g.add(vaso); cil(vaso, 0.34, 0.26, 0.52, '#c8704f', 0, 0.26, 0, 12); vaso.add(mesh(new T.SphereGeometry(0.32, 10, 8), M('#4f9d5c'), { y: 0.72 }));
+      ostBox(px - 1.4, pz, 0.6, 0.6); ostBox(px + 1.4, pz, 0.6, 0.6); ostCer(px - 2.1, pz + 0.7, 0.5); ostBox(px + 2.1, pz + 0.6, 1.0, 1.0); ostCer(px + 2.0, pz - 0.5, 0.45);
+      const pr = new T.Mesh(new T.BoxGeometry(3.0, 3.2, 1.2), new T.MeshBasicMaterial()); pr.position.set(px, 1.6, pz); pr.visible = false; scena.add(pr);
+      toccabili.push({ obj: pr, tipo: 'azione', testo: 'Nascondino Trasformista: avvicinati e premi "Gioca" (da 4 a 8, anche con gli amici)' });
+      porte.push({ id: 'gioco-nascondino', nome: 'Nascondino', testo: 'Gioca a Nascondino', gioco: 'nascondino', x: px, z: pz + 1.6, r: 2.0 });
+    })();
+
     /* la Cripta del Re non e' piu' qui: si entra dal portale in piazza (js/portale-cripta.js) */
 
     /* ---------- luci e uscita ---------- */

@@ -655,7 +655,7 @@
       } }
 
     // eventi dal gioco
-    G.su('toast', t => { if ((B.Kart && B.Kart.attivo) || (B.Paintball && B.Paintball.attivo) || (B.Raid && B.Raid.attivo)) return; UI.toast(t); });
+    G.su('toast', t => { if ((B.Kart && B.Kart.attivo) || (B.Paintball && B.Paintball.attivo) || (B.Raid && B.Raid.attivo) || (B.Nascondino && B.Nascondino.attivo)) return; UI.toast(t); });
     G.su('transizione', fn => UI.fade(fn));
     G.su('stanza', aggiornaStanza);
     G.su('profilo', d => apriFoglio(d.id));
