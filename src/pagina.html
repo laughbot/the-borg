@@ -160,6 +160,7 @@
       <div id="grafica" class="catene"></div>
       <button id="btn-esci" class="btn-secondario">Torna alla schermata iniziale</button>
       <button id="btn-ricomincia" class="btn-secondario" style="margin-top:10px;color:#ffb3a8">Ricomincia da capo</button>
+      <button id="btn-errori" class="btn-secondario" style="margin-top:10px">Copia rapporto errori</button>
       <p class="versione" id="versione"></p>
     </div>
   </section>
@@ -258,6 +259,9 @@
 
 <script>
 @@include(src/avvio/errori-telefono.js)@@
+</script>
+<script>
+@@include(src/avvio/secondo-piano.js)@@
 </script>
 <script>
 @@include(src/librerie/three.js)@@
@@ -393,7 +397,10 @@
 @@include(src/borgo/attivita-piazza.js)@@
 
 </script>
-<script>@@include(src/dati/belinverse-immagini.js)@@</script>
+<script>
+@@include(src/borgo/portale-cripta.js)@@
+
+</script>
 <script>
 @@include(src/minigiochi/belinverse/carte.js)@@
 

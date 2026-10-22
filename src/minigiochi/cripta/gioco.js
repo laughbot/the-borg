@@ -368,7 +368,7 @@
     if (!leggera()) for (let z = o.z0 + 6; z < o.z1; z += 14) { const s = sprite(texPunto, 0x5fbf6a, 14, 8, 0.22); s.position.set(cx + rnd(-2, 2), y0 + 3, z); scena.add(s); }
     [-1, 1].forEach(s => {
       const g = new T.PlaneGeometry(d + 6, h - y0 + 2, Math.round(d / 2), 14), p = g.attributes.position, v = new T.Vector3();
-      for (let i = 0; i < p.count; i++) { v.fromBufferAttribute(p, i); const n = nz(v.x * 0.35, v.y * 0.3, s * 3), k = 0.6 + 2.0 * (0.5 + 0.5 * n); p.setXYZ(i, v.x, v.y, -k); }
+      for (let i = 0; i < p.count; i++) { v.fromBufferAttribute(p, i); const n = nz(v.x * 0.35, v.y * 0.3, s * 3), k = 0.15 + 1.6 * (0.5 + 0.5 * n); p.setXYZ(i, v.x, v.y, k); }   // la roccia sporge verso l'esterno: dentro il passaggio non entra mai (i pistoni non portano piu' dentro il muro)
       g.computeVertexNormals();
       const m = new T.Mesh(g, matRoccia(d / 8, (h - y0) / 8)); m.rotation.y = s * PI / 2; m.position.set(s < 0 ? o.x0 : o.x1, (h + y0) / 2, cz); scena.add(m);
     });
@@ -1860,6 +1860,8 @@
       return h;
     };
     E.dbg = () => ({ tit, tSg, fin, ciclo, pozze, ventre, schiena, sfere, boss });
+    // icona dell'occhio vicino alla vita: solo per chi ha lo Sguardo, con i secondi che restano
+    E.icona = () => tit && tit.io && !tit.morto && boss.vivo ? { s: Math.max(0, tSg), max: 16 } : null;
     E.foto = () => ({ ti: tit ? tit.k : null, ts: +tSg.toFixed(1), fi: +fin.toFixed(1), ci: ciclo, sv: sfere.map(x => x.vivo ? 1 : 0), po: pozze.map(p => [+p.x.toFixed(1), +p.z.toFixed(1), +p.t.toFixed(1)]) });
     E.specchio = q => {
       tit = unita(q.ti); tSg = nnum(q.ts, tSg); fin = nnum(q.fi, fin); ciclo = nnum(q.ci, ciclo) | 0; schiena.vivo = !tit;
@@ -2902,7 +2904,7 @@
      niente sconosciuti. Ognuno entra nella Cripta con la sua squadra da 1; si invita o ci si unisce alla
      squadra di un amico. Si parte dall'ultima sala salvata del capo (in modalita' prova da qualsiasi stanza),
      gli altri dicono "pronto". I posti liberi (fino a 6) li prendono i Custodi bot (provvisori: col server si giochera' in 6 amici). */
-  const testoComandi = () => '<p class="com">' + (B.touch ? (CF ? 'Sinistra: muoviti (spingi in avanti fino in fondo per correre). Destra: trascina per guardare. Tasti: fuoco (anche a sinistra), mirino, salto (in aria: doppio salto o volo, se hai le scarpe giuste), accovacciati (in corsa: scivolata; tieni premuto: a terra), ricarica, granata, pugno (corpo a corpo: colpisce chi ti è addosso, anche sotto, senza mirare), cambia arma. Lo zaino 🎒 è accanto alle armi. In pausa trovi Comandi per sensibilità, fuoco automatico e posizione dei tasti.' : 'Sinistra: muoviti. Destra: trascina per guardare. Tasto rosso: spara (mira assistita). Tasto ▲: salta. Tasto ⇄: cambia arma.') : '<b>WASD</b> per muoverti, <b>clic</b> per catturare il mouse, poi muovi il mouse per guardare e tieni premuto per sparare. <b>Spazio</b> salta, <b>Maiusc</b> corre, <b>Q</b> o <b>rotella</b> cambia arma, <b>I</b> apre lo zaino.' + (CF ? ' <b>Tasto destro</b> mirino, <b>R</b> ricarica, <b>G</b> granata, <b>V</b> corpo a corpo, <b>C</b> accovacciati o scivola, <b>Z</b> a terra.' : '')) + '</p>';
+  const testoComandi = () => '<p class="com">' + (B.touch ? (CF ? 'Sinistra: muoviti (spingi in avanti fino in fondo per correre). Destra: trascina per guardare. Tasti: fuoco (anche a sinistra), mirino, salto (in aria: doppio salto o volo, se hai le scarpe giuste), accovacciati (in corsa: scivolata; tieni premuto: a terra), ricarica, granata, pugno (corpo a corpo: colpisce chi ti è addosso, anche sotto, senza mirare), cambia arma. Lo zaino 🎒 è accanto alle armi. In pausa trovi Comandi per sensibilità, fuoco automatico e posizione dei tasti.' : 'Sinistra: muoviti. Destra: trascina per guardare. Tasto rosso: spara (mira assistita). Tasto ▲: salta. Tasto ⇄: cambia arma.') : '<b>WASD</b> per muoverti, il <b>mouse</b> muove la visuale (come negli sparatutto per PC: al primo clic il gioco lo cattura, <b>Esc</b> lo libera e apre il menu), <b>clic</b> per sparare. <b>Spazio</b> salta, <b>Maiusc</b> corre, <b>Q</b> o <b>rotella</b> cambia arma, <b>I</b> apre lo zaino.' + (CF ? ' <b>Tasto destro</b> mirino, <b>R</b> ricarica, <b>G</b> granata, <b>V</b> corpo a corpo, <b>C</b> accovacciati o scivola, <b>Z</b> a terra.' : '')) + '</p>';
   const rar = r => CD.RARITA[r];
   const nomeArmaHtml = it => '<span class="rar" style="color:' + rar(it.r).col + '">' + ARMI[it.k].nome + '</span>';
   function schedaPersonaggio() {
@@ -3063,7 +3065,7 @@
 
   function intro(i) {
     audio(); prepara(i);
-    // si entra direttamente nella sala: niente spiegazioni a schermo (sono in Pausa → Come funziona); parte alla prima azione
+    // si entra direttamente nella sala: niente spiegazioni a schermo (sono in Menu → Come funziona); parte alla prima azione
     if (i !== ALLENAMENTO) { pannello(''); stato = 'gioco'; return; }
     stato = 'intro';
     const kick = i === ALLENAMENTO ? 'Allenamento · nessun premio' : (enc.percorso ? 'Percorso' : 'Sala ' + (i + 1) + ' di ' + NUM_SALE) + ' · ' + enc.luogo + ' · livello consigliato ' + FS.liv + (PROVA ? ' · prova' : '');
@@ -3180,7 +3182,7 @@
     pannello('<div class="kick bene">La luce torna nel borgo' + (PROVA ? ' · prova' : '') + '</div><h2>Il Re senza Luce è caduto</h2><p class="sotto">Gli Starlight rubati tornano su dal Cratere: i lampioni si riaccendono e la cometa torna calda. I Portatori di Lanterna ce l\'hanno fatta.</p><div class="pul"><button id="rd-menu">Stanza d\'attesa</button></div>');
     ui.pan.querySelector('#rd-menu').onclick = () => menu();
   }
-  // il bottino dell'ultima cassa (Pausa → Bottino)
+  // il bottino dell'ultima cassa (Menu → Bottino)
   function pannelloCassa(R) {
     const ultimo = encI === NUM_SALE - 1, lv = cassa && cassa.liv;
     const ogg = R.oggetti.map(o => { const n = CD.nomeOggetto(o), r = rar(o.r); return '<li><b style="color:' + r.col + '">' + n + '</b> <small>' + r.nome + (o.k ? ' · ' + ARMI[o.k].tipo : ' · ' + CD.EQUIP[o.s].nome.toLowerCase()) + (o.doppione ? ' · già ce l\'hai: diventa Starlight' : '') + '</small></li>'; }).join('');
@@ -3249,6 +3251,10 @@
   }
   function aggHud(forza) {
     tHud -= 1 / 60; if (tHud > 0 && !forza) return; tHud = 0.1;
+    if (ui.sg) {   // icona a tempo (lo Sguardo di Bruthak): niente scritte, solo occhio, cerchio che si svuota e secondi
+      const v = enc && stato === 'gioco' && enc.icona ? enc.icona() : null; ui.sg.hidden = !v;
+      if (v) { const n = Math.ceil(v.s); if (ui.sgN.textContent !== String(n)) ui.sgN.textContent = n; ui.sg.style.setProperty('--k', clamp(v.s / v.max, 0, 1).toFixed(3)); ui.sg.classList.toggle('fine', v.s <= 5 && v.s > 2); ui.sg.classList.toggle('ultimi', v.s <= 2); }
+    }
     if (!enc) return;
     ui.tit.innerHTML = '<small>' + enc.luogo + '</small>' + enc.nome;
     ui.obi.innerHTML = cassa ? linea(cassa.aperta ? 'Sala superata' : 'Apri la cassa', 'oro') : enc.hud();
@@ -3349,7 +3355,7 @@ body.raid-attivo #rd-hud{display:block}
 #rd-radio{position:absolute;right:calc(12px + env(safe-area-inset-right,0px));top:calc(160px + env(safe-area-inset-top,0px));width:min(260px,30%);display:flex;flex-direction:column;gap:3px;align-items:flex-end}
 #rd-radio .rd-r{background:rgba(13,16,15,.6);padding:3px 8px;font-size:12px;line-height:1.3;text-align:right;border-right:2px solid rgba(122,216,255,.6);transition:opacity .5s}
 #rd-radio .rd-r.via{opacity:0}#rd-radio b{font-weight:800}
-#rd-esci{position:absolute;right:calc(12px + env(safe-area-inset-right,0px));top:calc(10px + env(safe-area-inset-top,0px));pointer-events:auto;padding:6px 12px;border-radius:4px;background:var(--vetro);border:1px solid rgba(233,225,201,.3);color:var(--osso);font:inherit;font-weight:700;font-size:13px;cursor:pointer}
+#rd-esci{z-index:8;touch-action:manipulation;position:absolute;right:calc(12px + env(safe-area-inset-right,0px));top:calc(10px + env(safe-area-inset-top,0px));pointer-events:auto;padding:6px 12px;border-radius:4px;background:var(--vetro);border:1px solid rgba(233,225,201,.3);color:var(--osso);font:inherit;font-weight:700;font-size:13px;cursor:pointer}
 #rd-mir{position:absolute;left:50%;top:50%;width:22px;height:22px;margin:-11px 0 0 -11px;border:2px solid rgba(233,225,201,.75);border-radius:50%;transition:transform .06s}
 #rd-mir::after{content:"";position:absolute;left:50%;top:50%;width:3px;height:3px;margin:-1.5px 0 0 -1.5px;background:var(--osso);border-radius:50%}
 #rd-mir.mira{width:8px;height:8px;margin:-4px 0 0 -4px;border-color:#ff5a4a;background:rgba(255,90,74,.35)}#rd-mir.mira::after{display:none}
@@ -3424,7 +3430,7 @@ body.pc #rd-hud .tasto,body.pc #rd-hud .base{display:none}
 @media (max-width:700px){#rd-zaino{width:100%}}
 @media (max-height:420px){#rd-obi .ln{font-size:12px;padding:3px 7px}#rd-pan ul{font-size:13px;gap:4px}#rd-pan{gap:7px}}
 /* niente scritte durante il gioco: obiettivi, avvisi e radio dei compagni non si mostrano (ognuno ricorda da se'
-   cosa fare; le regole sono in Pausa → Come funziona). Il nome della sala compare solo entrando. */
+   cosa fare; le regole sono in Menu → Come funziona). Il nome della sala compare solo entrando. */
 #rd-obi,#rd-toasts,#rd-radio,#rd-sq,#rd-chips{display:none!important}
 #rd-tit{opacity:0;transition:opacity .9s}#rd-tit.vedi{opacity:1}
 #rd-lato{position:absolute;inset:0;pointer-events:none}
@@ -3435,6 +3441,14 @@ body.pc #rd-hud .tasto,body.pc #rd-hud .base{display:none}
 #rd-mun em{font-style:normal;font-size:11px;font-weight:700;letter-spacing:.06em;opacity:.8;margin-left:8px}
 #rd-armi .zn{opacity:1;font-size:16px;padding:2px 12px}
 #rd-pan .zfoto,.zfoto{display:block;margin:4px auto 8px;width:240px;max-width:100%;height:auto}
+#rd-sg{position:absolute;right:calc(100% + 10px);bottom:-4px;width:54px;height:54px;border-radius:50%;display:grid;place-items:center;--k:1;
+  background:conic-gradient(#ff4a3a calc(var(--k) * 360deg), rgba(40,10,10,.55) 0);box-shadow:0 0 12px rgba(255,60,40,.55)}
+#rd-sg::before{content:'';position:absolute;inset:4px;border-radius:50%;background:#1a0d0f}
+#rd-sg svg{position:relative;width:26px;height:26px;margin-top:-10px;fill:#ffb347;stroke:#2a0805;stroke-width:1.2}
+#rd-sg svg circle{fill:#2a0805}
+#rd-sg b{position:absolute;bottom:7px;left:0;right:0;text-align:center;font:900 15px/1 system-ui,sans-serif;color:#fff;text-shadow:0 1px 2px #000;font-variant-numeric:tabular-nums}
+#rd-sg.fine{animation:rdSg .6s ease-in-out infinite}#rd-sg.ultimi{animation:rdSg .28s ease-in-out infinite}
+@keyframes rdSg{50%{transform:scale(1.14);box-shadow:0 0 22px rgba(255,60,40,.95)}}
 #rd-nasc{position:absolute;left:50%;top:18%;transform:translateX(-50%);z-index:5;font:800 12px system-ui,sans-serif;letter-spacing:.2em;text-transform:uppercase;color:#c9bfff;text-shadow:0 0 8px #6a5cff;opacity:.85}
 #rd-apri{position:absolute;left:50%;bottom:32%;transform:translateX(-50%);z-index:9;pointer-events:auto;font:800 18px system-ui,sans-serif;letter-spacing:.12em;text-transform:uppercase;padding:12px 34px;border-radius:999px;border:2px solid #fff1c4;background:linear-gradient(#e2b24f,#b8862e);color:#1b1407;box-shadow:0 0 24px rgba(255,210,122,.7)}
 #rd-racc{right:auto!important;left:50%!important;transform:translateX(-50%);bottom:calc(96px + env(safe-area-inset-bottom,0px))!important;align-items:center!important;z-index:5}
@@ -3465,29 +3479,38 @@ body.pc #rd-hud .tasto,body.pc #rd-hud .base{display:none}
     hud = document.createElement('div'); hud.id = 'rd-hud';
     hud.innerHTML = '<div id="rd-vig"></div><div id="rd-num"></div>' + (CF ? '' : '<div class="zona" id="rd-zl"></div><div class="zona" id="rd-zr"></div><div class="base" id="rd-lb"><i></i></div>') +
       '<div id="rd-mir"></div><div id="rd-tit"></div><div id="rd-obi"></div><div id="rd-boss" hidden></div><div id="rd-sq"></div><div id="rd-radio" aria-live="polite"></div><div id="rd-toasts"></div><div id="rd-giu" hidden></div>' +
-      '<div id="rd-lato"><i></i><i></i></div><div id="rd-dir"></div><div id="rd-vita"><div id="rd-chips"></div><div id="rd-mun"></div><div id="rd-armi"></div><b class="bar"><i id="rd-hp"></i></b></div><button id="rd-apri" hidden>Apri</button><div id="rd-nasc" hidden>nascosto</div><div id="rd-racc" aria-live="polite"></div><div id="rd-zaino" hidden></div>' +
+      '<div id="rd-lato"><i></i><i></i></div><div id="rd-dir"></div><div id="rd-vita"><div id="rd-sg" hidden><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M2 12s3.6-6 10-6 10 6 10 6-3.6 6-10 6S2 12 2 12Z"/><circle cx="12" cy="12" r="3.2"/></svg><b></b></div><div id="rd-chips"></div><div id="rd-mun"></div><div id="rd-armi"></div><b class="bar"><i id="rd-hp"></i></b></div><button id="rd-apri" hidden>Apri</button><div id="rd-nasc" hidden>nascosto</div><div id="rd-racc" aria-live="polite"></div><div id="rd-zaino" hidden></div>' +
       (CF ? '' : '<div class="tasto" id="rd-salto" aria-label="Salta">▲</div><div class="tasto" id="rd-cambia" aria-label="Cambia arma">⇄</div><div class="tasto" id="rd-fuoco" aria-label="Spara">FUOCO</div>') +
-      '<button id="rd-esci">Pausa</button><div id="rd-pan" hidden></div>';
+      '<button id="rd-esci">Menu</button><div id="rd-pan" hidden></div>';
     (document.getElementById('hud') || document.getElementById('app') || document.body).appendChild(hud);
-    ['mun', 'apri', 'nasc', 'dir', 'lato', 'zl', 'zr', 'lb', 'mir', 'tit', 'obi', 'boss', 'sq', 'radio', 'toasts', 'giu', 'chips', 'hp', 'salto', 'fuoco', 'esci', 'pan', 'vig', 'armi', 'cambia', 'num', 'racc', 'zaino'].forEach(k => { ui[k] = hud.querySelector('#rd-' + k); });
+    ['mun', 'apri', 'nasc', 'sg', 'dir', 'lato', 'zl', 'zr', 'lb', 'mir', 'tit', 'obi', 'boss', 'sq', 'radio', 'toasts', 'giu', 'chips', 'hp', 'salto', 'fuoco', 'esci', 'pan', 'vig', 'armi', 'cambia', 'num', 'racc', 'zaino'].forEach(k => { ui[k] = hud.querySelector('#rd-' + k); }); ui.sgN = ui.sg.querySelector('b');
     ui.apri.addEventListener('pointerdown', e => { e.preventDefault(); e.stopPropagation(); if (vicinoCassa()) apriCassa(); });
     window.addEventListener('keydown', e => { if (R.attivo && stato === 'gioco' && !e.repeat && (e.key === 'e' || e.key === 'E') && vicinoCassa()) apriCassa(); });
     ui.obi.addEventListener('pointerdown', e => { if (innerHeight > 500) return; ui.obi.classList.toggle('tutto'); e.stopPropagation(); });   // telefono: tocca per vedere tutti gli obiettivi
     window.addEventListener('keydown', e => { if (R.attivo && (stato === 'gioco') && !e.repeat && (e.key === 'i' || e.key === 'I' || e.key === 'Tab')) { zaino(); e.preventDefault(); } });
     const pausa = () => {
       const avanti = false;   // si va avanti solo attraversando il portale
-      stato = 'pausa'; sparo = false; zaino(false);
-      pannello('<div class="kick">Pausa</div><h2>' + enc.nome + '</h2><div class="pul">' + (avanti ? '<button id="rd-av2">Prossima sala</button>' : '') + '<button id="rd-ri2"' + (avanti ? ' class="sec"' : '') + '>Riprendi</button>' + (enc.guida ? '<button class="sec" id="rd-cf">Come funziona</button>' : '') + (ultimaCassa && cassa && cassa.aperta ? '<button class="sec" id="rd-bt">Bottino</button>' : '') + (C ? '<button class="sec" id="rd-cmd">Comandi</button>' : '') + '<button class="sec" id="rd-menu">Stanza d\'attesa</button>' + (B.solo ? '' : '<button class="sec" id="rd-x">Esci dalla Sala</button>') + '</div>');
-      ui.pan.querySelector('#rd-ri2').onclick = () => { pannello(''); stato = 'gioco'; }; ui.pan.querySelector('#rd-menu').onclick = () => menu();
+      // come in Destiny il menu NON ferma il gioco: con gli amici online tutto continua in tempo reale
+      sparo = false; zaino(false); if (stato !== 'gioco') return;
+      pannello('<div class="kick">Menu · il gioco non si ferma</div><h2>' + enc.nome + '</h2><div class="pul">' + (avanti ? '<button id="rd-av2">Prossima sala</button>' : '') + '<button id="rd-ri2"' + (avanti ? ' class="sec"' : '') + '>Torna a giocare</button>' + (enc.guida ? '<button class="sec" id="rd-cf">Come funziona</button>' : '') + (ultimaCassa && cassa && cassa.aperta ? '<button class="sec" id="rd-bt">Bottino</button>' : '') + (C ? '<button class="sec" id="rd-cmd">Comandi</button>' : '') + '<button class="sec" id="rd-menu">Stanza d\'attesa</button>' + (B.solo ? '' : '<button class="sec" id="rd-x">Esci dalla Sala</button>') + '</div>');
+      ui.pan.querySelector('#rd-ri2').onclick = () => { pannello(''); }; ui.pan.querySelector('#rd-menu').onclick = () => menu();
       const x = ui.pan.querySelector('#rd-x'); if (x) x.onclick = () => R.esci(); const cm = ui.pan.querySelector('#rd-cmd'); if (cm) cm.onclick = () => C.impostazioni(ui.pan, pausa);
       const av = ui.pan.querySelector('#rd-av2'); if (av) av.onclick = () => prossimaSala();
       const bt = ui.pan.querySelector('#rd-bt'); if (bt) bt.onclick = () => pannelloCassa(ultimaCassa);
       const cf = ui.pan.querySelector('#rd-cf'); if (cf) cf.onclick = () => { pannello('<div class="kick">Come funziona</div><h2>' + enc.nome + '</h2><ul>' + (enc.guida || []).map(g => '<li>' + g + '</li>').join('') + '</ul><div class="pul"><button id="rd-cfx">Indietro</button></div>'); ui.pan.querySelector('#rd-cfx').onclick = pausa; };
     };
-    ui.esci.addEventListener('click', () => { if (stato === 'gioco') pausa(); else if (B.solo) menu(); else R.esci(); });
+    // su telefono i comandi di gioco fermano il "click": il tasto risponde al tocco stesso (pointerup)
+    let tLiberato = 0;   // Esc che libera il mouse apre gia' il menu: non richiuderlo subito
+    const premiEsci = (daTasto) => { if (daTasto === true && performance.now() - tLiberato < 500) return; if (stato === 'gioco') { if (ui.pan.hidden) pausa(); else pannello(''); } else if (B.solo) menu(); else R.esci(); };
+    ui.esci.addEventListener('pointerdown', e => { e.stopPropagation(); });
+    ui.esci.addEventListener('pointerup', e => { e.stopPropagation(); e.preventDefault(); premiEsci(); });
+    window.addEventListener('keydown', e => { if (R.attivo && stato === 'gioco' && !e.repeat && (e.key === 'Escape' || e.key === 'p' || e.key === 'P')) premiEsci(true); });
     if (CF) {
       // comandi condivisi con gli altri sparatutto: sotto i pannelli, sopra il resto dell'HUD
-      C = CF.crea({ dove: hud, tasti: ['fuoco', 'mira', 'salto', 'giu', 'ricarica', 'granata', 'cambia', 'corpo'], granataMirata: true, audio, guarda: (dx, dy) => { io.yaw -= dx; io.pitch = clamp(io.pitch - dy, -1.35, 1.35); } });
+      C = CF.crea({ dove: hud, tasti: ['fuoco', 'mira', 'salto', 'giu', 'ricarica', 'granata', 'cambia', 'corpo'], granataMirata: true, audio, guarda: (dx, dy) => { io.yaw -= dx; io.pitch = clamp(io.pitch - dy, -1.35, 1.35); },
+        // PC: mouse catturato solo in partita, senza menu o zaino aperti; Esc lo libera e apre il menu
+        puoCatturare: () => stato === 'gioco' && ui.pan.hidden && (!ui.zaino || ui.zaino.hidden),
+        liberato: () => { tLiberato = performance.now(); if (ui.pan.hidden) pausa(); } });
       hud.insertBefore(C.el, ui.pan); corpo = CF.corpo(); R._riposo = () => C.riposo();
       ui.armi.addEventListener('pointerdown', e => { const s = e.target.closest('span'); if (!s) return; if (s.classList.contains('zn')) { zaino(); return; } cambiaArma([...ui.armi.children].indexOf(s)); });
       return;

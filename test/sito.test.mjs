@@ -4,7 +4,7 @@ import { readFileSync, existsSync, readdirSync, mkdtempSync, cpSync, rmSync } fr
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
 import vm from 'node:vm';
-import { pubblica, FILE } from '../strumenti/pubblica.mjs';
+import { pubblica, FILE, CARTELLE } from '../strumenti/pubblica.mjs';
 
 let ok = 0, ko = 0;
 const prova = (nome, v) => { if (v) { ok++; console.log('  ok  ' + nome); } else { ko++; console.log('  NO  ' + nome); } };
@@ -25,11 +25,12 @@ prova('senza https: no', s('http://theborg.it/') === '');
 // --- cartella pubblica ---
 console.log('Cartella pubblica');
 const t = mkdtempSync(join(tmpdir(), 'borg-'));
-for (const f of ['src', 'strumenti', 'server', ...FILE]) cpSync(f, join(t, f), { recursive: true });
+for (const f of ['src', 'strumenti', 'server', ...FILE, ...CARTELLE]) cpSync(f, join(t, f), { recursive: true });
 const dest = pubblica(t);
 const dentro = readdirSync(dest).sort();
-prova('solo i file del gioco', JSON.stringify(dentro) === JSON.stringify(['_headers', 'index.html', ...FILE].sort()));
+prova('solo i file del gioco', JSON.stringify(dentro) === JSON.stringify(['_headers', 'index.html', ...FILE, ...CARTELLE].sort()));
 prova('index.html uguale a quello costruito', readFileSync(join(dest, 'index.html'), 'utf8') === readFileSync('index.html', 'utf8'));
+prova('carte di Belinverse', readdirSync(join(dest, 'img', 'belinverse')).length === readdirSync('img/belinverse').length && readdirSync('img/belinverse').length > 100);
 prova('niente codice sorgente o server', !existsSync(join(dest, 'src')) && !existsSync(join(dest, 'server')));
 prova('pagina sempre fresca', /\/index\.html\n\s+Cache-Control: no-cache/.test(readFileSync(join(dest, '_headers'), 'utf8')));
 rmSync(t, { recursive: true, force: true });

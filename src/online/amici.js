@@ -527,37 +527,5 @@
   // chi e' nel tuo stesso luogo (per i suggerimenti delle @menzioni)
   const qui = () => [...amici.values()].filter(a => stessoLuogo(a.pr.s, luogo()) && !bloccato(a)).map(a => ({ id: idAmico(a.nick), nick: a.nick }));
   B.Online = { visita, raggiungi, compra, qui, annunci: () => [...amici.values()].reduce((o, a) => o.concat(annunciDi(a)), []), inLinea: () => !!room, stato: () => room && room.stato ? room.stato() : null, amici: () => [...amici.values()].map(a => ({ nick: a.nick, s: a.pr.s, x: a.x, z: a.z, bici: !!a.bk })) };
-  /* ---------- indicatore della stanza amici (solo con il codice nel link) ----------
-     Dice sempre se il collegamento c'e': in collegamento, da solo, quanti amici, oppure non raggiungibile.
-     Toccandolo: chi c'e' e dove si trova, o "riprova" se il collegamento non riesce. */
-  if (CODICE) {
-    const chip = document.createElement('button'); chip.id = 'amici-stato'; chip.type = 'button';
-    const css = document.createElement('style');
-    css.textContent = '#amici-stato{position:fixed;left:50%;transform:translateX(-50%);top:calc(var(--h-alto,56px) + env(safe-area-inset-top,0px) + 6px);z-index:30;border:0;border-radius:999px;padding:5px 12px;font:600 12px/1.2 system-ui,sans-serif;color:#fff;background:rgba(20,24,40,.72);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);pointer-events:auto;white-space:nowrap}'
-      + '#amici-stato.ok{background:rgba(30,120,70,.82)}#amici-stato.err{background:rgba(170,40,40,.88)}'
-      + 'body[class*="-attivo"] #amici-stato,#amici-stato[hidden]{display:none}';
-    document.head.appendChild(css); document.body.appendChild(chip);
-    let stato = 'attesa';
-    const DOVE = { piazza: 'in piazza', raid: 'nella Cripta', paintball: 'a Paintball', kart: 'sui Go-Kart', carte: 'a Belinverse', bubble: 'a Borg Bubble', casa: 'a casa sua' };
-    const doveDi = s => { s = String(s || ''); if (s.indexOf('casa:') === 0) { const c = s.slice(5); return stessoLuogo(c, mioNick()) ? 'a casa tua' : 'a casa di ' + testo(c, 20); } if (DOVE[s]) return DOVE[s]; const st = app.stanze && app.stanze[s]; return st && st.nome ? 'in ' + st.nome : 'nel borgo'; };
-    chip.addEventListener('click', () => {
-      if (stato === 'err') { location.reload(); return; }
-      if (stato !== 'ok') { G.emetti('toast', 'Collegamento alla stanza amici "' + CODICE + '" in corso…'); return; }
-      const l = [...amici.values()];
-      const st = room && room.stato ? room.stato() : null, ruolo = st ? (st.capo ? 'A' + st.conns : 'B' + (st.aperto ? '1' : '0')) : 'N';
-      G.emetti('toast', l.length ? l.map(a => a.nick + ' ' + doveDi(a.pr.s) + (stessoLuogo(a.pr.s, luogo()) ? ' (qui)' : '')).join(' · ') : 'Nella stanza "' + CODICE + '" ci sei solo tu: l\'amico deve aprire lo stesso link adesso (codice ' + ruolo + ')');
-    });
-    const agg = () => {
-      chip.hidden = !G.stato.giocatore || ($('#hud') && $('#hud').hidden);
-      const st = room && room.stato ? room.stato() : null, n = amici.size;
-      let t, c;
-      if (room && (!st || st.capo || st.aperto)) { c = 'ok'; t = n ? '👥 ' + n + (n === 1 ? ' amico collegato' : ' amici collegati') : '👥 Stanza "' + CODICE + '": sei da solo'; }
-      else if (st && st.errori >= 2) { c = 'err'; t = '⚠️ Stanza amici non raggiungibile · tocca per riprovare'; }
-      else { c = 'attesa'; t = '⏳ Collegamento alla stanza amici…'; }
-      stato = c; chip.className = c === 'attesa' ? '' : c; if (chip.textContent !== t) chip.textContent = t;
-    };
-    const $ = q => document.querySelector(q);
-    setInterval(agg, 1000); agg();
-  }
   ciclo();
 })();

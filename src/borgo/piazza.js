@@ -114,8 +114,8 @@
       trave(g, WU + 0.1, 0.16, 0, h1 + 0.08, zt); trave(g, WU + 0.1, 0.16, 0, H - 0.08, zt);
       [-1, 1].forEach(s => { trave(g, 0.18, h2, s * (WU / 2 - 0.05), h1 + h2 / 2, zt); trave(g, 0.18, h1 - 0.5, s * (w / 2 - 0.05), 0.5 + (h1 - 0.5) / 2, zb + 0.045); });
       trave(g, 0.12, h2, 0, h1 + h2 / 2, zt); [-1, 1].forEach(s => trave(g, 0.1, h2 * 1.15, s * WU * 0.25, h1 + h2 / 2, zt, s * 0.75));
-      // finestre del piano alto
-      [-1, 1].forEach(s => finestra(g, s * WU * 0.3, h1 + 1.2, 0.85, 0.95, zt, { persiane: o.persiane || '#2f6a78', fiori: true }));
+      // finestre del piano alto (senza fioriere: finivano davanti all'insegna)
+      [-1, 1].forEach(s => finestra(g, s * WU * 0.3, h1 + 1.2, 0.85, 0.95, zt, { persiane: o.persiane || '#2f6a78' }));
       // porta ad arco con luce
       const px = o.porta || 0;
       g.add(mesh(new T.BoxGeometry(1.5, 1.8, 0.14), M(pietra), { x: px, y: 0.9 + 0.3, z: zb + 0.03, lb: 0.012 }));
@@ -137,7 +137,7 @@
       // insegna
       const IW = o.insegnaGiochi ? 5.7 : o.insegnaLtc ? 5.4 : 3.0, IH = o.insegnaGiochi ? 1.5 : o.insegnaLtc ? 0.98 : 0.72;
       const ins = new T.Mesh(new T.PlaneGeometry(IW, IH), new T.MeshBasicMaterial({ map: o.insegnaGiochi ? B.texInsegnaGiochi(1024, 270) : o.insegnaLtc ? B.texInsegnaLTC(1024, 186) : B.texInsegna(o.senzaNome ? '' : o.nome, 512, 123), transparent: true }));
-      ins.position.set(px, h1 + 0.5, zt + 0.08); g.add(ins);
+      ins.position.set(px, h1 + 0.5, zt + 0.27); g.add(ins);   // davanti ai davanzali delle finestre di sopra
       if (o.insegnaGiochi) { // alone luminoso dietro l'insegna
         const cv = document.createElement('canvas'); cv.width = 256; cv.height = 128; const cx = cv.getContext('2d');
         const rg = cx.createRadialGradient(128, 64, 8, 128, 64, 128); rg.addColorStop(0, 'rgba(255,90,200,.75)'); rg.addColorStop(.5, 'rgba(110,80,255,.35)'); rg.addColorStop(1, 'rgba(0,0,0,0)');
@@ -145,7 +145,7 @@
         const hl = new T.Mesh(new T.PlaneGeometry(IW * 1.7, IH * 2.2), new T.MeshBasicMaterial({ map: new T.CanvasTexture(cv), transparent: true, blending: T.AdditiveBlending, depthWrite: false }));
         hl.position.set(px, h1 + 0.5, zt + 0.02); g.add(hl);
       }
-      g.add(mesh(new T.BoxGeometry(IW + 0.14, IH + 0.12, 0.05), M('#3a2216'), { x: px, y: h1 + 0.5, z: zt + 0.04, lb: 0.01 }));
+      g.add(mesh(new T.BoxGeometry(IW + 0.14, IH + 0.12, 0.05), M('#3a2216'), { x: px, y: h1 + 0.5, z: zt + 0.235, lb: 0.01 }));
       // tetto: due falde con tegole, colmo, timpani
       const s = (d + 0.5) / 2 + 0.45, rh = 1.45, beta = Math.atan2(rh, s), Ls = Math.hypot(s, rh) + 0.1, WR = w + 0.5 + 0.9;
       const tt = B.texTegole(o.tetto || '#2f3f8f');
@@ -246,9 +246,8 @@
       { x: 18, z: -9.1, rot: 0, w: 7.0, d: 5, muro: '#e8d6b6', muroSopra: '#f1e3c8', tetto: '#2a3a85', nome: 'Caffetteria', tendaA: '#f4ead6', tendaB: '#e0675c', porta: 0.3, abbaino: -1.9, persiane: '#2f6a78', tendaLarg: 5.2 },
       { x: -22, z: -9.1, rot: 0, w: 6.2, d: 5, muro: '#c98a62', muroSopra: '#ebd3a8', tetto: '#38307a', nome: 'Sala Giochi', insegnaGiochi: true, tendaA: '#f6e8cc', tendaB: '#c8553d', porta: -0.2, persiane: '#7a3f6a', tendaLarg: 4.6 },
       { x: -32, z: -9.1, rot: 0, w: 3.4, d: 4.4, muro: '#cdb08a', muroSopra: '#e9d6b0', tetto: '#4a3a86', nome: 'Casa', tendaA: '#f6e8cc', tendaB: '#4f8ab8', porta: 0, persiane: '#2f6a78', tendaLarg: 2.6 },
-      { x: -22, z: 69.1, rot: PI, w: 3.6, d: 5, muro: '#bfc9d8', muroSopra: '#e3e8f0', tetto: '#2f5a4a', nome: 'Biblioteca', tendaA: '#f4ead6', tendaB: '#3f7a6a', porta: 0, persiane: '#4a3a6a', tendaLarg: 2.8 },
+      { x: -27.7, z: -9.1, rot: 0, w: 3.2, d: 4.7, muro: '#bfc9d8', muroSopra: '#e3e8f0', tetto: '#2f5a4a', nome: 'Biblioteca', tendaA: '#f4ead6', tendaB: '#3f7a6a', porta: 0, persiane: '#4a3a6a', tendaLarg: 2.8 },
       { x: 51.1, z: 50, rot: -PI / 2, w: 3.8, d: 4.6, muro: '#d8b4a0', muroSopra: '#f0dcc4', tetto: '#7a3a4a', nome: 'Fioraio', tendaA: '#f6e8cc', tendaB: '#e0675c', porta: 0, persiane: '#4f8a3a', tendaLarg: 3.0 },
-      { x: -51.1, z: 50, rot: PI / 2, w: 3.6, d: 5, muro: '#b8c8b0', muroSopra: '#dfe8d4', tetto: '#2e5a6a', nome: 'Gelateria', tendaA: '#f4ead6', tendaB: '#f08fb4', porta: 0, persiane: '#c8553d', tendaLarg: 2.8 },
       { x: -51.1, z: 4, rot: PI / 2, w: 4.6, d: 5, muro: '#c9a77c', muroSopra: '#ecd9b4', tetto: '#6a3d2a', nome: 'Arredamenti', tendaA: '#f4ead6', tendaB: '#b0703c', porta: 0, persiane: '#3f6a8a', tendaLarg: 3.6 },
       { x: -40, z: -9.1, rot: 0, w: 7.6, d: 5, muro: '#3b2f5c', muroSopra: '#51427a', tetto: '#1d1a3a', nome: 'Laugh Tale Collectibles', tendaA: '#f4ead6', tendaB: '#7a2fd6', porta: 0, persiane: '#e0b040', tendaLarg: 6.4, insegnaLtc: true }
     ];
@@ -286,6 +285,16 @@
     /* ---------- alberi di ciliegio ---------- */
     function ciliegio(x, z, s) {
       const g = new T.Group(); g.position.set(x, 0, z); g.scale.setScalar(s); scene.add(g);
+      // vicino al portale della Cripta gli alberi sono morti: rami neri e storti, niente fiori
+      const PC = B.PORTALE_CRIPTA;
+      if (PC && Math.hypot(x - PC.x, z - PC.z) < 13) {
+        const legno = M('#2b2126'); g.add(mesh(new T.CylinderGeometry(0.2, 0.42, 2.9, 7), legno, { y: 1.45, l: 0.03 })).rotation.z = 0.08;
+        [[-1, 0.4, 0.9], [1, -0.3, 1.0], [0.3, 1, 0.8], [-0.4, -1, 0.7], [0.9, 0.6, 0.6]].forEach((b, i) => {
+          const r = mesh(new T.CylinderGeometry(0.03, 0.12, 1.7 * b[2], 6), legno, { x: b[0] * 0.5, y: 2.9 + i * 0.12, z: b[1] * 0.4, l: 0.02 }); r.rotation.z = -b[0] * 0.9; r.rotation.x = b[1] * 0.7; g.add(r);
+          const p = mesh(new T.CylinderGeometry(0.01, 0.05, 0.7, 5), legno, { x: b[0] * 1.1, y: 3.7 + i * 0.1, z: b[1] * 0.85, l: 0.015 }); p.rotation.z = b[0] * 0.6; g.add(p);
+        });
+        ostCer(x, z, 0.5 * s); return;
+      }
       const tr = mesh(new T.CylinderGeometry(0.26, 0.46, 2.7, 10), M('#6b4630'), { y: 1.35, l: 0.03 }); g.add(tr);
       [[-1, 0.5], [1, -0.4], [0, 0.9]].forEach(b => { const r = mesh(new T.CylinderGeometry(0.1, 0.17, 1.5, 8), M('#6b4630'), { x: b[0] * 0.45, y: 2.8, z: b[1] * 0.2, l: 0.02 }); r.rotation.z = -b[0] * 0.7; r.rotation.x = b[1] * 0.5; g.add(r); });
       const cols = ['#f4a3c4', '#f8bcd4', '#ee8fb6', '#fbd0e1', '#f29bbf'];
@@ -618,6 +627,8 @@
 
     /* ---------- laghetto, ruota panoramica e mercatino (js/piazza-attivita.js) ---------- */
     if (B.costruisciAttivita) B.costruisciAttivita({ scene, edifici, ostacoli, porte, sedili, anim, toccabili, lampione, panchina });
+    // il portale della Cripta del Re, nell'angolo sud-ovest vicino al Cratere (js/portale-cripta.js)
+    if (B.costruisciPortaleCripta) B.costruisciPortaleCripta({ scene, edifici, ostacoli, porte, anim, toccabili });
 
     /* ---------- i pezzi fermi uniti in poche mesh: stessa piazza, molto meno lavoro per il telefono (js/ottimizza.js) ---------- */
     if (B.unisciStatici) { const r = B.unisciStatici(scene, { anim, fade: fadeItems, protetti: toccabili.map(t => t.obj) }); B.statPiazza = r; }
