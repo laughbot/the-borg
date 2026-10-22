@@ -19,6 +19,7 @@ src/
   librerie/            three.js e PeerJS (codice di terzi, non si tocca)
   dati/                immagini incollate come testo (loghi)
 img/belinverse/        immagini delle carte di Belinverse (file a parte: il telefono le scarica solo quando servono)
+sito/                  home di presentazione (immagini, font): online va in /, il gioco in /gioca/
 server/                server di gioco Nakama (vedi server/README.md)
 test/                  prove automatiche (node test/filtro.test.mjs)
 strumenti/             costruisci.mjs e scomponi.mjs
