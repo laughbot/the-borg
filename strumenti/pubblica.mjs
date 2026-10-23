@@ -1,6 +1,6 @@
 // Prepara la cartella pubblica/ con solo i file del gioco da mettere online
 // (Cloudflare Pages): il gioco, le icone, il manifest e le immagini in img/
-// (per esempio le carte di Belinverse, che il telefono scarica solo quando servono). Il codice sorgente,
+// (per esempio le carte di Belinverse, che il telefono scarica solo quando servono) e i modelli 3D in modelli/. Il codice sorgente,
 // il server e le prove restano fuori, anche quando il repository diventa privato.
 //
 //   node strumenti/pubblica.mjs
@@ -16,7 +16,7 @@ import { costruisci } from './costruisci.mjs';
 const RADICE = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const USCITA = 'pubblica';
 export const FILE = ['apple-touch-icon.png', 'icona-192.png', 'icona-512.png', 'icona-maskable-512.png', 'manifest.webmanifest'];
-export const CARTELLE = ['img'];
+export const CARTELLE = ['img', 'modelli'];
 
 // il telefono deve sempre chiedere la pagina nuova (il gioco controlla la versione da solo);
 // le icone cambiano raramente
@@ -27,6 +27,8 @@ export const INTESTAZIONI = `/
 /*.png
   Cache-Control: public, max-age=86400
 /img/*
+  Cache-Control: public, max-age=86400
+/modelli/*
   Cache-Control: public, max-age=86400
 /*
   X-Content-Type-Options: nosniff

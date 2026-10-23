@@ -34,14 +34,13 @@
 
     /* ---------- suolo: lastra di selciato che fluttua nel cielo ---------- */
     const W = PZ.w, D = PZ.d, CZ = PZ.cz;
-    const tSel = B.texSelciato(); tSel.repeat.set(W / 6, D / 6);
-    const suolo = new T.Mesh(new T.PlaneGeometry(W, D), new T.MeshToonMaterial({ map: tSel, gradientMap: gm }));
-    suolo.rotation.x = -PI / 2; suolo.position.z = CZ; suolo.receiveShadow = true; scene.add(suolo);
+    // pietre irregolari con rilievo e macchie di colore (B3.PM, piazza-modelli.js)
+    const suolo = B.PM.suolo(W, D, [W / 4.5, D / 4.5]); suolo.position.z = CZ; scene.add(suolo);
     scene.add(mesh(new T.BoxGeometry(W + 0.4, 1.4, D + 0.4), M('#8a7a82'), { y: -0.71, z: CZ, lb: 0.05 }));
-    for (let i = 0; i < 14; i++) { const c = mesh(new T.ConeGeometry(rnd(1.2, 2.6), rnd(1.6, 3.4), 7), M('#6f6270'), { x: rnd(PZ.x0 + 2, PZ.x1 - 2), y: -1.4 - rnd(0.2, 0.9), z: rnd(PZ.z0 + 2, PZ.z1 - 2) }); c.rotation.x = PI; scene.add(c); }
+    // rocce sotto l'isola: niente ombre (con il suolo nuovo facevano comparire macchie sul selciato)
+    for (let i = 0; i < 14; i++) { const c = mesh(new T.ConeGeometry(rnd(1.2, 2.6), rnd(1.6, 3.4), 7), M('#6f6270'), { x: rnd(PZ.x0 + 2, PZ.x1 - 2), y: -1.4 - rnd(0.2, 0.9), z: rnd(PZ.z0 + 2, PZ.z1 - 2), cast: false }); c.rotation.x = PI; scene.add(c); }
     // disco a mosaico attorno alla fontana
-    const mo = new T.Mesh(new T.CircleGeometry(6.3, 64), new T.MeshToonMaterial({ map: B.texMosaico(), color: 0xd0d0d0, transparent: true, gradientMap: gm, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2 }));
-    mo.rotation.x = -PI / 2; mo.position.set(0, 0.02, 3.2 + DZ); mo.receiveShadow = true; scene.add(mo);
+    const mo = B.PM.discoAnelli(6.3); mo.position.set(0, 0.02, 3.2 + DZ); scene.add(mo);   // anelli di pietra e stella della cometa
     // nuvole sotto e attorno all'isola
     const nuvole = [];
     for (let i = 0; i < 12; i++) {
@@ -106,9 +105,12 @@
     function edificio(o) {
       const w = o.w, d = o.d, h1 = 2.7, h2 = 2.0, H = h1 + h2, g = new T.Group(); g.position.set(o.x, 0, o.z); scene.add(g); const f0 = fiori.length;
       const zb = d / 2, zu = (d + 0.5) / 2;
-      g.add(mesh(new T.BoxGeometry(w + 0.12, 0.5, d + 0.12), M(pietra), { y: 0.25, lb: 0.03 }));
+      B.PM.basamento(g, w, d, 0.5);
       g.add(mesh(new T.BoxGeometry(w, h1 - 0.5, d), M(o.muro), { y: 0.5 + (h1 - 0.5) / 2, lb: 0.03 }));
+      B.PM.cantonali(g, w, d, 0.5, h1 - 0.1);
       g.add(mesh(new T.BoxGeometry(w + 0.5, h2, d + 0.5), M(o.muroSopra || o.muro), { y: h1 + h2 / 2, lb: 0.03 }));
+      B.PM.mensole(g, w + 0.3, zb + 0.25, h1, legno);
+      B.PM.traviLati(g, w + 0.5, d + 0.5, h1, h2, legno);
       // travi di legno (piano alto e angoli)
       const WU = w + 0.5, zt = zu + 0.045;
       trave(g, WU + 0.1, 0.16, 0, h1 + 0.08, zt); trave(g, WU + 0.1, 0.16, 0, H - 0.08, zt);
@@ -124,6 +126,9 @@
       const arcoD = mesh(new T.CylinderGeometry(0.55, 0.55, 0.12, 16, 1, false, PI / 2, PI), M('#6b3f27'), { x: px, y: 2.0, z: zb + 0.09 }); arcoD.rotation.x = PI / 2; g.add(arcoD);
       const luceP = new T.Mesh(new T.PlaneGeometry(0.5, 0.7), B.Mluce('#ffc060', 0.9)); luceP.position.set(px, 1.5, zb + 0.16); g.add(luceP);
       g.add(mesh(new T.SphereGeometry(0.05, 8, 6), M('#e3a63a'), { x: px + 0.35, y: 1.0, z: zb + 0.17 }));
+      // lanterne ai lati della porta e vasi di piante (sotto la tenda, non danno fastidio al passaggio)
+      [-1, 1].forEach(sl => B.PM.lanterna(g, px + sl * 0.98, 1.95, zb));
+      if (w >= 5) [-1, 1].forEach(sl => B.PM.vaso(g, px + sl * 3.0, zb + 0.35));
       // vetrine del piano terra
       [-1, 1].forEach(s => finestra(g, px + s * 2.05, 1.5, 1.35, 1.2, zb + 0.04, { fiori: true, persiane: null }));
       // tenda a righe
@@ -148,13 +153,8 @@
       g.add(mesh(new T.BoxGeometry(IW + 0.14, IH + 0.12, 0.05), M('#3a2216'), { x: px, y: h1 + 0.5, z: zt + 0.235, lb: 0.01 }));
       // tetto: due falde con tegole, colmo, timpani
       const s = (d + 0.5) / 2 + 0.45, rh = 1.45, beta = Math.atan2(rh, s), Ls = Math.hypot(s, rh) + 0.1, WR = w + 0.5 + 0.9;
-      const tt = B.texTegole(o.tetto || '#2f3f8f');
-      [1, -1].forEach(sg => {
-        const t = tt.clone(); t.needsUpdate = true; t.repeat.set(WR / 1.3, Ls / 1.1);
-        const sl = mesh(new T.BoxGeometry(WR, 0.16, Ls), new T.MeshToonMaterial({ map: t, gradientMap: M('#fff').gradientMap }), { lb: 0.025 });
-        sl.position.set(0, H + rh / 2 + 0.05, sg * s / 2); sl.rotation.x = sg * beta; g.add(sl);
-      });
-      const colmo = mesh(new T.CylinderGeometry(0.13, 0.13, WR + 0.1, 8), M('#3a2a5a'), { y: H + rh + 0.12, l: 0.02 }); colmo.rotation.z = PI / 2; g.add(colmo);
+      // tetto a file di tegole sovrapposte, colmo e tavole di bordo (B3.PM.tettoTegole)
+      B.PM.tettoTegole(g, { WR, s, rh, H, colore: o.tetto || '#2f3f8f' }); void beta; void Ls;
       const wsd = (d + 0.5) / 2;
       [-1, 1].forEach(sx => {
         const sh = new T.Shape(); sh.moveTo(-wsd, 0); sh.lineTo(wsd, 0); sh.lineTo(0, rh * wsd / s); sh.lineTo(-wsd, 0);
@@ -261,29 +261,15 @@
 
     /* ---------- fontana con statua ---------- */
     (function fontana(x, z) {
+      // fontana a tre vasche con la statua alata che solleva una Starlight (B3.PM.fontana, piazza-modelli.js)
       const g = new T.Group(); g.position.set(x, 0, z); scene.add(g);
-      g.add(mesh(new T.CylinderGeometry(2.7, 2.8, 0.22, 28), M('#cbbab2'), { y: 0.11, l: 0.03 }));
-      const bordo = mesh(new T.CylinderGeometry(2.5, 2.35, 0.7, 28, 1, true), M('#d9cbc2'), { y: 0.55, l: 0.03 }); bordo.material = new T.MeshToonMaterial({ color: new T.Color('#d9cbc2'), side: T.DoubleSide, gradientMap: M('#fff').gradientMap }); g.add(bordo);
-      g.add(mesh(new T.TorusGeometry(2.45, 0.17, 8, 32), M('#e6d9d0'), { y: 0.9, l: 0.02 })).children[g.children.length - 1].rotation.x = PI / 2;
-      const acqua = new T.Mesh(new T.CircleGeometry(2.33, 32), new T.MeshToonMaterial({ color: new T.Color('#58c4ea'), emissive: new T.Color('#2a8fc0'), emissiveIntensity: 0.55, gradientMap: M('#fff').gradientMap }));
-      acqua.rotation.x = -PI / 2; acqua.position.y = 0.72; g.add(acqua); anim.push(t => { acqua.material.emissiveIntensity = 0.5 + Math.sin(t * 1.6) * 0.12; });
-      g.add(mesh(new T.CylinderGeometry(0.55, 0.8, 0.5, 14), M('#d9cbc2'), { y: 0.9, l: 0.03 }));
-      g.add(mesh(new T.CylinderGeometry(0.28, 0.4, 1.2, 12), M('#e6d9d0'), { y: 1.7, l: 0.03 }));
-      const ciotola = mesh(new T.CylinderGeometry(1.15, 0.5, 0.35, 20), M('#e6d9d0'), { y: 2.35, l: 0.03 }); g.add(ciotola);
-      const acq2 = new T.Mesh(new T.CircleGeometry(1.05, 20), new T.MeshToonMaterial({ color: new T.Color('#7fd6f2'), emissive: new T.Color('#2a8fc0'), emissiveIntensity: 0.55, gradientMap: M('#fff').gradientMap })); acq2.rotation.x = -PI / 2; acq2.position.y = 2.52; g.add(acq2);
-      const cascata = new T.Mesh(new T.CylinderGeometry(1.1, 1.5, 1.6, 20, 1, true), new T.MeshToonMaterial({ color: new T.Color('#9fe4f7'), transparent: true, opacity: 0.4, side: T.DoubleSide, emissive: new T.Color('#4fb4e0'), emissiveIntensity: 0.4, gradientMap: M('#fff').gradientMap }));
-      cascata.position.y = 1.7; g.add(cascata); anim.push(t => { cascata.scale.set(1 + Math.sin(t * 3) * 0.015, 1, 1 + Math.sin(t * 3) * 0.015); cascata.material.opacity = 0.35 + Math.sin(t * 2.2) * 0.08; });
-      // statua alata
-      const st = new T.Group(); st.position.y = 2.55; g.add(st);
-      const bianco = M('#efe9e6'); st.add(mesh(new T.CapsuleGeometry(0.2, 0.7, 4, 10), bianco, { y: 0.55, l: 0.02 }));
-      st.add(mesh(new T.SphereGeometry(0.2, 14, 10), bianco, { y: 1.28, l: 0.02 }));
-      [-1, 1].forEach(s => { const a = mesh(new T.SphereGeometry(0.55, 12, 8), bianco, { x: s * 0.4, y: 1.0, z: -0.2, l: 0.02 }); a.scale.set(0.22, 1.2, 0.5); a.rotation.z = s * -0.35; st.add(a); });
-      st.add(mesh(new T.CylinderGeometry(0.28, 0.3, 0.12, 12), bianco, { y: -0.04 }));
-      ostCer(x, z, 2.75);
+      B.PM.fontana(g, anim);
+      ostCer(x, z, 2.85);   // la vasca nuova e' un filo piu' larga (2,86 m): cosi' l'avatar non ci entra dentro
     })(0, 3.2 + DZ);
 
     /* ---------- alberi di ciliegio ---------- */
-    function ciliegio(x, z, s) {
+    let nAlberi = 0;
+    function ciliegio(x, z, s, tipo) {
       const g = new T.Group(); g.position.set(x, 0, z); g.scale.setScalar(s); scene.add(g);
       // vicino al portale della Cripta gli alberi sono morti: rami neri e storti, niente fiori
       const PC = B.PORTALE_CRIPTA;
@@ -295,21 +281,17 @@
         });
         ostCer(x, z, 0.5 * s); return;
       }
-      const tr = mesh(new T.CylinderGeometry(0.26, 0.46, 2.7, 10), M('#6b4630'), { y: 1.35, l: 0.03 }); g.add(tr);
-      [[-1, 0.5], [1, -0.4], [0, 0.9]].forEach(b => { const r = mesh(new T.CylinderGeometry(0.1, 0.17, 1.5, 8), M('#6b4630'), { x: b[0] * 0.45, y: 2.8, z: b[1] * 0.2, l: 0.02 }); r.rotation.z = -b[0] * 0.7; r.rotation.x = b[1] * 0.5; g.add(r); });
-      const cols = ['#f4a3c4', '#f8bcd4', '#ee8fb6', '#fbd0e1', '#f29bbf'];
-      const pos = [[0, 4.2, 0, 1.5], [-1.4, 3.7, 0.3, 1.1], [1.4, 3.8, -0.2, 1.15], [0.2, 3.5, 1.3, 1.0], [-0.3, 3.6, -1.3, 1.05], [-0.9, 4.7, -0.5, 1.0], [1.0, 4.8, 0.4, 0.95], [0, 5.2, 0, 0.8]];
-      const chioma = new T.Group(); g.add(chioma);
-      pos.forEach((p, i) => { const b = blob(p[3], cols[i % cols.length], { l: 0.035 }); b.position.set(p[0], p[1], p[2]); chioma.add(b); });
+      // tronco curvo con radici e chioma piena (B3.PM.albero): ciliegi al centro, alberi verdi lungo i bordi
+      const al = B.PM.albero(tipo || 'ciliegio', nAlberi++); al.rotation.y = rnd(0, PI * 2); g.add(al);
       ostCer(x, z, 0.5 * s);
     }
     [[-25, 2.5, 0.55], [-25, 20, 0.55], [25, 9, 0.55], [25, 24, 0.55], [-11, 27.6, 0.55], [11, 27.6, 0.55], [-19.5, -3, 0.55]].forEach(c => ciliegio(c[0], c[1] + DZ, c[2]));
     // zone nuove della piazza ampliata: filari di ciliegi ai bordi
-    [-50, -40, 40, 50].forEach((x, i) => [16, 32, 48, 66].forEach((z, j) => { if (!(x === 40 && z === 32)) ciliegio(x, z, 0.55); }));   // (40,32) e' nel laghetto
-    [-30, -15, 15, 30].forEach(x => ciliegio(x, 67, 0.55));
+    [-50, -40, 40, 50].forEach((x, i) => [16, 32, 48, 66].forEach((z, j) => { if (!(x === 40 && z === 32)) ciliegio(x, z, 0.55, (i + j) % 3 === 1 ? 'ciliegio' : 'verde'); }));   // (40,32) e' nel laghetto
+    [-30, -15, 15, 30].forEach((x, i) => ciliegio(x, 67, 0.55, i % 2 ? 'ciliegio' : 'verde'));
 
     /* ---------- lampioni (con alone luminoso) ---------- */
-    const lampade = [];
+    const lampade = [], pozze = [];
     function lampione(x, z, conLuce, y0) {
       y0 = y0 || 0;
       const g = new T.Group(); g.position.set(x, y0, z); scene.add(g);
@@ -326,6 +308,7 @@
       const alone = new T.Sprite(new T.SpriteMaterial({ map: B.texAlone(), transparent: true, blending: T.AdditiveBlending, depthWrite: false, opacity: 0 }));
       alone.scale.set(3.4, 3.4, 1); alone.position.y = 2.86; alone.renderOrder = 5; g.add(alone); aloni.push(alone);
       if (conLuce) { lampade.push({ x, y: y0 + 2.9, z }); }
+      pozze.push({ x, z, y0 });
       ostCer(x, z, 0.24);
       return { x, y: y0 + 2.86, z };
     }
@@ -353,6 +336,7 @@
     ghirlanda('-3.4,3.2', '3.4,3.2'); ghirlanda('-17.2,-5.6', '-12,-5.6'); ghirlanda('-22.4,-5.6', '-17.2,-5.6'); ghirlanda('15.6,-5.6', '22.2,-5.6'); ghirlanda('-8.5,20', '0,21'); ghirlanda('0,21', '8.5,20'); ghirlanda('-20,15', '-8.5,20'); ghirlanda('8.5,20', '20,16');
 
     /* ---------- panchine, tavolini, botti, aiuole, stendardo ---------- */
+    // (le pozze di luce si creano dopo il belvedere, che aggiunge altri due lampioni)
     function panchina(x, z, rot, y0) {
       const g = new T.Group(); g.position.set(x, y0 || 0, z); g.rotation.y = rot; scene.add(g);
       const fer = M('#2c2431'), leg = M('#8a5a35');
@@ -395,7 +379,9 @@
       const g = new T.Group(); g.position.set(x, 0, z); scene.add(g);
       g.add(mesh(new T.BoxGeometry(w, 0.3, d), M('#6aa043'), { y: 0.15, lb: 0.02 }));
       [[0, -d / 2, w + 0.3, 0.3], [0, d / 2, w + 0.3, 0.3], [-w / 2, 0, 0.3, d], [w / 2, 0, 0.3, d]].forEach(b => g.add(mesh(new T.BoxGeometry(b[2], 0.42, b[3]), M(pietra), { x: b[0], y: 0.21, z: b[1], lb: 0.02 })));
-      for (let i = 0; i < 3; i++) { const b = blob(rnd(0.3, 0.45), ['#4f8a3a', '#5fa045'][i % 2], { l: 0.02 }); b.position.set(rnd(-w / 2 + 0.4, w / 2 - 0.4), 0.55, rnd(-d / 2 + 0.3, d / 2 - 0.3)); g.add(b); }
+      // cespugli pieni (chioma condivisa, B3.PM.cespuglio) invece di 3 palline
+      const nb = Math.max(2, Math.round(w * d * 0.85));
+      for (let i = 0; i < nb; i++) { const b = B.PM.cespuglio(i + Math.round(x * 3)); b.position.set(-w / 2 + 0.35 + (i + 0.5) / nb * (w - 0.7) + rnd(-0.1, 0.1), 0.28, rnd(-d / 2 + 0.35, d / 2 - 0.35)); b.rotation.y = rnd(0, 6.28); const k = rnd(0.8, 1.1); b.scale.set(k, k, k); g.add(b); }
       for (let i = 0; i < Math.round(w * d * 5); i++) fiori.push([x + rnd(-w / 2 + 0.2, w / 2 - 0.2), 0.5 + rnd(0, 0.3), z + rnd(-d / 2 + 0.2, d / 2 - 0.2), 'a']);
       ostBox(x, z, w + 0.3, d + 0.3);
     }
@@ -424,8 +410,8 @@
     }
     (function belvedere() {
       const h = BEL.h, Wb = BEL.x1 - BEL.x0, Db = BEL.z1 - BEL.z0, zc = (BEL.z0 + BEL.z1) / 2;
-      const tp = B.texSelciato(); tp.repeat.set(Wb / 6, Db / 6);
-      const top = new T.Mesh(new T.PlaneGeometry(Wb, Db), new T.MeshToonMaterial({ map: tp, gradientMap: gm })); top.rotation.x = -PI / 2; top.position.set(0, h + 0.006, zc); top.receiveShadow = true; scene.add(top);
+      const tp = B.PM.texSelciatoPietra('piazza'); tp.map.repeat.set(Wb / 4.5, Db / 4.5); tp.normal.repeat.set(Wb / 4.5, Db / 4.5);
+      const top = new T.Mesh(new T.PlaneGeometry(Wb, Db), new T.MeshToonMaterial({ map: tp.map, normalMap: tp.normal, gradientMap: gm })); top.rotation.x = -PI / 2; top.position.set(0, h + 0.006, zc); top.receiveShadow = true; scene.add(top);
       scene.add(mesh(new T.BoxGeometry(Wb, h, Db), M('#c9b8ad'), { y: h / 2, z: zc, lb: 0.03 }));
       scene.add(mesh(new T.BoxGeometry(Wb + 0.2, 0.16, 0.3), M('#e0d2c8'), { y: h - 0.08, z: BEL.z0 - 0.05, lb: 0.015 }));
       // mattoni sul fronte (strisce)
@@ -483,6 +469,9 @@
       const pr = new T.Mesh(new T.CylinderGeometry(0.7, 0.7, 2.2, 8), new T.MeshBasicMaterial()); pr.position.set(5.0, h + 1.1, 26.2 + DZ); pr.visible = false; scene.add(pr);
       toccabili.push({ obj: pr, tipo: 'azione', testo: 'Telescopio: presto potrai guardare il borgo dall\'alto (dimostrativo)' });
     })();
+
+    // pozze di luce a terra di tutti i lampioni: una sola mesh, si accende la sera come gli aloni
+    { const pl = B.PM.pozzeDiLuce(pozze, 2.3); scene.add(pl); aloni.push(pl); }
 
     /* ---------- bacheca degli annunci ---------- */
     (function bacheca() {
