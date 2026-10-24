@@ -315,6 +315,7 @@
   function costruisciMercato(ctx) {
     const MZ = CF.mercato.z, sc = ctx.scene, gm = M('#fff').gradientMap;
     W.banchi = [];
+    const merceTerra = [];
     CF.mercato.xs.forEach((x, i) => {
       const d = BANCHI[i], g = new T.Group(); g.position.set(x, 0, MZ); sc.add(g);
       g.add(mesh(new T.BoxGeometry(3.0, 0.88, 0.9), M('#a96f44'), { y: 0.44, z: 0.4, lb: 0.015 }));
@@ -326,15 +327,26 @@
       const fest = new T.Mesh(new T.PlaneGeometry(3.4, 0.34), new T.MeshBasicMaterial({ map: B.texFestone(d.a, d.b, 10), transparent: true, alphaTest: 0.4, side: T.DoubleSide }));
       fest.position.set(0, 2.39, 1.12); g.add(fest);
       const ins = insegna(d.nome, 0.5, d.tema === 'carte' ? { fondo: '#1f2f5e' } : null); ins.position.set(0, 3.32, 0.2); ins.rotation.x = -0.1; g.add(ins);
-      // casse ai lati
-      g.add(mesh(new T.BoxGeometry(0.6, 0.45, 0.6), M('#8a5a35'), { x: 1.95, y: 0.225, z: 0.2, lb: 0.012 }));
-      if (i % 2) g.add(mesh(new T.BoxGeometry(0.5, 0.38, 0.5), M('#9a6a42'), { x: -1.9, y: 0.19, z: -0.2, lb: 0.012 }));
+      // casse, botti e sacchi ai lati: modelli 3D esterni (modelli/mercato-kaykit.glb, CC0) raccolti dopo il ciclo;
+      // le collisioni qui sotto restano quelle di sempre, anche se il file non si scarica
+      merceTerra.push({ n: 'crate_A_big', x: x + 1.95, z: MZ + 0.2, rot: i * 0.4 }, { n: 'sack', x: x + 2.05, z: MZ + 0.5, rot: 0.6 + i, s: 0.9 });
+      if (i % 2) merceTerra.push({ n: 'barrel', x: x - 1.9, z: MZ - 0.2, rot: i }, { n: 'bucket_water', x: x - 2.0, z: MZ + 0.15, rot: 0 });
+      else merceTerra.push({ n: 'crate_A_small', x: x + 1.9, y: 0.66, z: MZ + 0.15, rot: 0.3 });
       const merce = new T.Group(); merce.userData.vivo = true; merce.position.set(0, 0.96, 0.4); g.add(merce);
       ctx.ostacoli.push({ t: 'b', x0: x - 1.75, x1: x + 1.75, z0: MZ - 0.75, z1: MZ + 0.95 });
       if (i % 2) ctx.ostacoli.push({ t: 'c', x: x - 1.9, z: MZ - 0.2, r: 0.3 }); ctx.ostacoli.push({ t: 'c', x: x + 1.95, z: MZ + 0.2, r: 0.35 });
       const porta = { id: 'banco-' + i, nome: d.nome, testo: (d.tema === 'carte' ? '🃏 ' : d.tema === 'pesce' ? '🐟 ' : '🛒 ') + d.nome, x, z: MZ + 1.95, r: 1.35, fn: () => Mercato.apri(i) };
       ctx.porte.push(porta);
       W.banchi.push({ g, merce, x, z: MZ, d, venditore: { x, z: MZ - 1.15, yaw: 0 } });
+    });
+    // un gruppo di istanze per ogni tipo di oggetto: poche chiamate di disegno per tutto il mercatino
+    const ripiego = { crate_A_big: [0.6, 0.45, '#8a5a35'], crate_A_small: [0.4, 0.4, '#9a6a42'], barrel: [0.5, 0.6, '#9a6a42'], sack: [0.3, 0.2, '#c9b48a'], bucket_water: [0.35, 0.3, '#7a6a5a'] };
+    Object.keys(ripiego).forEach(n => {
+      const posti = merceTerra.filter(q => q.n === n);
+      if (!posti.length) return;
+      if (!B.Modelli) { posti.forEach(q => sc.add(mesh(new T.BoxGeometry(ripiego[n][0], ripiego[n][1], ripiego[n][0]), M(ripiego[n][2]), { x: q.x, y: (q.y || 0) + ripiego[n][1] / 2, z: q.z, lb: 0.012 }))); return; }
+      B.Modelli.sparpaglia('mercato-kaykit.glb', n, posti, sc, { scala: 3, linea: 0.02,
+        riserva: (lista, gr) => lista.forEach(q => gr.add(mesh(new T.BoxGeometry(ripiego[n][0], ripiego[n][1], ripiego[n][0]), M(ripiego[n][2]), { x: q.x, y: (q.y || 0) + ripiego[n][1] / 2, z: q.z, lb: 0.012 }))) });
     });
     // arco d'ingresso al centro con l'insegna
     const ga = new T.Group(); ga.position.set(0, 0, MZ + 0.4); sc.add(ga);
