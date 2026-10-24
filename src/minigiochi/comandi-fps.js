@@ -160,18 +160,23 @@ body.pc .cf .cf-t,body.pc .cf .cf-base{display:none}
     const puo = () => c.attivo && !c.tocco && (!opz.puoCatturare || opz.puoCatturare());
     const preso = () => document.pointerLockElement === zr;
     let lasciato = false, eraPreso = false, chiesto = 0;   // lasciato: l'ho liberato io (menu, zaino), niente menu all'uscita
+    // bloccoKo: il browser ha rifiutato di catturare il mouse (succede su alcuni Edge/PC): si gioca lo stesso,
+    // la visuale gira tenendo premuto un tasto del mouse e trascinando, e il clic spara
+    let bloccoKo = false, avvisoKo = null;
+    const rifiutato = () => { chiesto = 0; if (bloccoKo || c.tocco) return; bloccoKo = true; console.warn('Mouse non catturato dal browser: visuale col trascinamento');
+      if (!avvisoKo) { avvisoKo = document.createElement('div'); avvisoKo.textContent = 'Tieni premuto il mouse e trascina per girare la visuale'; avvisoKo.style.cssText = 'position:absolute;left:50%;top:18%;transform:translateX(-50%);padding:8px 14px;border-radius:10px;background:rgba(20,12,40,.82);color:#fff;font-weight:600;font-size:14px;line-height:1.3;pointer-events:none;z-index:5;transition:opacity .6s'; c.el.appendChild(avvisoKo); setTimeout(() => { if (avvisoKo) avvisoKo.style.opacity = '0'; }, 5000); } };
     function cattura() {
       if (preso() || !puo() || performance.now() - chiesto < 50) return;   // non due richieste nello stesso istante
       chiesto = performance.now();
-      try { const p = zr.requestPointerLock(); if (p && p.catch) p.catch(() => { chiesto = 0; }); } catch (x) { chiesto = 0; }
+      try { const p = zr.requestPointerLock(); if (p && p.catch) p.catch(rifiutato); } catch (x) { rifiutato(); }
     }
-    document.addEventListener('pointerlockerror', () => { chiesto = 0; });
+    document.addEventListener('pointerlockerror', rifiutato);
     c.cattura = cattura;
     const dopoGesto = () => { if (!c.tocco && c.attivo) setTimeout(cattura, 0); };   // dopo i gestori del clic (es. "Torna a giocare")
     document.addEventListener('click', dopoGesto);
     window.addEventListener('keydown', e => { if (!e.repeat && e.key !== 'Escape') dopoGesto(); });
     document.addEventListener('pointerlockchange', () => {
-      chiesto = 0; const prima = eraPreso; eraPreso = preso();
+      chiesto = 0; const prima = eraPreso; eraPreso = preso(); if (eraPreso) bloccoKo = false;
       if (eraPreso || c.tocco || !prima) return;   // conta solo quando il mouse era davvero catturato e viene liberato
       fuocoTocco = false; if (c.mira) { c.mira = false; if (T.mira) T.mira.classList.remove('attivo'); }
       if (lasciato) { lasciato = false; return; }
@@ -180,7 +185,7 @@ body.pc .cf .cf-t,body.pc .cf .cf-base{display:none}
     c.libera = () => { if (preso()) { lasciato = true; try { document.exitPointerLock(); } catch (x) { } } };
     zr.addEventListener('pointerdown', e => {
       if (!c.attivo) return;
-      if (!c.tocco) { if (!preso()) { cattura(); e.preventDefault(); return; } if (e.button === 2) premiMira(true); else fuocoTocco = true; return; }
+      if (!c.tocco) { if (!preso()) { cattura(); e.preventDefault(); if (!bloccoKo) return; } if (e.button === 2) premiMira(true); else fuocoTocco = true; return; }
       if (sg.id !== null) return; sg.id = e.pointerId; try { zr.setPointerCapture(e.pointerId); } catch (x) { } [sg.lx, sg.ly] = loc(e); e.preventDefault();
     });
     zr.addEventListener('contextmenu', e => e.preventDefault());
@@ -265,6 +270,9 @@ body.pc .cf .cf-t,body.pc .cf .cf-base{display:none}
     });
     window.addEventListener('keyup', e => { kb[e.key.toLowerCase()] = false; });
     window.addEventListener('blur', () => { for (const k in kb) kb[k] = false; fuocoTocco = false; });
+    // mouse non catturato (bloccoKo): pointermove, perche' il preventDefault sul pointerdown ferma i mousemove col tasto premuto
+    document.addEventListener('pointermove', e => { if (!bloccoKo || !c.attivo || c.tocco || e.pointerType !== 'mouse' || !(e.buttons & 3) || !puo() || document.pointerLockElement === zr) return;
+      if (opz.guarda) opz.guarda(Math.max(-400, Math.min(400, e.movementX)) * 0.0024 * sens(), Math.max(-400, Math.min(400, e.movementY)) * 0.0024 * sens()); });
     document.addEventListener('mousemove', e => { if (!c.attivo || c.tocco || document.pointerLockElement !== zr) return; const mx = Math.max(-400, Math.min(400, e.movementX)), my = Math.max(-400, Math.min(400, e.movementY));   // alcuni browser danno uno scatto enorme appena catturato
       if (opz.guarda) opz.guarda(mx * 0.0024 * sens(), my * 0.0024 * sens()); });
     window.addEventListener('mouseup', e => { if (c.tocco) return; if (e.button === 2) premiMira(false); else fuocoTocco = false; });
