@@ -27,13 +27,13 @@
   const riempi = new T.DirectionalLight(0xffe2c8, 0.55); riempi.position.set(8, 9, 12); scene.add(riempi);
 
   /* ---------- le due stanze ---------- */
-  const gP = new T.Group(), gC = new T.Group(), gN = new T.Group(), gS = new T.Group(), gL = new T.Group(), gT = new T.Group(), gB = new T.Group(); scene.add(gB); scene.add(gT); gT.visible = false; gB.visible = false; scene.add(gP); scene.add(gC); scene.add(gN); scene.add(gS); scene.add(gL); gN.visible = false; gS.visible = false; gL.visible = false;
+  const gP = new T.Group(), gC = new T.Group(), gN = new T.Group(), gS = new T.Group(), gL = new T.Group(), gT = new T.Group(), gB = new T.Group(), gK = new T.Group(); scene.add(gK); gK.visible = false; scene.add(gB); scene.add(gT); gT.visible = false; gB.visible = false; scene.add(gP); scene.add(gC); scene.add(gN); scene.add(gS); scene.add(gL); gN.visible = false; gS.visible = false; gL.visible = false;
   const piazza = B.costruisciMondo(gP, scene);
   let casa = B.costruisciCasa(gC, B.Eco ? B.Eco.stato.liv : 0, B.Eco ? B.Eco.stato.stili : null);
-  const negozio = B.costruisciNegozio(gN, { vuota: true }), sala = B.costruisciSala(gS), coll = B.costruisciCollectibles(gL, 'negozio'), tcgR = B.costruisciCollectibles(gT, 'tcg'), bib = B.costruisciBiblioteca(gB);
+  const negozio = B.costruisciNegozio(gN, { vuota: true }), sala = B.costruisciSala(gS), coll = B.costruisciCollectibles(gL, 'negozio'), tcgR = B.costruisciCollectibles(gT, 'tcg'), bib = B.costruisciBiblioteca(gB), scac = B.costruisciCasaScacchi(gK);
   const PZ = CFG.plaza;
   // la scena e le stanze non si muovono mai: cosi' three.js puo' saltare i pezzi fermi e le stanze nascoste
-  const gruppiStanze = [gP, gC, gN, gS, gL, gT, gB];
+  const gruppiStanze = [gP, gC, gN, gS, gL, gT, gB, gK];
   [scene].concat(gruppiStanze).forEach(g => { g.updateMatrix(); g.matrixAutoUpdate = false; g.matrixWorldNeedsUpdate = true; });
   const stanze = {
     piazza: { id: 'piazza', nome: 'Piazza del Borgo', pubblica: true, gruppo: gP, m: piazza, ostacoli: piazza.ostacoli, porte: piazza.porte, sedili: piazza.sedili, toccabili: piazza.toccabili,
@@ -45,6 +45,8 @@
       area: negozio.area, alt: () => 0, zoom: 0.75, spawn: { x: 0, z: 6.2, yaw: PI }, rect: { x0: -12.25, x1: 12.25, z0: -9.1, z1: 10.0 }, edifici: [], sfondo: '#2a2040' },
     biblioteca: { id: 'biblioteca', nome: 'Biblioteca', pubblica: true, gruppo: gB, m: bib, ostacoli: bib.ostacoli, porte: bib.porte, sedili: bib.sedili, toccabili: bib.toccabili,
       area: bib.area, alt: () => 0, zoom: 0.8, spawn: { x: 0, z: 6.0, yaw: PI }, rect: { x0: -7.5, x1: 7.5, z0: -6.5, z1: 7.5 }, edifici: [], sfondo: '#1c2a24' },
+    scacchi: { id: 'scacchi', nome: 'Casa degli Scacchi', pubblica: true, gruppo: gK, m: scac, ostacoli: scac.ostacoli, porte: scac.porte, sedili: scac.sedili, toccabili: scac.toccabili,
+      area: scac.area, alt: () => 0, zoom: 0.72, spawn: { x: 0, z: 7.0, yaw: PI }, rect: { x0: -10, x1: 10, z0: -8, z1: 9 }, edifici: [], sfondo: '#1d2a24' },
     collectibles: { id: 'collectibles', nome: 'Laugh Tale Collectibles', pubblica: true, gruppo: gL, m: coll, ostacoli: coll.ostacoli, porte: coll.porte, sedili: coll.sedili, toccabili: coll.toccabili,
       area: coll.area, alt: () => 0, zoom: 0.85, spawn: { x: 0, z: 13.5, yaw: PI }, rect: { x0: -10.5, x1: 10.5, z0: -5, z1: 15 }, edifici: [], sfondo: '#2a2040' },
     tcg: { id: 'tcg', nome: 'Sala giochi TCG', pubblica: true, gruppo: gT, m: tcgR, ostacoli: tcgR.ostacoli, porte: tcgR.porte, sedili: tcgR.sedili, toccabili: tcgR.toccabili,
@@ -100,7 +102,7 @@
     B.finestreMat.forEach(m => { m.emissiveIntensity = a.finestre; });
     const k = clamp(a.lampioni / 1.6, 0, 1) * 0.95;
     piazza.aloni.forEach(s => { s.material.opacity = k; });
-    casa.atm(nome); if (stanze.ospite) stanze.ospite.m.atm(nome); negozio.atm(nome); sala.atm(nome); coll.atm(nome); tcgR.atm(nome); bib.atm(nome); assegnaLuci();
+    casa.atm(nome); if (stanze.ospite) stanze.ospite.m.atm(nome); negozio.atm(nome); sala.atm(nome); coll.atm(nome); tcgR.atm(nome); bib.atm(nome); scac.atm(nome); assegnaLuci();
   }
 
   /* ---------- collisioni ---------- */
@@ -265,7 +267,7 @@
   /* ---------- cambio stanza ---------- */
   function entraStanza(id, arrivo) {
     stanza = stanze[id]; io.st = stanza; io.seduto = null; G.stato.stanzaId = id;
-    gP.visible = id === 'piazza'; gC.visible = id === 'casa'; gN.visible = id === 'negozio'; gS.visible = id === 'sala'; gL.visible = id === 'collectibles'; gT.visible = id === 'tcg'; gB.visible = id === 'biblioteca'; gO.visible = id === 'ospite';
+    gP.visible = id === 'piazza'; gC.visible = id === 'casa'; gN.visible = id === 'negozio'; gS.visible = id === 'sala'; gL.visible = id === 'collectibles'; gT.visible = id === 'tcg'; gB.visible = id === 'biblioteca'; gK.visible = id === 'scacchi'; gO.visible = id === 'ospite';
     const sp = arrivo || stanza.spawn;
     io.x = sp.x; io.z = sp.z; io.vx = io.vz = 0; io.yaw = sp.yaw === undefined ? 0 : sp.yaw; io.y = stanza.alt(io.x, io.z);
     C.azT = C.az = stanza.az === undefined ? PI / 4 : stanza.az; impostaZoom(stanza.zoom); if (stanza.elev) { C.elev = stanza.elev; C.elevAuto = true; } else if (C.elevAuto) { C.elev = 28; C.elevAuto = false; } C.tx = io.x; C.tz = io.z; C.ty = 1.0 + io.y;
@@ -314,7 +316,7 @@
     if (p.arredi) { if (B.NegozioArredi) B.NegozioArredi.apri(); return; }
     if (p.biblioteca) { if (B.Biblioteca) B.Biblioteca.apri(); return; }
     if (p.sito) { if (B.Sito) B.Sito.apri(); return; }
-    if (p.gioco) { const gm = p.gioco === 'paintball' ? B.Paintball : p.gioco === 'raid' ? B.Raid : p.gioco === 'nascondino' ? B.Nascondino : B.Kart; if (gm) gm.avvia(); return; }
+    if (p.gioco) { const gm = p.gioco === 'paintball' ? B.Paintball : p.gioco === 'raid' ? B.Raid : p.gioco === 'nascondino' ? B.Nascondino : p.gioco === 'scacchi' ? B.Scacchi : B.Kart; if (gm) gm.avvia(); return; }
     if (!p.verso) { G.emetti('toast', p.nome + ': non ancora disponibile (dimostrativo)'); return; }
     G.emetti('transizione', () => entraStanza(p.verso, p.arrivo || (p.verso === 'casa' ? stanze.casa.spawn : { x: 12.4, z: -4.3, yaw: PI / 4 })));
   }

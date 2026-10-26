@@ -140,8 +140,8 @@
       const val = new T.Mesh(new T.PlaneGeometry(aw, 0.3), new T.MeshToonMaterial({ map: t2, transparent: true, alphaTest: 0.5, side: T.DoubleSide, gradientMap: M('#fff').gradientMap }));
       val.position.set(px, 1.82, zb + 0.55 + L * Math.cos(tilt) / 2 + 0.02); val.castShadow = true; g.add(val);
       // insegna
-      const IW = o.insegnaGiochi ? 5.7 : o.insegnaLtc ? 5.4 : 3.0, IH = o.insegnaGiochi ? 1.5 : o.insegnaLtc ? 0.98 : 0.72;
-      const ins = new T.Mesh(new T.PlaneGeometry(IW, IH), new T.MeshBasicMaterial({ map: o.insegnaGiochi ? B.texInsegnaGiochi(1024, 270) : o.insegnaLtc ? B.texInsegnaLTC(1024, 186) : B.texInsegna(o.senzaNome ? '' : o.nome, 512, 123), transparent: true }));
+      const IW = o.insegnaGiochi ? 5.7 : o.insegnaLtc ? 5.4 : o.insegnaScacchi ? 5.0 : 3.0, IH = o.insegnaGiochi ? 1.5 : o.insegnaLtc ? 0.98 : o.insegnaScacchi ? 1.0 : 0.72;
+      const ins = new T.Mesh(new T.PlaneGeometry(IW, IH), new T.MeshBasicMaterial({ map: o.insegnaGiochi ? B.texInsegnaGiochi(1024, 270) : o.insegnaLtc ? B.texInsegnaLTC(1024, 186) : o.insegnaScacchi && B.texInsegnaScacchi ? B.texInsegnaScacchi(1024, 205) : B.texInsegna(o.senzaNome ? '' : o.nome, 512, 123), transparent: true }));
       ins.position.set(px, h1 + 0.5, zt + 0.27); g.add(ins);   // davanti ai davanzali delle finestre di sopra
       if (o.insegnaGiochi) { // alone luminoso dietro l'insegna
         const cv = document.createElement('canvas'); cv.width = 256; cv.height = 128; const cx = cv.getContext('2d');
@@ -249,11 +249,14 @@
       { x: -27.7, z: -9.1, rot: 0, w: 3.2, d: 4.7, muro: '#bfc9d8', muroSopra: '#e3e8f0', tetto: '#2f5a4a', nome: 'Biblioteca', tendaA: '#f4ead6', tendaB: '#3f7a6a', porta: 0, persiane: '#4a3a6a', tendaLarg: 2.8 },
       { x: 51.1, z: 50, rot: -PI / 2, w: 3.8, d: 4.6, muro: '#d8b4a0', muroSopra: '#f0dcc4', tetto: '#7a3a4a', nome: 'Fioraio', tendaA: '#f6e8cc', tendaB: '#e0675c', porta: 0, persiane: '#4f8a3a', tendaLarg: 3.0 },
       { x: -51.1, z: 4, rot: PI / 2, w: 4.6, d: 5, muro: '#c9a77c', muroSopra: '#ecd9b4', tetto: '#6a3d2a', nome: 'Arredamenti', tendaA: '#f4ead6', tendaB: '#b0703c', porta: 0, persiane: '#3f6a8a', tendaLarg: 3.6 },
+      // la Casa degli Scacchi (src/borgo/casa-scacchi.js): bianca e nera, al centro della fila nord
+      { x: 3, z: -9.1, rot: 0, w: 6.2, d: 5, muro: '#ece4d4', muroSopra: '#f6f0e4', tetto: '#24222c', nome: 'Casa degli Scacchi', insegnaScacchi: true, tendaA: '#f6f0e4', tendaB: '#2a2733', porta: 0, persiane: '#2a2733', tendaLarg: 4.6 },
       { x: -40, z: -9.1, rot: 0, w: 7.6, d: 5, muro: '#3b2f5c', muroSopra: '#51427a', tetto: '#1d1a3a', nome: 'Laugh Tale Collectibles', tendaA: '#f4ead6', tendaB: '#7a2fd6', porta: 0, persiane: '#e0b040', tendaLarg: 6.4, insegnaLtc: true }
     ];
-    defs.forEach(d => aggiungi(d, edificio(d), d.nome, d.nome === 'Casa' ? 'casa' : d.nome === 'Negozio TCG' ? 'negozio' : d.nome === 'Sala Giochi' ? 'sala' : d.insegnaLtc ? 'collectibles' : d.nome === 'Biblioteca' ? 'biblioteca' : null));
+    defs.forEach(d => aggiungi(d, edificio(d), d.nome, d.nome === 'Casa' ? 'casa' : d.nome === 'Negozio TCG' ? 'negozio' : d.nome === 'Sala Giochi' ? 'sala' : d.insegnaLtc ? 'collectibles' : d.nome === 'Biblioteca' ? 'biblioteca' : d.insegnaScacchi ? 'scacchi' : null));
     porte.forEach(p => { if (p.id === 'porta-Arredamenti') { p.arredi = true; p.testo = 'Entra nel negozio di arredi'; } });
-    porte.forEach(p => { if (p.verso === 'sala') p.arrivo = { x: 0, z: 12.6, yaw: PI }; if (p.verso === 'negozio') p.arrivo = { x: 0, z: 6.2, yaw: PI }; if (p.verso === 'collectibles') p.arrivo = { x: 0, z: 13.5, yaw: PI }; if (p.verso === 'biblioteca') p.arrivo = { x: 0, z: 6.0, yaw: PI }; });
+    porte.forEach(p => { if (p.verso === 'sala') p.arrivo = { x: 0, z: 12.6, yaw: PI }; if (p.verso === 'negozio') p.arrivo = { x: 0, z: 6.2, yaw: PI }; if (p.verso === 'collectibles') p.arrivo = { x: 0, z: 13.5, yaw: PI }; if (p.verso === 'biblioteca') p.arrivo = { x: 0, z: 6.0, yaw: PI }; if (p.verso === 'scacchi') { p.arrivo = { x: 0, z: 7.0, yaw: PI }; p.testo = 'Entra nella Casa degli Scacchi'; } });
+    if (B.CasaScacchi) B.CasaScacchi.decoraPiazza(scene, { ostCer });
     const gt = torre(-51.4, 26); gt.rotation.y = PI / 2; edifici.push({ g: gt, x: -51.4, z: 26, w: 3.2, d: 3.2, nome: 'Torre' });
     porte.push({ id: 'porta-torre', nome: 'Torre dell\'Orologio', x: -51.4 + 1.5 + 0.9, z: 26, r: 1.2, verso: null });
     // pezzi di muro ai lati della fila nord

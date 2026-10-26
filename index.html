@@ -2,7 +2,7 @@
 <html lang="it">
 <head>
   <meta charset="utf-8">
-  <meta name="versione" content="3aaa22ca3e95">
+  <meta name="versione" content="270326bdcad6">
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="mobile-web-app-capable" content="yes">
@@ -7417,8 +7417,8 @@ window.CONFIG = {
       const val = new T.Mesh(new T.PlaneGeometry(aw, 0.3), new T.MeshToonMaterial({ map: t2, transparent: true, alphaTest: 0.5, side: T.DoubleSide, gradientMap: M('#fff').gradientMap }));
       val.position.set(px, 1.82, zb + 0.55 + L * Math.cos(tilt) / 2 + 0.02); val.castShadow = true; g.add(val);
       // insegna
-      const IW = o.insegnaGiochi ? 5.7 : o.insegnaLtc ? 5.4 : 3.0, IH = o.insegnaGiochi ? 1.5 : o.insegnaLtc ? 0.98 : 0.72;
-      const ins = new T.Mesh(new T.PlaneGeometry(IW, IH), new T.MeshBasicMaterial({ map: o.insegnaGiochi ? B.texInsegnaGiochi(1024, 270) : o.insegnaLtc ? B.texInsegnaLTC(1024, 186) : B.texInsegna(o.senzaNome ? '' : o.nome, 512, 123), transparent: true }));
+      const IW = o.insegnaGiochi ? 5.7 : o.insegnaLtc ? 5.4 : o.insegnaScacchi ? 5.0 : 3.0, IH = o.insegnaGiochi ? 1.5 : o.insegnaLtc ? 0.98 : o.insegnaScacchi ? 1.0 : 0.72;
+      const ins = new T.Mesh(new T.PlaneGeometry(IW, IH), new T.MeshBasicMaterial({ map: o.insegnaGiochi ? B.texInsegnaGiochi(1024, 270) : o.insegnaLtc ? B.texInsegnaLTC(1024, 186) : o.insegnaScacchi && B.texInsegnaScacchi ? B.texInsegnaScacchi(1024, 205) : B.texInsegna(o.senzaNome ? '' : o.nome, 512, 123), transparent: true }));
       ins.position.set(px, h1 + 0.5, zt + 0.27); g.add(ins);   // davanti ai davanzali delle finestre di sopra
       if (o.insegnaGiochi) { // alone luminoso dietro l'insegna
         const cv = document.createElement('canvas'); cv.width = 256; cv.height = 128; const cx = cv.getContext('2d');
@@ -7526,11 +7526,14 @@ window.CONFIG = {
       { x: -27.7, z: -9.1, rot: 0, w: 3.2, d: 4.7, muro: '#bfc9d8', muroSopra: '#e3e8f0', tetto: '#2f5a4a', nome: 'Biblioteca', tendaA: '#f4ead6', tendaB: '#3f7a6a', porta: 0, persiane: '#4a3a6a', tendaLarg: 2.8 },
       { x: 51.1, z: 50, rot: -PI / 2, w: 3.8, d: 4.6, muro: '#d8b4a0', muroSopra: '#f0dcc4', tetto: '#7a3a4a', nome: 'Fioraio', tendaA: '#f6e8cc', tendaB: '#e0675c', porta: 0, persiane: '#4f8a3a', tendaLarg: 3.0 },
       { x: -51.1, z: 4, rot: PI / 2, w: 4.6, d: 5, muro: '#c9a77c', muroSopra: '#ecd9b4', tetto: '#6a3d2a', nome: 'Arredamenti', tendaA: '#f4ead6', tendaB: '#b0703c', porta: 0, persiane: '#3f6a8a', tendaLarg: 3.6 },
+      // la Casa degli Scacchi (src/borgo/casa-scacchi.js): bianca e nera, al centro della fila nord
+      { x: 3, z: -9.1, rot: 0, w: 6.2, d: 5, muro: '#ece4d4', muroSopra: '#f6f0e4', tetto: '#24222c', nome: 'Casa degli Scacchi', insegnaScacchi: true, tendaA: '#f6f0e4', tendaB: '#2a2733', porta: 0, persiane: '#2a2733', tendaLarg: 4.6 },
       { x: -40, z: -9.1, rot: 0, w: 7.6, d: 5, muro: '#3b2f5c', muroSopra: '#51427a', tetto: '#1d1a3a', nome: 'Laugh Tale Collectibles', tendaA: '#f4ead6', tendaB: '#7a2fd6', porta: 0, persiane: '#e0b040', tendaLarg: 6.4, insegnaLtc: true }
     ];
-    defs.forEach(d => aggiungi(d, edificio(d), d.nome, d.nome === 'Casa' ? 'casa' : d.nome === 'Negozio TCG' ? 'negozio' : d.nome === 'Sala Giochi' ? 'sala' : d.insegnaLtc ? 'collectibles' : d.nome === 'Biblioteca' ? 'biblioteca' : null));
+    defs.forEach(d => aggiungi(d, edificio(d), d.nome, d.nome === 'Casa' ? 'casa' : d.nome === 'Negozio TCG' ? 'negozio' : d.nome === 'Sala Giochi' ? 'sala' : d.insegnaLtc ? 'collectibles' : d.nome === 'Biblioteca' ? 'biblioteca' : d.insegnaScacchi ? 'scacchi' : null));
     porte.forEach(p => { if (p.id === 'porta-Arredamenti') { p.arredi = true; p.testo = 'Entra nel negozio di arredi'; } });
-    porte.forEach(p => { if (p.verso === 'sala') p.arrivo = { x: 0, z: 12.6, yaw: PI }; if (p.verso === 'negozio') p.arrivo = { x: 0, z: 6.2, yaw: PI }; if (p.verso === 'collectibles') p.arrivo = { x: 0, z: 13.5, yaw: PI }; if (p.verso === 'biblioteca') p.arrivo = { x: 0, z: 6.0, yaw: PI }; });
+    porte.forEach(p => { if (p.verso === 'sala') p.arrivo = { x: 0, z: 12.6, yaw: PI }; if (p.verso === 'negozio') p.arrivo = { x: 0, z: 6.2, yaw: PI }; if (p.verso === 'collectibles') p.arrivo = { x: 0, z: 13.5, yaw: PI }; if (p.verso === 'biblioteca') p.arrivo = { x: 0, z: 6.0, yaw: PI }; if (p.verso === 'scacchi') { p.arrivo = { x: 0, z: 7.0, yaw: PI }; p.testo = 'Entra nella Casa degli Scacchi'; } });
+    if (B.CasaScacchi) B.CasaScacchi.decoraPiazza(scene, { ostCer });
     const gt = torre(-51.4, 26); gt.rotation.y = PI / 2; edifici.push({ g: gt, x: -51.4, z: 26, w: 3.2, d: 3.2, nome: 'Torre' });
     porte.push({ id: 'porta-torre', nome: 'Torre dell\'Orologio', x: -51.4 + 1.5 + 0.9, z: 26, r: 1.2, verso: null });
     // pezzi di muro ai lati della fila nord
@@ -9268,6 +9271,310 @@ window.B3_LOGO = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAyAAAAC3CAIAAABl
   }
 
   B.costruisciSala = costruisciSala;
+})();
+
+</script>
+<script>
+/* =====================================================================
+   THE BORG 3D - LA CASA DEGLI SCACCHI
+   In piazza: la casa bianca e nera nella fila nord, tra il Negozio TCG e la
+   Caffetteria, con l'insegna a scacchi, due pezzi giganti ai lati della porta
+   e il selciato a scacchiera davanti (B3.CasaScacchi.decoraPiazza).
+   Dentro (B3.costruisciCasaScacchi): pavimento a scacchiera, sei tavoli da
+   gioco con i pezzi, una scacchiera gigante in mezzo alla sala, il tabellone
+   della classifica sulla parete in fondo. Ai tavoli si apre la partita
+   (B3.Scacchi, src/minigiochi/scacchi/gioco.js).
+   Le pareti davanti alla camera diventano trasparenti, come in biblioteca.
+   ===================================================================== */
+(function () {
+  'use strict';
+  const B = window.B3, T = B.T, M = B.M, mesh = B.mesh, rnd = B.rnd;
+  const PI = Math.PI;
+  const X = 10, Z0 = -8, Z1 = 9;                              // pareti: ovest/est, nord, sud
+  const AREA = { x0: -X + 0.6, x1: X - 0.6, z0: Z0 + 0.7, z1: Z1 - 0.7 };
+  const BIANCO = '#f4eedf', NERO = '#2c2733';
+  // dove si esce in piazza (davanti alla porta della casa, vedi piazza.js)
+  const PIAZZA = { x: 3, z: -9.1 };
+
+  /* ---------- i pezzi in 3D (profili girati attorno all'asse, il cavallo a blocchi) ---------- */
+  const GEO = {};
+  const tornio = (k, punti, seg) => GEO[k] || (GEO[k] = new T.LatheGeometry(punti.map(p => new T.Vector2(p[0], p[1])), seg || 12));
+  const PROFILI = {
+    1: [[0, 0], [0.42, 0], [0.42, 0.1], [0.3, 0.16], [0.18, 0.5], [0.26, 0.56], [0.14, 0.62], [0.24, 0.72], [0.26, 0.84], [0.18, 0.96], [0, 1.0]],
+    3: [[0, 0], [0.44, 0], [0.44, 0.1], [0.3, 0.18], [0.18, 0.75], [0.3, 0.82], [0.18, 0.88], [0.26, 1.08], [0.2, 1.3], [0.06, 1.42], [0.1, 1.48], [0, 1.56]],
+    4: [[0, 0], [0.46, 0], [0.46, 0.12], [0.34, 0.2], [0.28, 0.85], [0.4, 0.92], [0.4, 1.18], [0, 1.18]],
+    5: [[0, 0], [0.48, 0], [0.48, 0.12], [0.34, 0.2], [0.2, 0.95], [0.34, 1.02], [0.22, 1.1], [0.38, 1.52], [0.3, 1.56], [0.16, 1.6], [0.12, 1.66], [0, 1.72]],
+    6: [[0, 0], [0.5, 0], [0.5, 0.12], [0.36, 0.2], [0.22, 1.0], [0.36, 1.08], [0.24, 1.16], [0.34, 1.58], [0.18, 1.66], [0, 1.68]]
+  };
+  // pezzo alto circa 1 (pedone) - 1,9 (re); con lb/l = contorno (solo per i pezzi grandi)
+  function pezzo3D(tipo, bianco, contorno) {
+    const g = new T.Group(), mat = M(bianco ? BIANCO : NERO), o = contorno ? { l: contorno } : { cast: true };
+    if (tipo === 2) {
+      g.add(mesh(tornio('base2', [[0, 0], [0.46, 0], [0.46, 0.12], [0.34, 0.2], [0.3, 0.3], [0, 0.3]]), mat, o));
+      const corpo = mesh(new T.BoxGeometry(0.42, 0.75, 0.5), mat, contorno ? { lb: contorno } : {}); corpo.position.set(0, 0.62, -0.02); corpo.rotation.x = -0.18; g.add(corpo);
+      const testa = mesh(new T.BoxGeometry(0.36, 0.34, 0.74), mat, contorno ? { lb: contorno } : {}); testa.position.set(0, 1.05, 0.16); testa.rotation.x = 0.42; g.add(testa);
+      const criniera = mesh(new T.BoxGeometry(0.12, 0.6, 0.2), M(bianco ? '#d9cfb8' : '#4a4352'), {}); criniera.position.set(0, 0.95, -0.24); criniera.rotation.x = -0.2; g.add(criniera);
+      [-0.11, 0.11].forEach(s => { const or = mesh(new T.ConeGeometry(0.07, 0.2, 4), mat, {}); or.position.set(s, 1.3, -0.04); g.add(or); });
+      return g;
+    }
+    g.add(mesh(tornio('p' + tipo, PROFILI[tipo], 14), mat, o));
+    if (tipo === 6) { const v = mesh(new T.BoxGeometry(0.1, 0.42, 0.1), mat, contorno ? { lb: contorno } : {}); v.position.y = 1.86; g.add(v); const c = mesh(new T.BoxGeometry(0.32, 0.1, 0.1), mat, contorno ? { lb: contorno } : {}); c.position.y = 1.9; g.add(c); }
+    if (tipo === 5) { const p = mesh(new T.SphereGeometry(0.1, 10, 8), M('#e3a63a'), {}); p.position.y = 1.78; g.add(p); }
+    if (tipo === 4) [0, 1, 2, 3].forEach(i => { const m = mesh(new T.BoxGeometry(0.16, 0.16, 0.16), mat, {}); m.position.set(Math.cos(i * PI / 2) * 0.3, 1.24, Math.sin(i * PI / 2) * 0.3); g.add(m); });
+    return g;
+  }
+
+  /* ---------- texture: scacchiera e pavimento ---------- */
+  function texScacchiera(chiaro, scuro, bordo, n) {
+    const S = 512, [cv, x] = B.tela(S, S), b = bordo ? 26 : 0, q = (S - 2 * b) / (n || 8);
+    if (bordo) { x.fillStyle = bordo; x.fillRect(0, 0, S, S); }
+    for (let r = 0; r < (n || 8); r++) for (let f = 0; f < (n || 8); f++) { x.fillStyle = (r + f) % 2 ? scuro : chiaro; x.fillRect(b + f * q, b + r * q, q + 0.5, q + 0.5); }
+    if (bordo) { x.strokeStyle = 'rgba(255,220,150,.6)'; x.lineWidth = 3; x.strokeRect(b - 2, b - 2, S - 2 * b + 4, S - 2 * b + 4); }
+    const t = B.tex(cv); t.anisotropy = 4; return t;
+  }
+  function texPavimento() {
+    const S = 512, [cv, x] = B.tela(S, S), q = S / 4;
+    for (let r = 0; r < 4; r++) for (let f = 0; f < 4; f++) {
+      const chiaro = (r + f) % 2 === 0; x.fillStyle = chiaro ? '#efe6d2' : '#3b3340'; x.fillRect(f * q, r * q, q, q);
+      // venature del marmo
+      x.strokeStyle = chiaro ? 'rgba(160,140,120,.18)' : 'rgba(255,255,255,.06)'; x.lineWidth = 2;
+      for (let k = 0; k < 3; k++) { x.beginPath(); x.moveTo(f * q + Math.random() * q, r * q); x.bezierCurveTo(f * q + Math.random() * q, r * q + q * 0.4, f * q + Math.random() * q, r * q + q * 0.6, f * q + Math.random() * q, r * q + q); x.stroke(); }
+    }
+    x.strokeStyle = 'rgba(0,0,0,.18)'; x.lineWidth = 2; for (let i = 0; i <= 4; i++) { x.beginPath(); x.moveTo(i * q, 0); x.lineTo(i * q, S); x.stroke(); x.beginPath(); x.moveTo(0, i * q); x.lineTo(S, i * q); x.stroke(); }
+    const t = B.tex(cv, true); return t;
+  }
+
+  /* ---------- insegna della casa in piazza ---------- */
+  B.texInsegnaScacchi = function (w, h) {
+    const [cv, x] = B.tela(w, h), q = h / 6;
+    // cornice a scacchi
+    for (let i = 0; i * q < w; i++) for (let r = 0; r < 6; r++) { if (r > 0 && r < 5 && i > 0 && (i + 1) * q < w) continue; x.fillStyle = (i + r) % 2 ? NERO : BIANCO; x.fillRect(i * q, r * q, q + 0.5, q + 0.5); }
+    B.rr(x, q * 0.8, q * 0.8, w - q * 1.6, h - q * 1.6, 12); x.fillStyle = '#1f1b26'; x.fill(); x.lineWidth = 6; x.strokeStyle = '#e3a63a'; x.stroke();
+    x.textAlign = 'center'; x.textBaseline = 'middle';
+    x.font = 'bold ' + Math.round(h * 0.3) + 'px Georgia, serif'; x.fillStyle = '#f6d27a';
+    x.fillText('CASA DEGLI SCACCHI', w / 2 + h * 0.18, h * 0.52);
+    // un cavallo disegnato (lo stesso dei pezzi della scacchiera)
+    if (B.ScacchiPezzi) { try { x.save(); B.ScacchiPezzi.disegna(x, 2, q * 1.9, h / 2, h * 0.62); B.ScacchiPezzi.disegna(x, -2, w - q * 1.9, h / 2, h * 0.62); x.restore(); } catch (e) { } }
+    const t = new T.CanvasTexture(cv); t.encoding = T.sRGBEncoding; t.anisotropy = 4; return t;
+  };
+
+  /* ---------- in piazza: pezzi giganti ai lati della porta e selciato a scacchiera ---------- */
+  function decoraPiazza(scena, ctx) {
+    const xp = PIAZZA.x, zf = PIAZZA.z + 2.5;
+    // selciato a scacchiera davanti alla porta (piatto: ci si cammina sopra)
+    const tp = texScacchiera('#efe6d2', '#4a4252', null, 6);
+    const pav = new T.Mesh(new T.PlaneGeometry(4.2, 4.2), new T.MeshToonMaterial({ map: tp, gradientMap: M('#fff').gradientMap, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2 }));
+    pav.rotation.x = -PI / 2; pav.position.set(xp, 0.015, zf + 2.6); pav.receiveShadow = true; scena.add(pav);
+    // due pezzi giganti su un piedistallo: il re bianco e il cavallo nero
+    [[-1, 6, true], [1, 2, false]].forEach(([s, tipo, bianco]) => {
+      const g = new T.Group(); g.position.set(xp + s * 4.2, 0, zf + 0.7); scena.add(g);
+      g.add(mesh(new T.BoxGeometry(1.1, 0.5, 1.1), M('#b3a29b'), { y: 0.25, lb: 0.025 }));
+      g.add(mesh(new T.BoxGeometry(1.25, 0.1, 1.25), M('#cdbfb8'), { y: 0.52, lb: 0.02 }));
+      const p = pezzo3D(tipo, bianco, 0.03); p.scale.setScalar(1.05); p.position.y = 0.57; if (tipo === 2) p.rotation.y = -PI / 2.6; g.add(p);
+      if (ctx && ctx.ostCer) ctx.ostCer(xp + s * 4.2, zf + 0.7, 0.75);
+    });
+  }
+
+  /* ---------- tabellone della classifica (texture che si ridisegna) ---------- */
+  let tab = null;
+  function disegnaTabellone(lista) {
+    if (!tab) return;
+    const x = tab.x, W = tab.cv.width, H = tab.cv.height;
+    x.fillStyle = '#1d2a22'; x.fillRect(0, 0, W, H);
+    x.strokeStyle = '#c9a25a'; x.lineWidth = 14; x.strokeRect(7, 7, W - 14, H - 14);
+    x.textAlign = 'center'; x.textBaseline = 'middle'; x.fillStyle = '#f6d27a'; x.font = 'bold 54px Georgia, serif'; x.fillText('CLASSIFICA DEL BORGO', W / 2, 62);
+    x.fillStyle = 'rgba(246,210,122,.5)'; x.fillRect(60, 102, W - 120, 3);
+    (lista || []).slice(0, 8).forEach((r, i) => {
+      const y = 140 + i * 46;
+      x.textAlign = 'left'; x.font = 'bold 34px Georgia, serif'; x.fillStyle = i < 3 ? ['#ffd36a', '#dfe3ea', '#e0a36a'][i] : '#e8f2ea';
+      x.fillText((i + 1) + '.', 70, y);
+      x.font = (r.io ? 'bold ' : '') + '32px system-ui, sans-serif'; x.fillStyle = r.io ? '#9fe08a' : '#e8f2ea';
+      let n = (r.bot ? '🤖 ' : '') + r.nome; if (n.length > 26) n = n.slice(0, 25) + '…'; x.fillText(n, 130, y);
+      x.textAlign = 'right'; x.font = 'bold 34px Georgia, serif'; x.fillStyle = '#f6d27a'; x.fillText(String(r.elo), W - 70, y);
+    });
+    tab.t.needsUpdate = true;
+  }
+
+  function costruisciCasaScacchi(scena) {
+    const sedili = [], ostacoli = [], anim = [], porte = [], toccabili = [], lampade = [], vetri = [], muri = [];
+    const gm = M('#fff').gradientMap;
+    const ostBox = (cx, cz, w, d) => ostacoli.push({ t: 'b', x0: cx - w / 2, x1: cx + w / 2, z0: cz - d / 2, z1: cz + d / 2 });
+    const ostCer = (x, z, r) => ostacoli.push({ t: 'c', x, z, r });
+    const scatola = (g, w, h, d, col, x, y, z, lb) => { const m = mesh(new T.BoxGeometry(w, h, d), typeof col === 'string' ? M(col) : col, { x, y, z, lb: lb === undefined ? 0.02 : lb }); g.add(m); return m; };
+    const cil = (g, r1, r2, h, col, x, y, z, seg, l) => { const m = mesh(new T.CylinderGeometry(r1, r2, h, seg || 12), M(col), { x, y, z, l: l === undefined ? 0.018 : l }); g.add(m); return m; };
+    const legno = '#7a4a2c', legnoS = '#4e2f1c', ottone = '#d6a84a';
+
+    /* ---------- base, pavimento a scacchiera, nuvole ---------- */
+    scena.add(mesh(new T.BoxGeometry(2 * X + 0.4, 0.9, Z1 - Z0 + 0.4), M('#5a5068'), { y: -0.46, z: (Z0 + Z1) / 2, lb: 0.05 }));
+    for (let i = 0; i < 7; i++) { const c = mesh(new T.ConeGeometry(rnd(0.9, 1.8), rnd(1.5, 2.8), 7), M('#4a4060'), { x: rnd(-8, 8), y: -1.6 - rnd(0, 0.6), z: rnd(-6, 7) }); c.rotation.x = PI; scena.add(c); }
+    const tPav = texPavimento(); tPav.repeat.set(2 * X / 4, (Z1 - Z0) / 4);
+    const pav = new T.Mesh(new T.PlaneGeometry(2 * X, Z1 - Z0), new T.MeshToonMaterial({ map: tPav, gradientMap: gm })); pav.rotation.x = -PI / 2; pav.position.set(0, 0.002, (Z0 + Z1) / 2); pav.receiveShadow = true; scena.add(pav);
+    const nuvole = [];
+    for (let i = 0; i < 8; i++) {
+      const g = new T.Group(), a = i / 8 * 6.283 + rnd(-0.2, 0.2), rx = 16 + rnd(0, 5), rz = 12 + rnd(0, 4);
+      g.position.set(Math.cos(a) * rx, rnd(-5, -2.4), 0.5 + Math.sin(a) * rz);
+      const n = 3 + (i % 3);
+      for (let k = 0; k < n; k++) { const b = mesh(new T.IcosahedronGeometry(rnd(1.0, 1.9), 1), new T.MeshBasicMaterial({ color: 0xfff1e8, transparent: true, opacity: 0.88 }), { cast: false, recv: false }); b.position.set((k - n / 2) * 1.5, rnd(-0.2, 0.4), rnd(-0.6, 0.6)); b.scale.y = 0.6; g.add(b); }
+      g.userData.base = g.position.x; g.userData.v = rnd(0.1, 0.25); g.userData.f = rnd(0, 6); g.userData.vivo = true; scena.add(g); nuvole.push(g);
+    }
+    anim.push(t => nuvole.forEach(g => { g.position.x = g.userData.base + Math.sin(t * g.userData.v + g.userData.f) * 1.3; }));
+
+    /* ---------- pareti ---------- */
+    const matVetro = () => { const m = new T.MeshToonMaterial({ color: new T.Color('#bfe3f2'), gradientMap: gm, emissive: new T.Color('#bfe3f2'), emissiveIntensity: 0.6 }); vetri.push(m); return m; };
+    function finestra(g, x, y, w, h) {
+      scatola(g, w + 0.34, h + 0.34, 0.12, '#efe6d2', x, y, 0.03);
+      const v = new T.Mesh(new T.PlaneGeometry(w, h), matVetro()); v.position.set(x, y, 0.1); g.add(v);
+      scatola(g, 0.07, h, 0.05, '#efe6d2', x, y, 0.13, 0); scatola(g, w, 0.07, 0.05, '#efe6d2', x, y, 0.13, 0);
+      scatola(g, w + 0.6, 0.1, 0.34, '#d9cfb8', x, y - h / 2 - 0.2, 0.15, 0.012);
+    }
+    function quadroScacchi(g, x, y, s) {   // quadretto con una scacchiera e un pezzo
+      scatola(g, s + 0.16, s + 0.16, 0.07, '#2a2038', x, y, 0.04, 0.01);
+      const p = new T.Mesh(new T.PlaneGeometry(s, s), new T.MeshToonMaterial({ map: texScacchiera('#efe6d2', '#6b5a7a', null, 4), gradientMap: gm })); p.position.set(x, y, 0.085); g.add(p);
+    }
+    function parete(len, col, wx, wz, rotY, out, contenuto) {
+      const g = new T.Group(); g.position.set(wx, 0, wz); g.rotation.y = rotY; g.userData.vivo = true; scena.add(g);
+      const corpo = mesh(new T.BoxGeometry(len, 4.2, 0.3), M(col), { y: 2.1, z: -0.15, lb: 0.03 }); corpo.castShadow = false; g.add(corpo);
+      scatola(g, len, 1.1, 0.06, '#3a2a22', 0, 0.55, 0.03, 0.01);                 // boiserie in basso
+      scatola(g, len, 0.08, 0.1, ottone, 0, 1.12, 0.05, 0.006);
+      scatola(g, len, 0.16, 0.14, '#efe6d2', 0, 4.12, 0.07, 0.012);
+      contenuto(g);
+      muri.push({ g, out, mats: [], lines: [], q: 1, ap: 1 });
+      return g;
+    }
+    parete(2 * X + 0.6, '#284238', 0, Z0, 0, [0, -1], g => {
+      finestra(g, -7.4, 2.7, 1.4, 1.6); finestra(g, 7.4, 2.7, 1.4, 1.6);
+      // tabellone della classifica (si ridisegna quando cambia l'Elo)
+      const [cv, x] = B.tela(1024, 520); const t = B.tex(cv); tab = { cv, x, t };
+      scatola(g, 5.0, 2.7, 0.12, '#4e2f1c', 0, 2.55, 0.06, 0.02);
+      const pan = new T.Mesh(new T.PlaneGeometry(4.7, 2.4), new T.MeshBasicMaterial({ map: t })); pan.position.set(0, 2.55, 0.13); g.add(pan);
+      quadroScacchi(g, -4.3, 2.8, 0.9); quadroScacchi(g, 4.3, 2.8, 0.9);
+    });
+    parete(Z1 - Z0 + 0.3, '#22382f', -X, (Z0 + Z1) / 2, PI / 2, [-1, 0], g => { finestra(g, -3.5, 2.7, 1.4, 1.4); finestra(g, 3.5, 2.7, 1.4, 1.4); quadroScacchi(g, 0, 2.7, 1.0); });
+    parete(Z1 - Z0 + 0.3, '#22382f', X, (Z0 + Z1) / 2, -PI / 2, [1, 0], g => { finestra(g, -3.5, 2.7, 1.4, 1.4); finestra(g, 3.5, 2.7, 1.4, 1.4); quadroScacchi(g, 0, 2.7, 1.0); });
+    // tocco sul tabellone: apre la classifica
+    const prTab = new T.Mesh(new T.BoxGeometry(5, 2.8, 0.6), new T.MeshBasicMaterial()); prTab.position.set(0, 2.5, Z0 + 0.3); prTab.visible = false; scena.add(prTab);
+    toccabili.push({ obj: prTab, tipo: 'azione', fn: () => { if (B.Scacchi) B.Scacchi.apri('classifica'); } });
+    porte.push({ id: 'tabellone', nome: 'Classifica', testo: '🏆 Guarda la classifica', fn: () => { if (B.Scacchi) B.Scacchi.apri('classifica'); }, x: 0, z: Z0 + 1.5, r: 1.4 });
+
+    /* ---------- tavoli da gioco: scacchiera con i pezzi e due sedie ---------- */
+    const texTav = texScacchiera('#efe6d2', '#6f8f56', '#5a3a24');
+    // pezzi in partenza (o a meta' partita, per varieta')
+    const PARTENZA = 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR', META = ['r1bqk2r/pppp1ppp/2n2n2/2b1p3/2B1P3/3P1N2/PPP2PPP/RNBQK2R', 'r2q1rk1/ppp2ppp/2np1n2/2b1p1B1/2B1P1b1/2NP1N2/PPP2PPP/R2Q1RK1', '6k1/5ppp/8/8/3R4/8/5PPP/6K1', 'r1bq1rk1/pp3ppp/2n1pn2/2pp4/3P4/2PBPN2/PP1N1PPP/R2QK2R'];
+    const DA = { p: 1, n: 2, b: 3, r: 4, q: 5, k: 6 };
+    function tavolo(x, z, fen) {
+      const g = new T.Group(); g.position.set(x, 0, z); scena.add(g);
+      scatola(g, 1.5, 0.1, 1.5, legno, 0, 0.82, 0, 0.015);
+      cil(g, 0.1, 0.14, 0.78, legnoS, 0, 0.4, 0, 10, 0.012); cil(g, 0.5, 0.55, 0.06, legnoS, 0, 0.03, 0, 16, 0.012);
+      const sc = new T.Mesh(new T.PlaneGeometry(1.2, 1.2), new T.MeshToonMaterial({ map: texTav, gradientMap: gm })); sc.rotation.x = -PI / 2; sc.position.y = 0.873; g.add(sc);
+      // i pezzi (piccoli, senza contorno)
+      const q = 1.1 / 8, righe = fen.split('/');
+      righe.forEach((riga, r) => { let f = 0; for (const c of riga) { if (c >= '1' && c <= '8') { f += +c; continue; } const t = DA[c.toLowerCase()]; const p = pezzo3D(t, c !== c.toLowerCase(), 0); p.scale.setScalar(q * 0.62); p.position.set(-0.55 + (f + 0.5) * q, 0.876, -0.55 + (r + 0.5) * q); if (t === 2) p.rotation.y = c !== c.toLowerCase() ? PI : 0; g.add(p); f++; } });
+      // orologio da scacchi
+      const or = new T.Group(); or.position.set(0.66, 0.87, 0); or.rotation.y = PI / 2; g.add(or);
+      scatola(or, 0.36, 0.14, 0.12, '#2a2230', 0, 0.07, 0, 0.008);
+      [-0.09, 0.09].forEach((s, i) => { const d = new T.Mesh(new T.CircleGeometry(0.045, 14), new T.MeshBasicMaterial({ color: 0xfbf3dc })); d.position.set(s, 0.08, 0.062); or.add(d); cil(or, 0.02, 0.02, 0.04, i ? '#c4453b' : '#e3a63a', s, 0.16, 0, 8, 0); });
+      // due sedie, una per lato (bianco a sud, nero a nord)
+      [-1, 1].forEach(s => {
+        const sd = new T.Group(); sd.position.set(0, 0, s * 1.15); sd.rotation.y = s > 0 ? 0 : PI; g.add(sd);
+        scatola(sd, 0.6, 0.08, 0.55, '#8a2f3a', 0, 0.5, 0, 0.01);
+        [[-1, -1], [1, -1], [-1, 1], [1, 1]].forEach(p => scatola(sd, 0.06, 0.5, 0.06, legnoS, p[0] * 0.25, 0.25, p[1] * 0.22, 0.006));
+        scatola(sd, 0.6, 0.62, 0.07, legnoS, 0, 0.85, 0.26, 0.01);
+        ostCer(x, z + s * 1.15, 0.32);
+      });
+      ostBox(x, z, 1.6, 1.6);
+      porte.push({ id: 'tavolo-' + porte.length, nome: 'Tavolo da scacchi', testo: '♞ Gioca a scacchi', gioco: 'scacchi', x, z, r: 2.0 });
+      lampade.push({ x, y: 2.6, z });
+    }
+    tavolo(-6.4, -4.0, PARTENZA); tavolo(-6.4, 0.6, META[0]); tavolo(-6.4, 5.2, META[2]);
+    tavolo(6.4, -4.0, META[1]); tavolo(6.4, 0.6, PARTENZA); tavolo(6.4, 5.2, META[3]);
+
+    /* ---------- scacchiera gigante in mezzo alla sala (ci si cammina in mezzo) ---------- */
+    (function () {
+      const cx = 0, cz = -1.6, L = 4.8, q = L / 8;
+      scena.add(mesh(new T.BoxGeometry(L + 0.5, 0.12, L + 0.5), M('#3a2a22'), { x: cx, y: 0.06, z: cz, lb: 0.02 }));
+      const sc = new T.Mesh(new T.PlaneGeometry(L, L), new T.MeshToonMaterial({ map: texScacchiera('#efe6d2', '#5b7a49', null), gradientMap: gm })); sc.rotation.x = -PI / 2; sc.position.set(cx, 0.125, cz); sc.receiveShadow = true; scena.add(sc);
+      // una partita a meta': pochi pezzi, cosi' resta spazio per passeggiare
+      [['K', 6, 7], ['R', 4, 7], ['P', 5, 6], ['P', 6, 6], ['B', 3, 4], ['N', 5, 5], ['Q', 2, 6], ['k', 6, 0], ['r', 3, 0], ['p', 5, 1], ['p', 6, 2], ['q', 4, 2], ['n', 2, 2], ['b', 1, 3]].forEach(([c, f, r]) => {
+        const t = DA[c.toLowerCase()], bianco = c !== c.toLowerCase(), p = pezzo3D(t, bianco, 0.022);
+        p.scale.setScalar(0.42); const x = cx - L / 2 + (f + 0.5) * q, z = cz - L / 2 + (r + 0.5) * q; p.position.set(x, 0.125, z); if (t === 2) p.rotation.y = bianco ? PI : 0;
+        scena.add(p); ostCer(x, z, 0.24);
+      });
+      // cordoncino con paletti agli angoli
+      [[-1, -1], [1, -1], [-1, 1], [1, 1]].forEach(a => { const px = cx + a[0] * (L / 2 + 0.25), pz = cz + a[1] * (L / 2 + 0.25); cil(scena, 0.06, 0.08, 0.8, ottone, px, 0.4, pz, 10, 0.012); cil(scena, 0.09, 0.09, 0.08, ottone, px, 0.84, pz, 10, 0.01); ostCer(px, pz, 0.15); });
+    })();
+
+    /* ---------- arredi: librerie con i libri di scacchi, piante, panche all'ingresso ---------- */
+    const DORSI = ['#c4453b', '#efe6d2', '#2c2733', '#3a9a7a', '#e9b44c', '#3b5fc4'];
+    [[-3.6, Z0 + 0.55], [3.6, Z0 + 0.55]].forEach(([lx, lz]) => {
+      const g = new T.Group(); g.position.set(lx, 0, lz); scena.add(g);
+      scatola(g, 2.2, 2.6, 0.55, legnoS, 0, 1.3, -0.12, 0.02);
+      for (let r = 0; r < 4; r++) { const y = 0.3 + r * 0.6; scatola(g, 2.0, 0.05, 0.5, legno, 0, y, 0.04, 0.008); let px = -0.95; while (px < 0.9) { const w = 0.07 + Math.random() * 0.06, h = 0.36 + Math.random() * 0.14; scatola(g, w, h, 0.32, DORSI[(Math.random() * DORSI.length) | 0], px + w / 2, y + 0.03 + h / 2, 0.06, 0.005); px += w + 0.006; } }
+      ostBox(lx, lz, 2.3, 0.7);
+    });
+    [[-X + 0.8, Z0 + 0.8], [X - 0.8, Z0 + 0.8], [-X + 0.8, Z1 - 0.9], [X - 0.8, Z1 - 0.9]].forEach(([px, pz]) => {
+      cil(scena, 0.36, 0.27, 0.55, '#c8704f', px, 0.28, pz, 12);
+      for (let i = 0; i < 7; i++) { const a = i / 7 * 6.283, fo = mesh(new T.SphereGeometry(0.26, 8, 6), M(['#4f9d5c', '#69b86f', '#3f8a4c'][i % 3]), { l: 0.014 }); fo.scale.set(0.5, 1.4, 0.16); fo.position.set(px + Math.cos(a) * 0.2, 0.95 + (i % 3) * 0.14, pz + Math.sin(a) * 0.2); fo.rotation.set(Math.sin(a) * 0.5, -a, -Math.cos(a) * 0.5); scena.add(fo); }
+      ostCer(px, pz, 0.45);
+    });
+    [-4.2, 4.2].forEach(bx => {
+      const g = new T.Group(); g.position.set(bx, 0, Z1 - 0.8); scena.add(g);
+      scatola(g, 2.2, 0.1, 0.55, legno, 0, 0.48, 0, 0.012); scatola(g, 2.2, 0.55, 0.08, legno, 0, 0.8, 0.26, 0.012);
+      [-0.95, 0.95].forEach(s => scatola(g, 0.1, 0.45, 0.5, legnoS, s, 0.23, 0, 0.01));
+      ostBox(bx, Z1 - 0.8, 2.3, 0.65);
+      [-0.55, 0.55].forEach(s => { const st = { x: bx + s, z: Z1 - 0.85, y: 0.08, yt: 0, yaw: PI }; st.azione = { sedile: st, nome: 'Siediti', testo: 'Siediti' }; sedili.push(st); });
+    });
+
+    /* ---------- luci (niente lampadari: con la camera dall'alto sembravano tavolini sospesi) ---------- */
+    lampade.length = 0;   // le luci vere sono 6: sopra la scacchiera gigante, all'ingresso e ai tavoli degli angoli
+    [[0, 3.0, -1.6], [0, 3.0, 5], [-6.4, 2.6, -4], [6.4, 2.6, -4], [-6.4, 2.6, 5.2], [6.4, 2.6, 5.2]].forEach(p => lampade.push({ x: p[0], y: p[1], z: p[2] }));
+
+    /* ---------- uscita ---------- */
+    (function () {
+      const g = new T.Group(); g.position.set(0, 0, Z1 + 0.4); scena.add(g);
+      [-1, 1].forEach(s => scatola(g, 0.18, 3.0, 0.2, legnoS, s * 1.0, 1.5, 0, 0.015)); scatola(g, 2.18, 0.2, 0.2, legnoS, 0, 3.0, 0, 0.015);
+      const mt = new T.Mesh(new T.PlaneGeometry(1.6, 0.9), new T.MeshToonMaterial({ map: B.texTappeto(), gradientMap: gm })); mt.rotation.x = -PI / 2; mt.position.set(0, 0.014, -0.5); g.add(mt);
+    })();
+    porte.push({ id: 'porta-uscita', nome: 'Esci in piazza', x: 0, z: Z1 - 1.2, r: 1.3, verso: 'piazza', arrivo: { x: PIAZZA.x, z: PIAZZA.z + 4.0, yaw: 0 } });
+
+    /* ---------- pezzi fermi uniti (meno lavoro per il telefono) ---------- */
+    if (B.unisciStatici) try { B.unisciStatici(scena, { anim, protetti: toccabili.map(t => t.obj) }); } catch (e) { }
+
+    /* ---------- pareti che spariscono quando la camera e' dietro di loro ---------- */
+    muri.forEach(m => {
+      m.g.traverse(c => {
+        if (!c.isMesh) return;
+        const mm = c.material;
+        if (mm.isShaderMaterial || (mm.isMeshBasicMaterial && mm.side === T.BackSide)) { m.lines.push(c); return; }
+        const nuovo = mm.clone(), i = B.finestreMat.indexOf(mm); if (i >= 0) B.finestreMat[i] = nuovo;
+        const j = vetri.indexOf(mm); if (j >= 0) vetri[j] = nuovo;
+        c.material = nuovo; m.mats.push(nuovo);
+      });
+    });
+    function aggiornaMuri(az, dt) {
+      const cx = Math.sin(az), cz = Math.cos(az);
+      muri.forEach(m => {
+        const fuori = m.out[0] * cx + m.out[1] * cz > 0.2, target = fuori ? 0.0 : 1;
+        m.q += (target - m.q) * Math.min(1, dt * 9);
+        const q = Math.abs(m.q - target) < 0.02 ? target : m.q;
+        if (q === m.ap) return; m.ap = q;
+        m.mats.forEach(mm => { const tr = q < 0.99; if (mm.transparent !== tr) { mm.transparent = tr; mm.needsUpdate = true; } mm.opacity = q; mm.depthWrite = !tr; });
+        m.g.visible = q > 0.02;
+        m.lines.forEach(l => { l.visible = q >= 0.99; });
+      });
+    }
+    const COLORI = { giorno: ['#bfe3f2', 0.6], tramonto: ['#ffb878', 0.55], notte: ['#2c3a78', 0.5] };
+    function atm(nome) {
+      const c = COLORI[nome] || COLORI.giorno;
+      vetri.forEach(v => { v.color.set(c[0]); v.emissive.set(nome === 'notte' ? '#3a4a9a' : c[0]); v.emissiveIntensity = c[1]; });
+    }
+    disegnaTabellone(B.Scacchi && B.Scacchi.classifica ? B.Scacchi.classifica(8) : []);
+    if (window.Gioco) window.Gioco.su('stanza', s => { if (s && s.id === 'scacchi' && B.Scacchi) disegnaTabellone(B.Scacchi.classifica(8)); });
+    const area = (x, z) => x > AREA.x0 && x < AREA.x1 && z > AREA.z0 && z < AREA.z1;
+    return { sedili, anim, ostacoli, porte, toccabili, lampade, area, aggiornaMuri, atm, limiti: AREA };
+  }
+
+  B.costruisciCasaScacchi = costruisciCasaScacchi;
+  B.CasaScacchi = { decoraPiazza, pezzo3D, tabellone: disegnaTabellone, PIAZZA, rect: { x0: -X, x1: X, z0: Z0, z1: Z1 } };
 })();
 
 </script>
@@ -19974,7 +20281,7 @@ body.pc #rd-hud .tasto,body.pc #rd-hud .base{display:none}
     quote: { minigiochi: 0.40, missioni: 0.20, accesso: 0.15, piazza: 0.25 },
     partite: 6,                                      // partite premiate a pieno al giorno, su tutti i minigiochi insieme
     dopoTetto: 0.2,                                  // oltre la quota del giorno una partita rende solo il 20%
-    giochi: { kart: 1, paintball: 1, cripta: 1.6, belinverse: 1, borgbubble: 1, nascondino: 1 }   // peso di una partita (la Cripta dura di piu')
+    giochi: { kart: 1, paintball: 1, cripta: 1.6, belinverse: 1, borgbubble: 1, nascondino: 1, scacchi: 1 }   // peso di una partita (la Cripta dura di piu')
   };
   const oggiG = () => { const d = new Date(); return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); };
   function registra(fonte, n) {
@@ -20881,7 +21188,8 @@ body.arredando #joy,body.arredando #controlli,body.arredando #btn-contesto,body.
       { id: 'posa', t: 'Posa un mobile in casa', ev: 'posa', n: 1, r: 20 },
       { id: 'pesca', t: 'Pesca 3 pesci al laghetto', ev: 'pesca', n: 3, r: 25 },
       { id: 'ruota', t: 'Fai un giro sulla ruota panoramica', ev: 'ruota', n: 1, r: 20 },
-      { id: 'mercato', t: 'Compra o vendi qualcosa al mercatino', ev: 'mercato', n: 1, r: 20 }
+      { id: 'mercato', t: 'Compra o vendi qualcosa al mercatino', ev: 'mercato', n: 1, r: 20 },
+      { id: 'scacchi', t: 'Gioca una partita a scacchi', ev: 'scacchi', n: 1, r: 25 }
     ],
     settimanale: { t: 'Completa 5 missioni quotidiane in una settimana', n: 5, coins: Math.round(B.Eco.quota('missioni') * 1.5 / 5) * 5, premio: 'statua' },
     serieLunga: { giorni: 7, premio: 'lanterna' },
@@ -25225,6 +25533,1274 @@ body.bb-attivo #controlli,body.bb-attivo #joy,body.bb-attivo #btn-contesto,body.
 </script>
 <script>
 /* =====================================================================
+   THE BORG - SCACCHI: il motore (senza grafica).
+   Tutte le regole (arrocco, presa en passant, promozione, scacco matto,
+   stallo, patta per ripetizione, per 50 mosse e per materiale insufficiente),
+   la notazione delle mosse (SAN, es. "Cf3", "exd5", "O-O", "e8=D+") e i bot
+   a livelli, con il punteggio Elo (B3.ScacchiElo).
+   E' tutto dentro fabbricaScacchi() perche' il gioco possa farlo girare anche
+   in un Worker (cosi' mentre il bot pensa lo schermo non si blocca):
+   il Worker riceve il testo della funzione (B3.ScacchiMotore.sorgente).
+   Prove: node test/scacchi.test.mjs
+   ===================================================================== */
+(function () {
+  'use strict';
+  const B = window.B3 = window.B3 || {};
+
+  function fabbricaScacchi() {
+    'use strict';
+    // pezzi: 1 pedone, 2 cavallo, 3 alfiere, 4 torre, 5 donna, 6 re; bianco positivo, nero negativo
+    const P = 1, N = 2, BI = 3, R = 4, Q = 5, K = 6;
+    const LETTERA = ['', 'p', 'n', 'b', 'r', 'q', 'k'];
+    const DA_LETTERA = { p: 1, n: 2, b: 3, r: 4, q: 5, k: 6 };
+    // caselle 0x88: indice = traversa * 16 + colonna (a1 = 0, h8 = 0x77)
+    const sq = (f, r) => r * 16 + f, col = s => s & 7, trav = s => s >> 4, fuori = s => (s & 0x88) !== 0;
+    const nome = s => 'abcdefgh'[col(s)] + (trav(s) + 1);
+    const daNome = t => sq(t.charCodeAt(0) - 97, t.charCodeAt(1) - 49);
+    const D_N = [33, 31, 18, 14, -33, -31, -18, -14], D_B = [17, 15, -17, -15], D_R = [16, -16, 1, -1], D_K = [17, 15, -17, -15, 16, -16, 1, -1];
+    const INIZIO = 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1';
+
+    /* ---------- chiavi Zobrist (due numeri da 32 bit, sempre gli stessi) ---------- */
+    let semeZ = 0x9e3779b9;
+    const rz = () => { semeZ ^= semeZ << 13; semeZ ^= semeZ >>> 17; semeZ ^= semeZ << 5; return semeZ >>> 0; };
+    const ZP = [], ZT = [rz(), rz()], ZA = [], ZE = [];
+    for (let i = 0; i < 13 * 128; i++) ZP.push([rz(), rz()]);
+    for (let i = 0; i < 16; i++) ZA.push([rz(), rz()]);
+    for (let i = 0; i < 8; i++) ZE.push([rz(), rz()]);
+    const zi = (p, s) => ((p + 6) * 128 + s);
+
+    /* ---------- la posizione ---------- */
+    function Posizione(fen) {
+      this.b = new Int8Array(128); this.turno = 1; this.arr = 0; this.ep = -1; this.cinquanta = 0; this.mossaN = 1;
+      this.re = [0, 0]; this.storia = []; this.chiavi = []; this.h1 = 0; this.h2 = 0;
+      this.carica(fen || INIZIO);
+    }
+    const PR = Posizione.prototype;
+    PR.carica = function (fen) {
+      const t = String(fen).trim().split(/\s+/); this.b.fill(0);
+      const righe = (t[0] || '').split('/'); if (righe.length !== 8) throw new Error('FEN non valido');
+      for (let r = 0; r < 8; r++) {
+        let f = 0;
+        for (const c of righe[7 - r]) {
+          if (c >= '1' && c <= '8') { f += +c; continue; }
+          const p = DA_LETTERA[c.toLowerCase()]; if (!p || f > 7) throw new Error('FEN non valido');
+          this.b[sq(f, r)] = c === c.toLowerCase() ? -p : p; if (p === K) this.re[c === c.toLowerCase() ? 1 : 0] = sq(f, r); f++;
+        }
+      }
+      this.turno = t[1] === 'b' ? -1 : 1;
+      this.arr = 0; const a = t[2] || '-'; if (a.includes('K')) this.arr |= 1; if (a.includes('Q')) this.arr |= 2; if (a.includes('k')) this.arr |= 4; if (a.includes('q')) this.arr |= 8;
+      this.ep = t[3] && t[3] !== '-' ? daNome(t[3]) : -1;
+      this.cinquanta = +t[4] || 0; this.mossaN = +t[5] || 1; this.storia = []; this.chiavi = [];
+      this.hash(); this.chiavi.push(this.chiave());
+    };
+    PR.hash = function () {
+      let a = 0, c = 0;
+      for (let s = 0; s < 128; s++) { if (fuori(s)) { s += 7; continue; } const p = this.b[s]; if (p) { const z = ZP[zi(p, s)]; a ^= z[0]; c ^= z[1]; } }
+      if (this.turno < 0) { a ^= ZT[0]; c ^= ZT[1]; }
+      a ^= ZA[this.arr][0]; c ^= ZA[this.arr][1];
+      if (this.ep >= 0) { a ^= ZE[col(this.ep)][0]; c ^= ZE[col(this.ep)][1]; }
+      this.h1 = a >>> 0; this.h2 = c >>> 0;
+    };
+    PR.chiave = function () { return this.h1 * 1048576 + (this.h2 & 0xfffff); };
+    PR.fen = function () {
+      let s = '';
+      for (let r = 7; r >= 0; r--) {
+        let v = 0;
+        for (let f = 0; f < 8; f++) { const p = this.b[sq(f, r)]; if (!p) { v++; continue; } if (v) { s += v; v = 0; } const l = LETTERA[Math.abs(p)]; s += p > 0 ? l.toUpperCase() : l; }
+        if (v) s += v; if (r) s += '/';
+      }
+      let a = (this.arr & 1 ? 'K' : '') + (this.arr & 2 ? 'Q' : '') + (this.arr & 4 ? 'k' : '') + (this.arr & 8 ? 'q' : '');
+      return s + ' ' + (this.turno > 0 ? 'w' : 'b') + ' ' + (a || '-') + ' ' + (this.ep >= 0 ? nome(this.ep) : '-') + ' ' + this.cinquanta + ' ' + this.mossaN;
+    };
+    PR.copia = function () { const q = new Posizione(this.fen()); q.chiavi = this.chiavi.slice(); return q; };
+
+    /* ---------- case attaccate ---------- */
+    PR.attaccata = function (s, da) {   // da = 1 bianco, -1 nero
+      const b = this.b;
+      // pedoni
+      const pp = da > 0 ? [s - 15, s - 17] : [s + 15, s + 17];
+      for (const t of pp) if (!fuori(t) && b[t] === da * P) return true;
+      for (const d of D_N) { const t = s + d; if (!fuori(t) && b[t] === da * N) return true; }
+      for (const d of D_K) { const t = s + d; if (!fuori(t) && b[t] === da * K) return true; }
+      for (const d of D_B) { let t = s + d; while (!fuori(t)) { const p = b[t]; if (p) { if (p === da * BI || p === da * Q) return true; break; } t += d; } }
+      for (const d of D_R) { let t = s + d; while (!fuori(t)) { const p = b[t]; if (p) { if (p === da * R || p === da * Q) return true; break; } t += d; } }
+      return false;
+    };
+    PR.inScacco = function (lato) { lato = lato || this.turno; return this.attaccata(this.re[lato > 0 ? 0 : 1], -lato); };
+
+    /* ---------- mosse ---------- */
+    // mossa = { da, a, pz (pezzo che muove), cat (pezzo mangiato), pr (promozione, con segno), sp: 0 normale, 1 en passant, 2 arrocco, 3 doppio passo }
+    function aggiungi(l, da, a, pz, cat, pr, sp) { l.push({ da, a, pz, cat, pr: pr || 0, sp: sp || 0 }); }
+    PR.pseudo = function (soloPrese) {
+      const l = [], b = this.b, me = this.turno;
+      for (let s = 0; s < 128; s++) {
+        if (fuori(s)) { s += 7; continue; }
+        const p = b[s]; if (!p || (p > 0) !== (me > 0)) continue;
+        const t = p * me;
+        if (t === P) {
+          const av = s + 16 * me, ult = me > 0 ? 7 : 0, prima = me > 0 ? 1 : 6;
+          if (!fuori(av) && !b[av]) {
+            if (trav(av) === ult) { for (const x of [Q, R, BI, N]) aggiungi(l, s, av, p, 0, x * me); }
+            else if (!soloPrese) { aggiungi(l, s, av, p, 0); const a2 = av + 16 * me; if (trav(s) === prima && !b[a2]) aggiungi(l, s, a2, p, 0, 0, 3); }
+          }
+          for (const d of [15, 17]) {
+            const a = s + d * me; if (fuori(a)) continue;
+            const c = b[a];
+            if (c && (c > 0) !== (me > 0)) { if (trav(a) === ult) { for (const x of [Q, R, BI, N]) aggiungi(l, s, a, p, c, x * me); } else aggiungi(l, s, a, p, c); }
+            else if (a === this.ep) aggiungi(l, s, a, p, -me * P, 0, 1);
+          }
+          continue;
+        }
+        const dirs = t === N ? D_N : t === BI ? D_B : t === R ? D_R : D_K, scivola = t === BI || t === R || t === Q;
+        for (const d of (t === Q ? D_K : dirs)) {
+          let a = s + d;
+          while (!fuori(a)) {
+            const c = b[a];
+            if (c) { if ((c > 0) !== (me > 0)) aggiungi(l, s, a, p, c); break; }
+            if (!soloPrese) aggiungi(l, s, a, p, 0);
+            if (!scivola) break; a += d;
+          }
+        }
+        if (t === K && !soloPrese) {
+          const r0 = me > 0 ? 0 : 0x70, kA = me > 0 ? 1 : 4, qA = me > 0 ? 2 : 8;
+          if (s === r0 + 4 && !this.attaccata(s, -me)) {
+            if ((this.arr & kA) && !b[r0 + 5] && !b[r0 + 6] && b[r0 + 7] === me * R && !this.attaccata(r0 + 5, -me) && !this.attaccata(r0 + 6, -me)) aggiungi(l, s, r0 + 6, p, 0, 0, 2);
+            if ((this.arr & qA) && !b[r0 + 3] && !b[r0 + 2] && !b[r0 + 1] && b[r0] === me * R && !this.attaccata(r0 + 3, -me) && !this.attaccata(r0 + 2, -me)) aggiungi(l, s, r0 + 2, p, 0, 0, 2);
+          }
+        }
+      }
+      return l;
+    };
+    // diritti di arrocco che restano dopo aver toccato una casa
+    const TOGLI = new Int8Array(128).fill(15); TOGLI[0] = 13; TOGLI[7] = 14; TOGLI[4] = 12; TOGLI[0x70] = 7; TOGLI[0x77] = 11; TOGLI[0x74] = 3;
+    PR.fai = function (m) {
+      const b = this.b, me = this.turno;
+      this.storia.push({ m, arr: this.arr, ep: this.ep, c5: this.cinquanta, h1: this.h1, h2: this.h2 });
+      let a = this.h1, c = this.h2;
+      const zx = (p, s) => { const z = ZP[zi(p, s)]; a ^= z[0]; c ^= z[1]; };
+      zx(m.pz, m.da); b[m.da] = 0;
+      if (m.sp === 1) { const cs = m.a - 16 * me; zx(b[cs], cs); b[cs] = 0; }
+      else if (m.cat) zx(m.cat, m.a);
+      const arriva = m.pr || m.pz; b[m.a] = arriva; zx(arriva, m.a);
+      if (m.sp === 2) { const r0 = me > 0 ? 0 : 0x70, corta = m.a === r0 + 6, rd = corta ? r0 + 7 : r0, ra = corta ? r0 + 5 : r0 + 3; zx(b[rd], rd); b[ra] = b[rd]; b[rd] = 0; zx(b[ra], ra); }
+      if (Math.abs(m.pz) === K) this.re[me > 0 ? 0 : 1] = m.a;
+      a ^= ZA[this.arr][0]; c ^= ZA[this.arr][1]; this.arr &= TOGLI[m.da] & TOGLI[m.a]; a ^= ZA[this.arr][0]; c ^= ZA[this.arr][1];
+      if (this.ep >= 0) { a ^= ZE[col(this.ep)][0]; c ^= ZE[col(this.ep)][1]; }
+      this.ep = m.sp === 3 ? m.da + 16 * me : -1;
+      if (this.ep >= 0) { a ^= ZE[col(this.ep)][0]; c ^= ZE[col(this.ep)][1]; }
+      this.cinquanta = (Math.abs(m.pz) === P || m.cat) ? 0 : this.cinquanta + 1;
+      if (me < 0) this.mossaN++;
+      this.turno = -me; a ^= ZT[0]; c ^= ZT[1];
+      this.h1 = a >>> 0; this.h2 = c >>> 0;
+      this.chiavi.push(this.chiave());
+    };
+    PR.disfa = function () {
+      const u = this.storia.pop(); if (!u) return null; const m = u.m, b = this.b;
+      this.chiavi.pop();
+      this.turno = -this.turno; const me = this.turno;
+      if (me < 0) this.mossaN--;
+      b[m.da] = m.pz; b[m.a] = 0;
+      if (m.sp === 1) b[m.a - 16 * me] = m.cat; else if (m.cat) b[m.a] = m.cat;
+      if (m.sp === 2) { const r0 = me > 0 ? 0 : 0x70, corta = m.a === r0 + 6, rd = corta ? r0 + 7 : r0, ra = corta ? r0 + 5 : r0 + 3; b[rd] = b[ra]; b[ra] = 0; }
+      if (Math.abs(m.pz) === K) this.re[me > 0 ? 0 : 1] = m.da;
+      this.arr = u.arr; this.ep = u.ep; this.cinquanta = u.c5; this.h1 = u.h1; this.h2 = u.h2;
+      return m;
+    };
+    PR.mosse = function (soloPrese) {
+      const out = [], me = this.turno;
+      for (const m of this.pseudo(soloPrese)) { this.fai(m); if (!this.attaccata(this.re[me > 0 ? 0 : 1], -me)) out.push(m); this.disfa(); }
+      return out;
+    };
+    // mossa in formato "e2e4" / "e7e8q"
+    const uci = m => nome(m.da) + nome(m.a) + (m.pr ? LETTERA[Math.abs(m.pr)] : '');
+    PR.trovaUci = function (t) { t = String(t || '').toLowerCase(); return this.mosse().find(m => uci(m) === t) || null; };
+    PR.giocaUci = function (t) { const m = this.trovaUci(t); if (!m) return null; const s = this.san(m); this.fai(m); return { m, san: s, uci: uci(m) }; };
+
+    /* ---------- notazione SAN ---------- */
+    PR.san = function (m) {
+      const t = Math.abs(m.pz); let s;
+      if (m.sp === 2) s = col(m.a) === 6 ? 'O-O' : 'O-O-O';
+      else if (t === P) { s = (m.cat ? 'abcdefgh'[col(m.da)] + 'x' : '') + nome(m.a) + (m.pr ? '=' + LETTERA[Math.abs(m.pr)].toUpperCase() : ''); }
+      else {
+        s = LETTERA[t].toUpperCase();
+        const altre = this.mosse().filter(x => x.a === m.a && x.pz === m.pz && x.da !== m.da);
+        if (altre.length) {
+          const stessaC = altre.some(x => col(x.da) === col(m.da)), stessaT = altre.some(x => trav(x.da) === trav(m.da));
+          s += !stessaC ? 'abcdefgh'[col(m.da)] : !stessaT ? String(trav(m.da) + 1) : nome(m.da);
+        }
+        s += (m.cat ? 'x' : '') + nome(m.a);
+      }
+      this.fai(m); const sc = this.inScacco(), nessuna = !this.mosse().length; this.disfa();
+      return s + (sc ? (nessuna ? '#' : '+') : '');
+    };
+    PR.trovaSan = function (t) { const pulito = x => String(x).replace(/[+#!?]/g, '').replace(/0/g, 'O'); t = pulito(t); return this.mosse().find(m => pulito(this.san(m)) === t) || null; };
+
+    /* ---------- fine partita ---------- */
+    PR.ripetizioni = function () { const k = this.chiave(); let n = 0; for (let i = this.chiavi.length - 1, lim = Math.max(0, this.chiavi.length - 1 - this.cinquanta); i >= lim; i -= 1) if (this.chiavi[i] === k) n++; return n; };
+    PR.materialeInsufficiente = function () {
+      const pz = []; for (let s = 0; s < 128; s++) { if (fuori(s)) { s += 7; continue; } const p = this.b[s]; if (p && Math.abs(p) !== K) pz.push([Math.abs(p), (col(s) + trav(s)) & 1]); }
+      if (!pz.length) return true;
+      if (pz.some(x => x[0] === P || x[0] === R || x[0] === Q)) return false;
+      if (pz.length === 1) return true;                                      // re e cavallo, re e alfiere
+      return pz.every(x => x[0] === BI) && pz.every(x => x[1] === pz[0][1]);  // solo alfieri tutti su case dello stesso colore
+    };
+    // { fine: true/false, vince: 1 bianco, -1 nero, 0 patta, motivo }
+    PR.stato = function () {
+      const l = this.mosse();
+      if (!l.length) return this.inScacco() ? { fine: true, vince: -this.turno, motivo: 'matto' } : { fine: true, vince: 0, motivo: 'stallo' };
+      if (this.materialeInsufficiente()) return { fine: true, vince: 0, motivo: 'materiale' };
+      if (this.cinquanta >= 100) return { fine: true, vince: 0, motivo: 'cinquanta' };
+      if (this.ripetizioni() >= 3) return { fine: true, vince: 0, motivo: 'ripetizione' };
+      return { fine: false, scacco: this.inScacco(), n: l.length };
+    };
+    PR.pezzo = function (nomeCasa) { return this.b[daNome(nomeCasa)]; };
+
+    /* ---------- conteggio delle posizioni (per le prove: perft) ---------- */
+    PR.perft = function (d) { if (!d) return 1; let n = 0; for (const m of this.mosse()) { this.fai(m); n += d === 1 ? 1 : this.perft(d - 1); this.disfa(); } return n; };
+
+    /* =====================================================================
+       IL BOT: ricerca alfa-beta con approfondimento progressivo, quiete sulle
+       prese, tabella delle posizioni, mosse killer. Valutazione: materiale e
+       tabelle delle case per pezzo (apertura e finale mescolati).
+       ===================================================================== */
+    const VAL = [0, 100, 320, 330, 500, 900, 0];
+    // tabelle dal punto di vista del bianco, riga 0 = ottava traversa (come si scrivono di solito)
+    const PST = {
+      1: [0, 0, 0, 0, 0, 0, 0, 0, 50, 50, 50, 50, 50, 50, 50, 50, 10, 10, 20, 30, 30, 20, 10, 10, 5, 5, 10, 25, 25, 10, 5, 5, 0, 0, 0, 20, 20, 0, 0, 0, 5, -5, -10, 0, 0, -10, -5, 5, 5, 10, 10, -20, -20, 10, 10, 5, 0, 0, 0, 0, 0, 0, 0, 0],
+      2: [-50, -40, -30, -30, -30, -30, -40, -50, -40, -20, 0, 0, 0, 0, -20, -40, -30, 0, 10, 15, 15, 10, 0, -30, -30, 5, 15, 20, 20, 15, 5, -30, -30, 0, 15, 20, 20, 15, 0, -30, -30, 5, 10, 15, 15, 10, 5, -30, -40, -20, 0, 5, 5, 0, -20, -40, -50, -40, -30, -30, -30, -30, -40, -50],
+      3: [-20, -10, -10, -10, -10, -10, -10, -20, -10, 0, 0, 0, 0, 0, 0, -10, -10, 0, 5, 10, 10, 5, 0, -10, -10, 5, 5, 10, 10, 5, 5, -10, -10, 0, 10, 10, 10, 10, 0, -10, -10, 10, 10, 10, 10, 10, 10, -10, -10, 5, 0, 0, 0, 0, 5, -10, -20, -10, -10, -10, -10, -10, -10, -20],
+      4: [0, 0, 0, 0, 0, 0, 0, 0, 5, 10, 10, 10, 10, 10, 10, 5, -5, 0, 0, 0, 0, 0, 0, -5, -5, 0, 0, 0, 0, 0, 0, -5, -5, 0, 0, 0, 0, 0, 0, -5, -5, 0, 0, 0, 0, 0, 0, -5, -5, 0, 0, 0, 0, 0, 0, -5, 0, 0, 0, 5, 5, 0, 0, 0],
+      5: [-20, -10, -10, -5, -5, -10, -10, -20, -10, 0, 0, 0, 0, 0, 0, -10, -10, 0, 5, 5, 5, 5, 0, -10, -5, 0, 5, 5, 5, 5, 0, -5, 0, 0, 5, 5, 5, 5, 0, -5, -10, 5, 5, 5, 5, 5, 0, -10, -10, 0, 5, 0, 0, 0, 0, -10, -20, -10, -10, -5, -5, -10, -10, -20],
+      6: [-30, -40, -40, -50, -50, -40, -40, -30, -30, -40, -40, -50, -50, -40, -40, -30, -30, -40, -40, -50, -50, -40, -40, -30, -30, -40, -40, -50, -50, -40, -40, -30, -20, -30, -30, -40, -40, -30, -30, -20, -10, -20, -20, -20, -20, -20, -20, -10, 20, 20, 0, 0, 0, 0, 20, 20, 20, 30, 10, 0, 0, 10, 30, 20],
+      7: [-50, -40, -30, -20, -20, -30, -40, -50, -30, -20, -10, 0, 0, -10, -20, -30, -30, -10, 20, 30, 30, 20, -10, -30, -30, -10, 30, 40, 40, 30, -10, -30, -30, -10, 30, 40, 40, 30, -10, -30, -30, -10, 20, 30, 30, 20, -10, -30, -30, -30, 0, 0, 0, 0, -30, -30, -50, -30, -30, -30, -30, -30, -30, -50]
+    };
+    const idxB = s => (7 - trav(s)) * 8 + col(s), idxN = s => trav(s) * 8 + col(s);
+    const FASE = [0, 0, 1, 1, 2, 4, 0];
+    PR.valuta = function () {   // dal punto di vista di chi muove
+      const b = this.b; let mg = 0, eg = 0, fase = 0, alfB = 0, alfN = 0;
+      const pedB = new Int8Array(8), pedN = new Int8Array(8);
+      for (let s = 0; s < 128; s++) {
+        if (fuori(s)) { s += 7; continue; }
+        const p = b[s]; if (!p) continue;
+        const t = Math.abs(p), i = p > 0 ? idxB(s) : idxN(s), sg = p > 0 ? 1 : -1;
+        fase += FASE[t];
+        if (t === K) { mg += sg * PST[6][i]; eg += sg * PST[7][i]; continue; }
+        const v = VAL[t] + PST[t][i]; mg += sg * v; eg += sg * v;
+        if (t === BI) { if (p > 0) alfB++; else alfN++; }
+        if (t === P) { if (p > 0) pedB[col(s)]++; else pedN[col(s)]++; }
+      }
+      // coppia degli alfieri, pedoni doppiati e pedoni passati
+      if (alfB >= 2) { mg += 30; eg += 40; } if (alfN >= 2) { mg -= 30; eg -= 40; }
+      for (let f = 0; f < 8; f++) { if (pedB[f] > 1) { mg -= 12 * (pedB[f] - 1); eg -= 20 * (pedB[f] - 1); } if (pedN[f] > 1) { mg += 12 * (pedN[f] - 1); eg += 20 * (pedN[f] - 1); } }
+      for (let s = 0; s < 128; s++) {
+        if (fuori(s)) { s += 7; continue; }
+        const p = b[s]; if (Math.abs(p) !== P) continue;
+        const f = col(s), r = trav(s), w = p > 0; let passato = true;
+        for (let ff = Math.max(0, f - 1); ff <= Math.min(7, f + 1) && passato; ff++)
+          for (let rr = w ? r + 1 : r - 1; w ? rr < 7 : rr > 0; rr += w ? 1 : -1) if (b[sq(ff, rr)] === (w ? -P : P)) { passato = false; break; }
+        if (passato) { const avanti = w ? r : 7 - r, bonus = [0, 5, 10, 20, 35, 60, 100, 0][avanti]; mg += (w ? 1 : -1) * bonus * 0.5; eg += (w ? 1 : -1) * bonus; }
+      }
+      fase = Math.min(24, fase);
+      const v = (mg * fase + eg * (24 - fase)) / 24;
+      return Math.round(v) * this.turno;
+    };
+
+    const MATTO = 100000;
+    function cerca(pos, opz) {
+      opz = opz || {};
+      const t0 = Date.now(), limite = opz.tempo || 1000, maxP = opz.profondita || 64;
+      const tt = new Map(), killer = [];
+      let nodi = 0, stop = false;
+      const tempoScaduto = () => { if ((nodi & 1023) === 0 && Date.now() - t0 > limite) stop = true; return stop; };
+      const ordine = (m, ttM, ply) => {
+        if (ttM && m.da === ttM.da && m.a === ttM.a && m.pr === ttM.pr) return 1e6;
+        if (m.cat) return 1e5 + VAL[Math.abs(m.cat)] * 10 - VAL[Math.abs(m.pz)];
+        if (m.pr) return 9e4;
+        const k = killer[ply]; if (k && ((k[0] && k[0].da === m.da && k[0].a === m.a) || (k[1] && k[1].da === m.da && k[1].a === m.a))) return 8e4;
+        return 0;
+      };
+      function quiete(alfa, beta, ply) {
+        nodi++; if (tempoScaduto()) return 0;
+        const fermo = pos.valuta(); if (fermo >= beta) return beta; if (fermo > alfa) alfa = fermo;
+        if (ply > 40) return alfa;
+        const l = pos.pseudo(true); l.sort((a, b) => ordine(b, null, ply) - ordine(a, null, ply));
+        const me = pos.turno;
+        for (const m of l) {
+          if (fermo + VAL[Math.abs(m.cat)] + 200 < alfa && !m.pr) continue;   // presa che non puo' bastare
+          pos.fai(m);
+          if (pos.attaccata(pos.re[me > 0 ? 0 : 1], -me)) { pos.disfa(); continue; }
+          const v = -quiete(-beta, -alfa, ply + 1); pos.disfa();
+          if (stop) return 0;
+          if (v >= beta) return beta; if (v > alfa) alfa = v;
+        }
+        return alfa;
+      }
+      function ab(d, alfa, beta, ply) {
+        if (ply && (pos.cinquanta >= 100 || pos.ripetizioni() >= 2)) return 0;
+        const scacco = pos.inScacco(); if (scacco) d++;
+        if (d <= 0 || ply > 60) return quiete(alfa, beta, ply);
+        nodi++; if (tempoScaduto()) return 0;
+        const k = pos.chiave(), e = tt.get(k); let ttM = null;
+        if (e) { ttM = e.m; if (e.d >= d && ply) { if (e.f === 0) return e.v; if (e.f === 1 && e.v >= beta) return e.v; if (e.f === 2 && e.v <= alfa) return e.v; } }
+        const l = pos.pseudo(); l.forEach(m => { m.o = ordine(m, ttM, ply); }); l.sort((a, b) => b.o - a.o);
+        const me = pos.turno, a0 = alfa; let migliore = -MATTO * 2, mm = null, legali = 0;
+        for (const m of l) {
+          pos.fai(m);
+          if (pos.attaccata(pos.re[me > 0 ? 0 : 1], -me)) { pos.disfa(); continue; }
+          legali++;
+          let v;
+          if (legali > 1) { v = -ab(d - 1, -alfa - 1, -alfa, ply + 1); if (v > alfa && v < beta && !stop) v = -ab(d - 1, -beta, -alfa, ply + 1); }
+          else v = -ab(d - 1, -beta, -alfa, ply + 1);
+          pos.disfa();
+          if (stop) return 0;
+          if (v > migliore) { migliore = v; mm = m; }
+          if (v > alfa) alfa = v;
+          if (alfa >= beta) { if (!m.cat) { const kk = killer[ply] || (killer[ply] = [null, null]); if (!kk[0] || kk[0].da !== m.da || kk[0].a !== m.a) { kk[1] = kk[0]; kk[0] = m; } } break; }
+        }
+        if (!legali) return scacco ? -MATTO + ply : 0;
+        if (tt.size > 400000) tt.clear();
+        tt.set(k, { d, v: migliore, f: migliore <= a0 ? 2 : migliore >= beta ? 1 : 0, m: mm });
+        return migliore;
+      }
+      // radice: punteggio di ogni mossa (serve ai bot deboli per sbagliare "da umani")
+      const radice = pos.mosse(); if (!radice.length) return { mossa: null, punteggi: [], profondita: 0, nodi: 0 };
+      let punt = radice.map(m => ({ m, v: 0 })), fatta = 0;
+      for (let d = 1; d <= maxP; d++) {
+        const nuovi = [];
+        let alfa = -MATTO * 2;
+        for (const x of punt) {
+          pos.fai(x.m);
+          // tutte le mosse a finestra piena quando servono i punteggi esatti, altrimenti finestra stretta
+          const v = opz.tutte ? -ab(d - 1, -MATTO * 2, MATTO * 2, 1) : -ab(d - 1, -MATTO * 2, -alfa, 1);
+          pos.disfa();
+          if (stop) break;
+          nuovi.push({ m: x.m, v }); if (v > alfa) alfa = v;
+        }
+        if (stop && fatta) break;
+        if (stop) { punt = nuovi.concat(punt.filter(x => !nuovi.some(y => y.m === x.m))); fatta = d; break; }
+        nuovi.sort((a, b) => b.v - a.v); punt = nuovi; fatta = d;
+        if (Math.abs(punt[0].v) > MATTO - 100) break;   // matto trovato
+        if (Date.now() - t0 > limite * 0.55) break;      // la prossima profondita' non farebbe in tempo
+      }
+      return { mossa: punt[0].m, valore: punt[0].v, punteggi: punt, profondita: fatta, nodi };
+    }
+
+    /* ---------- i livelli dei bot ----------
+       elo = forza indicativa (da tarare con le prove vere); p = profondita'; ms = tempo per pensare;
+       rumore = quanto sbaglia a giudicare le mosse (in centesimi di pedone); caso = probabilita' di una mossa a caso */
+    const BOT = [
+      { id: 'pulcino', nome: 'Pallino il Pulcino', ico: '🐣', elo: 250, p: 1, ms: 200, rumore: 450, caso: 0.35, bio: 'Ha appena imparato come si muovono i pezzi. Più o meno.' },
+      { id: 'scoiattolo', nome: 'Rametto lo Scoiattolo', ico: '🐿️', elo: 450, p: 1, ms: 200, rumore: 260, caso: 0.15, bio: 'Corre dappertutto con i pezzi, ma a volte si dimentica di difenderli.' },
+      { id: 'nonna', nome: 'Nonna Ortensia', ico: '👵', elo: 650, p: 2, ms: 300, rumore: 150, caso: 0.07, bio: 'Gioca da sessant\'anni sulla panchina della fontana. Lenta ma furba.' },
+      { id: 'lampionaio', nome: 'Brillo il Lampionaio', ico: '🏮', elo: 850, p: 2, ms: 400, rumore: 80, caso: 0.03, bio: 'Accende i lampioni e le partite. Attento alle forchette.' },
+      { id: 'fata', nome: 'Fata Mirella', ico: '🧚', elo: 1050, p: 3, ms: 500, rumore: 45, caso: 0.01, bio: 'Vede due mosse avanti e ti fa credere che sia magia.' },
+      { id: 'capitano', nome: 'Capitan Ancora', ico: '⚓', elo: 1250, p: 3, ms: 700, rumore: 22, caso: 0, bio: 'Attacca sempre a tutta vela. Se ti difendi bene, affonda.' },
+      { id: 'gufo', nome: 'Gufo Sapiente', ico: '🦉', elo: 1450, p: 4, ms: 1200, rumore: 10, caso: 0, bio: 'Ha letto tutti i libri di scacchi della Biblioteca. Due volte.' },
+      { id: 'torre', nome: 'Torre Nera', ico: '♜', elo: 1650, p: 6, ms: 2200, rumore: 4, caso: 0, bio: 'Non parla mai. Non sbaglia quasi mai.' },
+      { id: 'maestro', nome: 'Il Gran Maestro della Cometa', ico: '☄️', elo: 1850, p: 64, ms: 3500, rumore: 0, caso: 0, bio: 'Il campione del borgo. Batterlo è una leggenda.' }
+    ];
+    // generatore casuale con seme (le prove danno sempre lo stesso risultato)
+    function casuale(seme) { let s = (Math.imul((seme >>> 0) ^ 0x5bd1e995, 0x9e3779b1) >>> 0) || 1; const r = () => { s ^= s << 13; s ^= s >>> 17; s ^= s << 5; return (s >>> 0) / 4294967296; }; for (let i = 0; i < 6; i++) r(); return r; }
+    function gauss(r) { let u = 0, v = 0; while (!u) u = r(); while (!v) v = r(); return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v); }
+    // fen + mosse giocate (per le ripetizioni) -> mossa del bot in formato uci
+    function mossaBot(fen, mosseUci, livello, seme, opz) {
+      const bot = BOT[Math.max(0, Math.min(BOT.length - 1, livello | 0))], r = casuale(seme || Date.now());
+      const pos = new Posizione(fen); (mosseUci || []).forEach(u => pos.giocaUci(u));
+      const legali = pos.mosse(); if (!legali.length) return null;
+      if (legali.length === 1) return uci(legali[0]);
+      const apertura = pos.storia.length < 8;
+      if (bot.caso && r() < bot.caso) {
+        // mossa "a caso", ma quando puo' mangiare qualcosa spesso lo fa (come un principiante)
+        const prese = legali.filter(m => m.cat); const l = prese.length && r() < 0.5 ? prese : legali;
+        return uci(l[Math.floor(r() * l.length)]);
+      }
+      const rumore = bot.rumore || (apertura ? 12 : 0);   // anche il campione varia un po' le aperture
+      // con il rumore servono i punteggi esatti di tutte le mosse (finestra piena); senza, basta la migliore
+      const ris = cerca(pos, { tempo: (opz && opz.ms) || bot.ms, profondita: bot.p, tutte: rumore > 0 });
+      if (!rumore) return uci(ris.mossa);
+      let best = null, bv = -Infinity;
+      ris.punteggi.forEach(x => { const matto = Math.abs(x.v) > MATTO - 1000; const v = x.v + (matto && bot.rumore < 100 ? 0 : gauss(r) * rumore); if (v > bv) { bv = v; best = x.m; } });
+      return uci(best || ris.mossa);
+    }
+
+    return { Posizione, INIZIO, BOT, MATTO, cerca, mossaBot, uci, nome, daNome, casuale };
+  }
+
+  /* ---------- punti Elo e livelli ---------- */
+  const ELO = {
+    iniziale: 800,
+    // K: quanto si muove il punteggio a ogni partita (di piu' nelle prime 20, quando non si sa ancora quanto sei forte)
+    k(partite, elo) { return partite < 20 ? 40 : elo >= 2000 ? 16 : 24; },
+    atteso(a, b) { return 1 / (1 + Math.pow(10, (b - a) / 400)); },
+    // risultato: 1 vittoria, 0.5 patta, 0 sconfitta -> variazione (arrotondata, mai sotto 100 in tutto)
+    variazione(mio, avv, risultato, partite) { const d = Math.round(ELO.k(partite, mio) * (risultato - ELO.atteso(mio, avv))); return Math.max(100 - mio, d); },
+    LIVELLI: [
+      { min: 0, nome: 'Pedone', ico: '♟' },
+      { min: 700, nome: 'Cavallo', ico: '♞' },
+      { min: 1000, nome: 'Alfiere', ico: '♝' },
+      { min: 1300, nome: 'Torre', ico: '♜' },
+      { min: 1600, nome: 'Regina', ico: '♛' },
+      { min: 1900, nome: 'Re', ico: '♚' },
+      { min: 2200, nome: 'Gran Maestro del Borgo', ico: '☄️' }
+    ],
+    livello(elo) { const L = ELO.LIVELLI; let i = 0; while (i + 1 < L.length && elo >= L[i + 1].min) i++; const prossimo = L[i + 1] || null; return { i, nome: L[i].nome, ico: L[i].ico, min: L[i].min, prossimo, quota: prossimo ? Math.max(0, Math.min(1, (elo - L[i].min) / (prossimo.min - L[i].min))) : 1 }; }
+  };
+
+  B.fabbricaScacchi = fabbricaScacchi;
+  B.ScacchiMotore = fabbricaScacchi();
+  B.ScacchiMotore.sorgente = fabbricaScacchi.toString();
+  B.ScacchiElo = ELO;
+})();
+
+</script>
+<script>
+/* =====================================================================
+   THE BORG - SCACCHI: la sala da gioco (come chess.com, nel borgo).
+   Si apre ai tavoli della Casa degli Scacchi in piazza.
+   - Contro i bot: 9 avversari a livelli (Elo indicativo da 250 a 1850),
+     con o senza orologio.
+   - Contro gli amici online: chi e' nella Casa degli Scacchi nello stesso
+     momento si puo' sfidare (la partita passa nella presenza, come Belinverse:
+     ognuno manda l'elenco delle mosse; chi sfida sceglie i colori a sorte).
+   - Punti Elo (si parte da 800) e livelli da Pedone a Gran Maestro del Borgo;
+     classifica con te, gli amici visti nella Casa e i bot.
+   - Premio in Starlight a fine partita (B.Eco.premioGioco('scacchi')).
+   Regole e bot in motore.js (B3.ScacchiMotore). Per ora Elo e classifica
+   restano sul telefono: con il server (fase 2) diventano di tutto il borgo.
+   ===================================================================== */
+(function () {
+  'use strict';
+  const B = window.B3, MOT = B.ScacchiMotore, ELO = B.ScacchiElo, G = window.Gioco;
+  if (!MOT || !ELO) return;
+  const Pos = MOT.Posizione, BOT = MOT.BOT, PI = Math.PI;
+  const esc = t => String(t == null ? '' : t).replace(/[&<>"']/g, c => '&#' + c.charCodeAt(0) + ';');
+  const num = (v, d) => (typeof v === 'number' && isFinite(v) ? v : d);
+  const ora = () => performance.now();
+  const PREMI_GIORNO = 8;           // partite premiate al giorno (il premio lo decide B.ECONOMIA)
+  const MIN_SEMIMOSSE = 10;          // sotto, niente premio in Starlight (l'Elo conta lo stesso): niente partite lampo per fare Starlight
+
+  /* ---------- tempi di gioco ---------- */
+  const TEMPI = {
+    libero: { nome: 'Senza tempo', m: 0, inc: 0 },
+    '15+10': { nome: '15 min + 10 s', m: 15, inc: 10 },
+    '10': { nome: '10 minuti', m: 10, inc: 0 },
+    '5': { nome: '5 minuti', m: 5, inc: 0 },
+    '3+2': { nome: '3 min + 2 s', m: 3, inc: 2 }
+  };
+  const ORDINE_TEMPI = ['libero', '15+10', '10', '5', '3+2'];   // (le chiavi numeriche di un oggetto non tengono l'ordine)
+  const TEMA = {
+    verde: { nome: 'Verde', chiaro: '#ebecd0', scuro: '#739552', selC: '#f5f682', selS: '#b9ca43', coord: ['#739552', '#ebecd0'] },
+    legno: { nome: 'Legno', chiaro: '#f0d9b5', scuro: '#b58863', selC: '#f7ec74', selS: '#dac34b', coord: ['#b58863', '#f0d9b5'] },
+    borgo: { nome: 'Borgo', chiaro: '#e8dcc2', scuro: '#7a62c8', selC: '#f2c76e', selS: '#d8a548', coord: ['#7a62c8', '#e8dcc2'] }
+  };
+
+  /* ---------- salvataggio ---------- */
+  const CHIAVE = 'theborg.scacchi.v1';
+  const SAV = { elo: ELO.iniziale, n: 0, v: 0, p: 0, s: 0, picco: ELO.iniziale, battuti: {}, storico: [], amici: {}, tema: 'verde', tempo: '10', colore: 'caso', premi: { g: '', n: 0 } };
+  try { const x = JSON.parse(localStorage.getItem(CHIAVE) || 'null'); if (x && typeof x === 'object') Object.keys(SAV).forEach(k => { if (x[k] !== undefined && typeof x[k] === typeof SAV[k]) SAV[k] = x[k]; }); } catch (e) { }
+  if (!TEMA[SAV.tema]) SAV.tema = 'verde'; if (!TEMPI[SAV.tempo]) SAV.tempo = '10';
+  const salva = () => { try { localStorage.setItem(CHIAVE, JSON.stringify(SAV)); } catch (e) { } };
+  const oggi = () => { const d = new Date(); return d.getFullYear() + '-' + (d.getMonth() + 1) + '-' + d.getDate(); };
+  const mioNick = () => (G && G.stato.giocatore && G.stato.giocatore.nick) || 'Tu';
+  const mioLook = () => (G && G.stato.giocatore && G.stato.giocatore.look) || null;
+  const gen = (m, f) => (B.gen ? B.gen(m, f) : m);
+
+  /* =====================================================================
+     I PEZZI: disegni nostri (tracciati SVG su una casella di 100 x 100),
+     gli stessi per la scacchiera (canvas) e per le icone (SVG nell'HTML).
+     ===================================================================== */
+  const cerchio = (x, y, r) => `M${x - r} ${y}a${r} ${r} 0 1 0 ${2 * r} 0a${r} ${r} 0 1 0 ${-2 * r} 0Z`;
+  const BASE = 'M27 91h46a3 3 0 0 0 3-3v-3a4 4 0 0 0-4-4H28a4 4 0 0 0-4 4v3a3 3 0 0 0 3 3Z';
+  const DISEGNI = {
+    1: [['c', 'M36 81h28l-3-9c-2-6-4-13-4-20h4v-6H39v6h4c0 7-2 14-4 20Z'], ['c', cerchio(50, 32, 13)], ['c', BASE]],
+    2: [['c', 'M30 81h42c1-16-1-30-7-41-6-11-14-17-25-18l-2-9-6 9c-6 4-10 10-12 18l-4 12c0 5 5 7 10 4l8-5c4 1 5 4 3 8-5 7-8 13-7 22Z'], ['d', cerchio(39, 35, 3.4)], ['l', 'M29 51l-4 2'], ['c', BASE]],
+    3: [['c', 'M38 81h24l-3-13c9-5 13-13 11-23-2-9-9-17-20-24-11 7-18 15-20 24-2 10 2 18 11 23Z'], ['c', cerchio(50, 14, 5.5)], ['l', 'M56 31L46 45'], ['c', 'M36 70h28v5H36Z'], ['c', BASE]],
+    4: [['c', 'M32 81h36l-4-34h-28Z'], ['c', 'M29 47h42v-5l5-5V19h-9v7h-7v-7h-8v7h-7v-7h-9v18l5 5Z'], ['l', 'M36 47h28'], ['c', BASE]],
+    5: [['c', 'M33 81h34l3-13 9-38-15 21-5-26-9 25-9-25-5 26-15-21 9 38Z'], ['c', cerchio(21, 28, 4.5)], ['c', cerchio(37, 22, 4.5)], ['c', cerchio(50, 20, 4.5)], ['c', cerchio(63, 22, 4.5)], ['c', cerchio(79, 28, 4.5)], ['l', 'M32 69h36'], ['c', BASE]],
+    6: [['c', 'M33 81h34l2-13c10-6 14-14 10-21-4-7-13-8-20-3-3 2-6 6-9 11-3-5-6-9-9-11-7-5-16-4-20 3-4 7 0 15 10 21Z'], ['c', 'M47 8h6v7h7v6h-7v12h-6V21h-7v-6h7Z'], ['l', 'M32 69h36'], ['c', BASE]]
+  };
+  const COL = { b: { corpo: '#f7f1e3', bordo: '#2a1a2e', dett: '#2a1a2e' }, n: { corpo: '#2f2838', bordo: '#0d0911', dett: '#e8dcc2' } };
+  function svgPezzo(p, px) {
+    const c = p > 0 ? COL.b : COL.n;
+    return '<svg viewBox="0 0 100 100" width="' + px + '" height="' + px + '" aria-hidden="true">' + DISEGNI[Math.abs(p)].map(([t, d]) =>
+      t === 'c' ? `<path d="${d}" fill="${c.corpo}" stroke="${c.bordo}" stroke-width="4.5" stroke-linejoin="round"/>` : t === 'd' ? `<path d="${d}" fill="${c.dett}"/>` : `<path d="${d}" fill="none" stroke="${c.dett}" stroke-width="4" stroke-linecap="round"/>`).join('') + '</svg>';
+  }
+  let PATH = null;
+  function disegnaPezzo(x, p, cx, cy, q) {
+    if (!PATH) { PATH = {}; Object.keys(DISEGNI).forEach(k => { try { PATH[k] = DISEGNI[k].map(([t, d]) => [t, new Path2D(d)]); } catch (e) { PATH[k] = []; } }); }
+    const c = p > 0 ? COL.b : COL.n, k = q / 100;
+    x.save(); x.translate(cx - q / 2, cy - q / 2); x.scale(k, k); x.lineJoin = 'round'; x.lineCap = 'round';
+    x.shadowColor = 'rgba(0,0,0,.28)'; x.shadowBlur = 5; x.shadowOffsetY = 2;
+    PATH[Math.abs(p)].forEach(([t, pa]) => {
+      if (t === 'c') { x.fillStyle = c.corpo; x.fill(pa); x.shadowColor = 'transparent'; x.strokeStyle = c.bordo; x.lineWidth = 4.5; x.stroke(pa); }
+      else if (t === 'd') { x.fillStyle = c.dett; x.fill(pa); }
+      else { x.strokeStyle = c.dett; x.lineWidth = 4; x.stroke(pa); }
+    });
+    x.restore();
+  }
+  // notazione italiana: R re, D donna, T torre, A alfiere, C cavallo
+  const IT = { K: 'R', Q: 'D', R: 'T', B: 'A', N: 'C' };
+  const sanIt = s => String(s).replace(/[KQRBN]/g, c => IT[c]);
+  const MOTIVI = { matto: 'Scacco matto', stallo: 'Stallo', materiale: 'Pezzi insufficienti per dare matto', cinquanta: 'Regola delle 50 mosse', ripetizione: 'Tre volte la stessa posizione', abbandono: 'Abbandono', tempo: 'Tempo scaduto', accordo: 'Patta d\'accordo', uscito: 'Partita lasciata', tempoPatta: 'Tempo scaduto, ma l\'avversario non può dare matto' };
+
+  /* =====================================================================
+     IL BOT IN UN WORKER (lo schermo resta fluido); se non si puo', pensa qui
+     ===================================================================== */
+  let worker = null, workerOk = null, nRich = 0; const attese = new Map();
+  function creaWorker() {
+    try {
+      const src = 'var M=(' + MOT.sorgente + ')();onmessage=function(e){var d=e.data,u=null;try{u=M.mossaBot(d.fen,d.mosse,d.liv,d.seme)}catch(x){}postMessage({n:d.n,u:u})};';
+      worker = new Worker(URL.createObjectURL(new Blob([src], { type: 'text/javascript' })));
+      worker.onmessage = e => { const f = attese.get(e.data.n); if (f) { attese.delete(e.data.n); f(e.data.u); } };
+      worker.onerror = () => { workerOk = false; worker = null; const l = [...attese.values()]; attese.clear(); l.forEach(f => f(undefined)); };
+      workerOk = true;
+    } catch (e) { workerOk = false; worker = null; }
+  }
+  function chiediBot(mosse, liv) {
+    const seme = (Math.random() * 1e9) | 0, qui = () => MOT.mossaBot(MOT.INIZIO, mosse, liv, seme);
+    return new Promise(res => {
+      if (workerOk !== false && !worker) creaWorker();
+      if (!worker) { setTimeout(() => res(qui()), 30); return; }
+      const n = ++nRich; let fatto = false;
+      const fine = u => { if (fatto) return; fatto = true; res(u === undefined ? qui() : u); };
+      attese.set(n, fine);
+      setTimeout(() => { if (!fatto) { attese.delete(n); fine(undefined); } }, BOT[liv].ms + 8000);   // il Worker non risponde: pensa qui
+      worker.postMessage({ n, fen: MOT.INIZIO, mosse, liv, seme });
+    });
+  }
+
+  /* =====================================================================
+     LA PARTITA
+     P = { tipo 'bot'|'amico', col (1 io bianco, -1 io nero), pos, mosse[uci], san[], tc, ore [bianco, nero] in ms,
+           tMossa (quando e' partito l'orologio), fine, avv { nome, elo, ico, look }, liv (bot), id }
+     ===================================================================== */
+  let P = null, vista = null, sel = null, trascina = null, anim = null, girata = false, promo = null, nPartita = 0;
+  function nuovaPartita(o) {
+    const tc = TEMPI[o.tempo] || TEMPI.libero;
+    P = { id: ++nPartita, tipo: o.tipo, col: o.col, pos: new Pos(), mosse: [], san: [], tc, tcId: o.tempo, ore: [tc.m * 60000, tc.m * 60000], tMossa: ora(), fine: null, avv: o.avv, liv: o.liv, eloPrima: SAV.elo, inizio: Date.now() };
+    vista = null; sel = null; trascina = null; anim = null; promo = null; girata = false;
+    mostra('partita'); disegnaTutto();
+    if (P.tipo === 'bot' && P.col === -1) setTimeout(turnoBot, 600);
+  }
+  const mioTurno = () => P && !P.fine && P.pos.turno === P.col && vista === null && !(P.tipo === 'bot' && P.pensa);
+  const ultimaMossa = () => { if (!P) return null; const n = vista === null ? P.mosse.length : vista; if (!n) return null; const u = P.mosse[n - 1]; return { da: MOT.daNome(u.slice(0, 2)), a: MOT.daNome(u.slice(2, 4)) }; };
+  function posVista() { if (!P) return new Pos(); if (vista === null) return P.pos; const q = new Pos(); P.mosse.slice(0, vista).forEach(u => q.giocaUci(u)); return q; }
+  // orologio di un lato in questo momento
+  function orologio(lato) {
+    if (!P || !P.tc.m) return null;
+    const i = lato > 0 ? 0 : 1; let t = P.ore[i];
+    if (!P.fine && P.pos.turno === lato) t -= ora() - P.tMossa;
+    return Math.max(0, t);
+  }
+  function eseguiMossa(u, daRete) {
+    if (!P || P.fine) return false;
+    const lato = P.pos.turno, m = P.pos.trovaUci(u); if (!m) return false;
+    // orologio: tolgo il tempo usato e aggiungo l'incremento
+    if (P.tc.m) { const i = lato > 0 ? 0 : 1; if (!daRete || typeof daRete !== 'object') P.ore[i] = Math.max(0, P.ore[i] - (ora() - P.tMossa)) + P.tc.inc * 1000; else P.ore[i] = Math.max(0, daRete.t); }
+    const san = P.pos.san(m); P.pos.fai(m); P.mosse.push(MOT.uci(m)); P.san.push(san); P.tMossa = ora();
+    const xy = casellaXY(m.da), xy2 = casellaXY(m.a);
+    anim = { p: m.pr || m.pz, da: m.da, a: m.a, x0: xy[0], y0: xy[1], x1: xy2[0], y1: xy2[1], t0: ora(), dur: 140 };
+    if (m.sp === 2) { const r0 = lato > 0 ? 0 : 0x70, corta = (m.a & 7) === 6; anim.torre = { p: lato * 4, a: corta ? r0 + 5 : r0 + 3, x0: casellaXY(corta ? r0 + 7 : r0)[0], x1: casellaXY(corta ? r0 + 5 : r0 + 3)[0], y: xy2[1] }; }
+    vista = null; sel = null;
+    suono(san.includes('#') || san.includes('+') ? 'scacco' : m.cat ? 'presa' : m.sp === 2 ? 'arrocco' : 'mossa');
+    const st = P.pos.stato();
+    if (st.fine) chiudiPartita(st.vince, st.motivo);
+    disegnaTutto();
+    if (!P.fine && P.tipo === 'bot' && P.pos.turno !== P.col) setTimeout(turnoBot, 60);
+    return true;
+  }
+  async function turnoBot() {
+    if (!P || P.fine || P.tipo !== 'bot' || P.pos.turno === P.col || P.pensa) return;
+    const id = P.id, t0 = ora(); P.pensa = true; disegnaGiocatori();
+    let u = await chiediBot(P.mosse.slice(), P.liv);
+    // un attimo di "pensiero" anche per i bot veloci, come una persona
+    const minimo = 350 + Math.random() * 650 + (P.mosse.length < 6 ? 0 : 250); const resta = minimo - (ora() - t0);
+    if (resta > 0) await new Promise(r => setTimeout(r, resta));
+    if (!P || P.id !== id || P.fine) return;
+    P.pensa = false;
+    if (!u || !P.pos.trovaUci(u)) { const l = P.pos.mosse(); u = l.length ? MOT.uci(l[0]) : null; }
+    if (u) eseguiMossa(u);
+  }
+  // vince: 1 bianco, -1 nero, 0 patta
+  function chiudiPartita(vince, motivo) {
+    if (!P || P.fine) return;
+    if (P.tc.m) { const i = P.pos.turno > 0 ? 0 : 1; P.ore[i] = Math.max(0, P.ore[i] - (ora() - P.tMossa)); }
+    P.fine = { vince, motivo };
+    const ris = vince === 0 ? 0.5 : vince === P.col ? 1 : 0;
+    // per l'Elo conta ogni partita in cui hanno mosso tutti e due (chi abbandona presto perde lo stesso, come su chess.com);
+    // il premio solo con abbastanza mosse, cosi' non si fanno Starlight abbandonando subito
+    const vera = P.mosse.length >= 2, premiata = P.mosse.length >= MIN_SEMIMOSSE || (motivo === 'matto' && P.mosse.length >= 4);
+    let delta = 0, premio = 0;
+    if (vera) {
+      const avvElo = num(P.avv.elo, ELO.iniziale);
+      delta = ELO.variazione(SAV.elo, avvElo, ris, SAV.n);
+      const livPrima = ELO.livello(SAV.elo).i;
+      SAV.elo += delta; SAV.n++; SAV.picco = Math.max(SAV.picco, SAV.elo);
+      P.saliLiv = ELO.livello(SAV.elo).i > livPrima; P.scendiLiv = ELO.livello(SAV.elo).i < livPrima;
+      if (ris === 1) SAV.v++; else if (ris === 0) SAV.p++; else SAV.s++;
+      if (P.tipo === 'bot' && ris === 1) { P.primaVolta = !SAV.battuti[BOT[P.liv].id]; SAV.battuti[BOT[P.liv].id] = 1; }
+      if (premiata && B.Eco && B.Eco.premioGioco) {
+        if (SAV.premi.g !== oggi()) SAV.premi = { g: oggi(), n: 0 };
+        if (SAV.premi.n < PREMI_GIORNO) { SAV.premi.n++; premio = B.Eco.premioGioco('scacchi', ris === 1 ? (P.primaVolta ? 1.6 : 1.4) : ris === 0.5 ? 0.9 : 0.5); }
+      }
+    }
+    P.delta = delta; P.premio = premio; P.vera = vera;
+    if (premiata && B.Miss && B.Miss.ev) { B.Miss.ev('scacchi'); B.Miss.ev('gioco'); }
+    SAV.storico.unshift({ d: Date.now(), tipo: P.tipo, avv: P.avv.nome, ico: P.avv.ico || '', avvElo: num(P.avv.elo, 0), col: P.col, ris, motivo, delta, elo: SAV.elo, tc: P.tcId, mosse: P.mosse.slice(0, 400), vera });
+    SAV.storico = SAV.storico.slice(0, 30);
+    salva();
+    suono(ris === 1 ? 'vittoria' : ris === 0 ? 'sconfitta' : 'patta');
+    setTimeout(() => { if (P && P.fine) finePopup(); }, P.fine.motivo === 'abbandono' && ris === 0 ? 100 : 700);
+    aggiornaTabellone();
+  }
+
+  /* ---------- suoni (Web Audio del borgo) ---------- */
+  function suono(t) {
+    const A = B.Audio; if (!A) return;
+    try {
+      if (t === 'vittoria' || t === 'sconfitta') { A.sfx(t); return; }
+      if (t === 'patta') { A.sfx('trovato', 0.6); return; }
+      if (t === 'presa') { A.sfx('colpo', 0.9); return; }
+      if (t === 'scacco') { A.sfx('pop', 1); setTimeout(() => A.bip && A.bip(true), 60); return; }
+      A.sfx('pop', t === 'arrocco' ? 0.9 : 0.7);
+    } catch (e) { }
+  }
+
+  /* =====================================================================
+     INTERFACCIA
+     ===================================================================== */
+  const css = `
+body.sc-attivo #barra-alto,body.sc-attivo #controlli,body.sc-attivo #btn-contesto,body.sc-attivo #chat,body.sc-attivo #minimappa-box,body.sc-attivo #joy,body.sc-attivo #tabbar,body.sc-attivo #hud{display:none!important}
+#sc{--fondo:#262421;--fondo2:#302e2b;--fondo3:#3c3a37;--linea:#4b4844;--testo:#f3f1ec;--tenue:#a9a6a0;--verde:#81b64c;--verde2:#5d8a35;--oro:#f2c76e;--rosso:#e05a4f;
+  position:absolute;inset:0;z-index:56;display:none;flex-direction:column;background:var(--fondo);color:var(--testo);font-family:system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;-webkit-user-select:none;user-select:none;overflow:hidden;touch-action:manipulation}
+#sc.on{display:flex}
+#sc *{box-sizing:border-box}
+#sc button{font-family:inherit;font-weight:800;font-size:14px;cursor:pointer;color:var(--testo);background:var(--fondo3);border:0;border-radius:10px;padding:10px 14px;line-height:1.15}
+#sc button:active{transform:translateY(1px)}
+#sc button.pri{background:var(--verde);color:#fff;box-shadow:0 4px 0 var(--verde2)}
+#sc button.pri:active{box-shadow:0 2px 0 var(--verde2);transform:translateY(2px)}
+#sc button:disabled{opacity:.4;cursor:default}
+#sc .bar{flex:none;display:flex;align-items:center;gap:8px;padding:calc(env(safe-area-inset-top,0px) + 8px) 12px 8px;background:#1f1e1c;border-bottom:1px solid var(--linea)}
+#sc .bar h1{margin:0;font-size:18px;font-weight:800;flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#sc .bar h1 i{font-style:normal;color:var(--verde)}
+#sc .bar button{padding:8px 12px;font-size:13px}
+#sc .pag{flex:1;min-height:0;display:none;overflow:auto;-webkit-overflow-scrolling:touch}
+#sc .pag.on{display:flex}
+#sc .col{flex-direction:column;align-items:center;padding:14px 14px calc(env(safe-area-inset-bottom,0px) + 18px);gap:12px}
+#sc .col>*{width:100%;max-width:520px}
+#sc h2{margin:6px 0 0;font-size:16px;color:var(--tenue);font-weight:700;text-transform:uppercase;letter-spacing:.06em}
+#sc .card{background:var(--fondo2);border-radius:14px;padding:14px;border:1px solid var(--linea)}
+#sc .prof{display:flex;gap:14px;align-items:center}
+#sc .prof canvas{width:76px;height:76px;border-radius:12px;background:#3a3631;flex:none}
+#sc .prof .n{font-size:19px;font-weight:800}
+#sc .elo{font-size:30px;font-weight:900;line-height:1}
+#sc .elo small{font-size:13px;font-weight:700;color:var(--tenue);margin-left:6px}
+#sc .liv{display:inline-flex;align-items:center;gap:6px;background:rgba(129,182,76,.18);color:#b9e08f;border-radius:99px;padding:3px 10px;font-size:13px;font-weight:800;margin-top:6px}
+#sc .barra{height:8px;border-radius:9px;background:var(--fondo3);overflow:hidden;margin-top:8px}
+#sc .barra i{display:block;height:100%;background:var(--verde);border-radius:9px}
+#sc .mini{font-size:12px;color:var(--tenue);margin-top:5px}
+#sc .stat{display:flex;gap:8px;margin-top:12px}
+#sc .stat div{flex:1;background:var(--fondo3);border-radius:10px;padding:8px;text-align:center;font-size:12px;color:var(--tenue)}
+#sc .stat b{display:block;font-size:18px;color:var(--testo)}
+#sc .grande{display:flex;align-items:center;gap:14px;width:100%;text-align:left;padding:16px;font-size:17px;border-radius:14px}
+#sc .grande .ico{font-size:30px;width:40px;text-align:center}
+#sc .grande small{display:block;font-weight:600;font-size:12.5px;opacity:.85;margin-top:3px}
+#sc .scelte{display:flex;flex-wrap:wrap;gap:6px}
+#sc .scelte button{flex:1 1 auto;padding:9px 10px;font-size:13px;background:var(--fondo3);box-shadow:none;border:2px solid transparent}
+#sc .scelte button.on{border-color:var(--verde);background:rgba(129,182,76,.16)}
+#sc .bot{display:flex;gap:12px;align-items:center;padding:12px;border-radius:14px;background:var(--fondo2);border:2px solid var(--linea);cursor:pointer}
+#sc .bot.on{border-color:var(--verde);background:rgba(129,182,76,.12)}
+#sc .bot .ico{font-size:34px;width:48px;height:48px;display:grid;place-items:center;background:var(--fondo3);border-radius:12px;flex:none}
+#sc .bot .t{flex:1;min-width:0}
+#sc .bot .t b{font-size:15.5px}
+#sc .bot .t p{margin:3px 0 0;font-size:12.5px;color:var(--tenue);line-height:1.3}
+#sc .bot .e{font-weight:900;font-size:15px;text-align:right}
+#sc .bot .e small{display:block;font-size:11px;color:var(--verde);font-weight:800}
+#sc .fondo-fisso{position:sticky;bottom:0;padding-top:8px;background:linear-gradient(transparent,var(--fondo) 30%)}
+#sc .fondo-fisso button{width:100%;padding:15px;font-size:17px}
+#sc .riga{display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:12px;background:var(--fondo2)}
+#sc .riga .pos{width:26px;text-align:center;font-weight:900;color:var(--tenue)}
+#sc .riga .nm{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-weight:700}
+#sc .riga .nm small{display:block;font-weight:600;color:var(--tenue);font-size:11.5px}
+#sc .riga .el{font-weight:900}
+#sc .riga.io{background:rgba(129,182,76,.18);outline:2px solid var(--verde)}
+#sc .riga .ris{width:30px;height:30px;border-radius:8px;display:grid;place-items:center;font-weight:900;font-size:14px;flex:none}
+#sc .ris.v{background:var(--verde);color:#fff} #sc .ris.p{background:#8a8780;color:#fff} #sc .ris.s{background:var(--rosso);color:#fff}
+#sc .vuoto{color:var(--tenue);font-size:14px;text-align:center;padding:18px 8px;line-height:1.45}
+/* partita */
+#sc .gioco{flex:1;min-height:0;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:6px 8px calc(env(safe-area-inset-bottom,0px) + 6px);gap:6px}
+#sc .gioco .lato{display:flex;flex-direction:column;gap:6px;width:var(--lato);min-width:0}
+#sc.oriz .gioco{display:grid;grid-template-columns:var(--lato) minmax(250px,360px);grid-template-rows:auto 1fr;column-gap:16px;row-gap:8px;align-content:center;justify-content:center}
+#sc.oriz .tav{grid-column:1;grid-row:1/3}
+#sc.oriz .gioco .lato{width:auto;min-width:0}
+#sc.oriz .lato.sopra{grid-column:2;grid-row:1}
+#sc.oriz .lato.sotto{grid-column:2;grid-row:2;justify-content:flex-end}
+#sc .gc{display:flex;align-items:center;gap:8px;width:var(--lato);max-width:100%;min-height:44px}
+#sc.oriz .gc{width:100%}
+#sc .gc .av{width:40px;height:40px;border-radius:8px;background:#3a3631;display:grid;place-items:center;font-size:24px;flex:none;overflow:hidden}
+#sc .gc .av canvas{width:40px;height:40px}
+#sc .gc .chi{flex:1;min-width:0}
+#sc .gc .chi b{font-size:14.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;display:block}
+#sc .gc .chi b small{color:var(--tenue);font-weight:700;margin-left:4px}
+#sc .gc .prese{display:flex;align-items:center;min-height:18px;margin-top:1px;font-size:12px;color:var(--tenue);font-weight:800}
+#sc .gc .prese svg{margin-right:-6px}
+#sc .gc .prese em{font-style:normal;margin-left:10px}
+#sc .gc .ora{font-variant-numeric:tabular-nums;font-size:22px;font-weight:900;background:#989795;color:#2b2a28;border-radius:8px;padding:5px 10px;min-width:92px;text-align:right}
+#sc .gc .ora.va{background:#fff;color:#1d1c1a}
+#sc .gc .ora.poco{background:var(--rosso);color:#fff}
+#sc .gc .ora[hidden]{display:none}
+#sc .gc .pensa{font-size:12px;color:var(--verde);font-weight:800}
+#sc .tav{position:relative;width:var(--lato);height:var(--lato);flex:none;border-radius:4px;overflow:hidden;box-shadow:0 6px 20px rgba(0,0,0,.45);touch-action:none}
+#sc .tav canvas{width:100%;height:100%;display:block}
+#sc .promo{position:absolute;inset:0;background:rgba(0,0,0,.55);display:none;align-items:center;justify-content:center;gap:6px}
+#sc .promo.on{display:flex}
+#sc .promo button{background:#f3f1ec;border-radius:12px;padding:4px;box-shadow:0 4px 12px rgba(0,0,0,.5)}
+#sc .mosse{display:flex;gap:2px;overflow-x:auto;width:var(--lato);max-width:100%;padding:5px 4px;background:var(--fondo2);border-radius:10px;font-size:13.5px;scrollbar-width:none;min-height:32px;align-items:center}
+#sc.oriz .mosse{flex-wrap:wrap;overflow-y:auto;width:100%;max-height:30vh;align-content:flex-start}
+#sc .mosse::-webkit-scrollbar{display:none}
+#sc .mosse span{white-space:nowrap;padding:3px 5px;border-radius:6px;font-weight:700}
+#sc .mosse span.n{color:var(--tenue);font-weight:600;padding-right:1px}
+#sc .mosse span.m{cursor:pointer}
+#sc .mosse span.m.on{background:var(--fondo3);color:#fff}
+#sc .comandi{display:flex;gap:6px;width:var(--lato);max-width:100%}
+#sc.oriz .comandi{width:100%}
+#sc .comandi button{flex:1;height:44px;padding:0 6px;font-size:13px;background:var(--fondo2);display:flex;align-items:center;justify-content:center;gap:4px;white-space:nowrap}
+#sc .comandi button.ico{flex:0 0 46px;font-size:17px}
+#sc .finestra{position:absolute;inset:0;background:rgba(0,0,0,.6);display:none;align-items:center;justify-content:center;padding:18px;z-index:5}
+#sc .finestra.on{display:flex}
+#sc .finestra .box{background:var(--fondo2);border-radius:18px;padding:22px 20px 18px;width:min(360px,100%);text-align:center;box-shadow:0 18px 50px rgba(0,0,0,.6);border:1px solid var(--linea)}
+#sc .finestra h3{margin:0;font-size:26px;font-weight:900}
+#sc .finestra .perche{color:var(--tenue);font-size:14px;margin-top:4px}
+#sc .finestra .elo-box{margin:16px 0 4px;font-size:15px;font-weight:700}
+#sc .finestra .elo-box b{font-size:26px}
+#sc .finestra .su{color:var(--verde)} #sc .finestra .giu{color:var(--rosso)}
+#sc .finestra .liv-su{margin-top:10px;background:rgba(242,199,110,.16);color:var(--oro);border-radius:12px;padding:8px;font-weight:800}
+#sc .finestra .premio{margin-top:10px;font-weight:800;color:var(--oro)}
+#sc .finestra .bt{display:flex;flex-direction:column;gap:8px;margin-top:16px}
+#sc .finestra .bt button{width:100%;padding:13px}
+#sc .finestra p{line-height:1.45;font-size:14.5px;text-align:left;color:#ddd9d1}
+#sc .finestra p b{color:#fff}
+.sc-invito{position:fixed;left:50%;top:calc(env(safe-area-inset-top,0px) + 14px);transform:translateX(-50%);z-index:400;background:#262421;color:#f3f1ec;border:2px solid #81b64c;border-radius:16px;padding:12px 14px;box-shadow:0 12px 30px rgba(0,0,0,.5);font:700 14.5px system-ui,sans-serif;display:flex;flex-direction:column;gap:10px;width:min(340px,92vw)}
+.sc-invito div{display:flex;gap:8px}
+.sc-invito button{flex:1;border:0;border-radius:10px;padding:10px;font:800 14px system-ui,sans-serif;cursor:pointer;background:#3c3a37;color:#f3f1ec}
+.sc-invito button.pri{background:#81b64c;color:#fff}
+`;
+  let root = null, cv = null, ctx = null, LATO = 320, DPR = 1, pagina = 'home', scelta = { bot: 3, col: 'caso', tempo: 'libero' }, aperto = false;
+  const $ = (s, r) => (r || root).querySelector(s);
+  function nodo(tag, cls, html) { const n = document.createElement(tag); if (cls) n.className = cls; if (html !== undefined) n.innerHTML = html; return n; }
+  try { const x = JSON.parse(localStorage.getItem('theborg.scacchi.scelta') || 'null'); if (x) Object.assign(scelta, x); } catch (e) { }
+  if (!BOT[scelta.bot]) scelta.bot = 3; if (!TEMPI[scelta.tempo]) scelta.tempo = 'libero';
+  const salvaScelta = () => { try { localStorage.setItem('theborg.scacchi.scelta', JSON.stringify(scelta)); } catch (e) { } };
+
+  function costruisci() {
+    const st = document.createElement('style'); st.textContent = css; document.head.appendChild(st);
+    root = nodo('div'); root.id = 'sc';
+    root.innerHTML = `
+<header class="bar"><button data-b="indietro" aria-label="Indietro">←</button><h1>♞ <i>Scacchi</i> del Borgo</h1><button data-b="regole" aria-label="Regole">?</button></header>
+<section class="pag col" data-p="home"></section>
+<section class="pag col" data-p="bot"></section>
+<section class="pag col" data-p="amici"></section>
+<section class="pag col" data-p="classifica"></section>
+<section class="pag col" data-p="storico"></section>
+<section class="pag" data-p="partita">
+  <div class="gioco">
+    <div class="lato sopra"><div class="gc" data-g="su"></div></div>
+    <div class="tav"><canvas></canvas><div class="promo"></div></div>
+    <div class="lato sotto"><div class="gc" data-g="giu"></div><div class="mosse"></div><div class="comandi"></div></div>
+  </div>
+</section>
+<div class="finestra"><div class="box"></div></div>`;
+    (document.getElementById('app') || document.body).appendChild(root);
+    cv = $('.tav canvas'); ctx = cv.getContext('2d');
+    root.querySelectorAll('.bar [data-b]').forEach(b => b.addEventListener('click', () => barra(b.dataset.b)));
+    const t = $('.tav');
+    t.addEventListener('pointerdown', giu); t.addEventListener('pointermove', muovi); t.addEventListener('pointerup', su); t.addEventListener('pointercancel', () => { trascina = null; disegna(); });
+    window.addEventListener('resize', () => { if (aperto) misura(); });
+    window.addEventListener('keydown', e => { if (!aperto || pagina !== 'partita') return; if (e.key === 'ArrowLeft') sfoglia(-1); if (e.key === 'ArrowRight') sfoglia(1); });
+    ciclo();
+  }
+  function barra(b) {
+    if (b === 'regole') { regole(); return; }
+    if (pagina === 'partita') { esciPartita(); return; }
+    if (pagina === 'home') { SC.chiudi(); return; }
+    mostra('home');
+  }
+  function mostra(p) {
+    pagina = p; root.querySelectorAll('.pag').forEach(x => x.classList.toggle('on', x.dataset.p === p));
+    $('.bar h1').innerHTML = p === 'partita' && P ? esc(P.tipo === 'bot' ? 'Contro ' + P.avv.nome : 'Contro ' + P.avv.nome) : p === 'bot' ? 'Gioca contro un bot' : p === 'amici' ? 'Sfida un amico' : p === 'classifica' ? 'Classifica' : p === 'storico' ? 'Le tue partite' : '♞ <i>Scacchi</i> del Borgo';
+    if (p === 'home') home(); if (p === 'bot') listaBot(); if (p === 'amici') listaAmici(true); if (p === 'classifica') classifica(); if (p === 'storico') storico();
+    if (p === 'partita') { misura(); disegnaTutto(); }
+    const s = root.querySelector('.pag.on'); if (s) s.scrollTop = 0;
+  }
+  function finestra(html, bottoni) {
+    const f = $('.finestra'), bx = $('.box', f);
+    bx.innerHTML = html + '<div class="bt">' + bottoni.map((b, i) => `<button class="${i === 0 ? 'pri' : ''}" data-i="${i}">${b}</button>`).join('') + '</div>';
+    f.classList.add('on');
+    return new Promise(res => bx.querySelectorAll('[data-i]').forEach(b => b.addEventListener('click', () => { f.classList.remove('on'); res(+b.dataset.i); })));
+  }
+  const chiudiFinestra = () => { const f = root && $('.finestra'); if (f) f.classList.remove('on'); };
+  function regole() {
+    finestra(`<h3>Come si gioca</h3><p>Tocca un tuo pezzo e poi la casa dove vuoi muoverlo (oppure trascinalo). I puntini mostrano le mosse possibili.<br>
+<b>Vinci</b> dando scacco matto, se l'avversario abbandona o se finisce il suo tempo.<br>
+<b>Patta</b>: stallo, tre volte la stessa posizione, 50 mosse senza prese né pedoni mossi, pezzi che non bastano per il matto, oppure d'accordo.<br>
+<b>Punti Elo</b>: si parte da ${ELO.iniziale}. Battere chi è più forte vale di più. Nelle prime 20 partite il punteggio si muove più in fretta. Se esci o abbandoni dopo che avete mosso tutti e due, la partita è persa.<br>
+<b>Livelli</b>: ${ELO.LIVELLI.map(l => l.ico + ' ' + l.nome + ' (' + l.min + ')').join(', ')}.<br>
+Ogni partita di almeno ${MIN_SEMIMOSSE / 2} mosse a testa dà ${B.Eco ? B.Eco.gli : 'Starlight'}, di più se vinci (fino a ${PREMI_GIORNO} partite premiate al giorno).<br>
+Notazione: R re, D donna, T torre, A alfiere, C cavallo.</p>`, ['Ho capito']);
+  }
+
+  /* ---------- pagine del menu ---------- */
+  function cardProfilo() {
+    const L = ELO.livello(SAV.elo);
+    return `<div class="card"><div class="prof"><canvas width="152" height="152" data-foto></canvas><div style="flex:1;min-width:0">
+<div class="n">${esc(mioNick())}</div><div class="elo">${SAV.elo}<small>Elo${SAV.n < 20 ? ' · provvisorio' : ''}</small></div>
+<div class="liv">${L.ico} ${esc(L.nome)}</div></div></div>
+<div class="barra"><i style="width:${Math.round(L.quota * 100)}%"></i></div>
+<div class="mini">${L.prossimo ? 'Ancora ' + (L.prossimo.min - SAV.elo) + ' punti per diventare ' + L.prossimo.ico + ' ' + esc(L.prossimo.nome) : 'Hai raggiunto il livello più alto del borgo!'}</div>
+<div class="stat"><div><b>${SAV.v}</b>Vinte</div><div><b>${SAV.p}</b>Patte</div><div><b>${SAV.s}</b>Perse</div><div><b>${SAV.picco}</b>Record</div></div></div>`;
+  }
+  function fotoProfilo() { const c = root.querySelector('[data-foto]'), l = mioLook(); if (c && l && B.Foto) try { B.Foto.statica(c, l, 'busto'); } catch (e) { } }
+  function home() {
+    const s = $('[data-p="home"]'), inCorso = P && !P.fine;
+    s.innerHTML = cardProfilo() + (inCorso ? `<button class="pri grande" data-h="riprendi"><span class="ico">▶</span><span>Torna alla partita<small>contro ${esc(P.avv.nome)}</small></span></button>` : '') + `
+<button class="${inCorso ? '' : 'pri '}grande" data-h="bot"><span class="ico">🤖</span><span>Gioca contro un bot<small>9 avversari, da Pallino il Pulcino al Gran Maestro</small></span></button>
+<button class="grande" data-h="amici"><span class="ico">⚔️</span><span>Sfida un amico<small>${amiciQui().length ? amiciQui().length + ' ' + (amiciQui().length === 1 ? 'amico è' : 'amici sono') + ' nella Casa degli Scacchi' : 'Gli amici nella Casa degli Scacchi'}</small></span></button>
+<button class="grande" data-h="classifica"><span class="ico">🏆</span><span>Classifica<small>Tu, i tuoi amici e i bot</small></span></button>
+<button class="grande" data-h="storico"><span class="ico">📜</span><span>Le tue partite<small>Rivedi le ultime ${SAV.storico.length || ''} partite</small></span></button>
+<h2>Scacchiera</h2><div class="scelte" data-scelta="tema">${Object.keys(TEMA).map(k => `<button data-v="${k}" class="${SAV.tema === k ? 'on' : ''}">${TEMA[k].nome}</button>`).join('')}</div>`;
+    s.querySelectorAll('[data-h]').forEach(b => b.addEventListener('click', () => { const h = b.dataset.h; if (h === 'riprendi') mostra('partita'); else mostra(h); }));
+    s.querySelectorAll('[data-scelta="tema"] button').forEach(b => b.addEventListener('click', () => { SAV.tema = b.dataset.v; salva(); home(); }));
+    fotoProfilo();
+  }
+  function scelteHtml(chiave, voci, val) { return `<div class="scelte" data-scelta="${chiave}">${voci.map(v => `<button data-v="${v[0]}" class="${val === v[0] ? 'on' : ''}">${v[1]}</button>`).join('')}</div>`; }
+  function listaBot() {
+    const s = $('[data-p="bot"]');
+    s.innerHTML = `<h2>Scegli l'avversario</h2>` + BOT.map((b, i) => `<div class="bot${scelta.bot === i ? ' on' : ''}" data-i="${i}"><div class="ico">${b.ico}</div><div class="t"><b>${esc(b.nome)}</b><p>${esc(b.bio)}</p></div><div class="e">${b.elo}${SAV.battuti[b.id] ? '<small>✓ battuto</small>' : ''}</div></div>`).join('') +
+      `<h2>Giochi con</h2>` + scelteHtml('col', [['b', '⚪ Bianco'], ['caso', '🎲 A caso'], ['n', '⚫ Nero']], scelta.col) +
+      `<h2>Tempo</h2>` + scelteHtml('tempo', ORDINE_TEMPI.map(k => [k, TEMPI[k].nome]), scelta.tempo) +
+      `<div class="fondo-fisso"><button class="pri" data-gioca>Gioca contro ${esc(BOT[scelta.bot].nome)}</button></div>`;
+    s.querySelectorAll('.bot').forEach(d => d.addEventListener('click', () => { scelta.bot = +d.dataset.i; salvaScelta(); const y = s.scrollTop; listaBot(); s.scrollTop = y; }));
+    s.querySelectorAll('[data-scelta] button').forEach(b => b.addEventListener('click', () => { scelta[b.parentNode.dataset.scelta] = b.dataset.v; salvaScelta(); const y = s.scrollTop; listaBot(); s.scrollTop = y; }));
+    $('[data-gioca]', s).addEventListener('click', () => {
+      const b = BOT[scelta.bot], col = scelta.col === 'b' ? 1 : scelta.col === 'n' ? -1 : (Math.random() < 0.5 ? 1 : -1);
+      nuovaPartita({ tipo: 'bot', col, tempo: scelta.tempo, liv: scelta.bot, avv: { nome: b.nome, elo: b.elo, ico: b.ico } });
+    });
+  }
+  function classifica() {
+    const s = $('[data-p="classifica"]');
+    const righe = [{ nome: mioNick(), elo: SAV.elo, io: true, sub: ELO.livello(SAV.elo).ico + ' ' + ELO.livello(SAV.elo).nome }];
+    Object.values(SAV.amici).forEach(a => { if (a && a.nick && typeof a.elo === 'number') righe.push({ nome: a.nick, elo: a.elo, sub: '👥 ' + ELO.livello(a.elo).nome + (a.t ? ' · visto ' + quando(a.t) : '') }); });
+    BOT.forEach(b => righe.push({ nome: b.ico + ' ' + b.nome, elo: b.elo, sub: '🤖 Bot' + (SAV.battuti[b.id] ? ' · battuto ✓' : '') }));
+    righe.sort((a, b) => b.elo - a.elo || (a.io ? -1 : 1));
+    s.innerHTML = `<div class="card" style="font-size:13.5px;color:var(--tenue);line-height:1.45">La classifica del tuo telefono: tu, gli amici che hai incontrato nella Casa degli Scacchi e i bot. Quando arriverà il server del borgo ci sarà la classifica di tutti.</div>` +
+      righe.map((r, i) => `<div class="riga${r.io ? ' io' : ''}"><span class="pos">${i + 1}</span><span class="nm">${esc(r.nome)}<small>${esc(r.sub)}</small></span><span class="el">${r.elo}</span></div>`).join('');
+  }
+  function quando(t) { const d = (Date.now() - t) / 60000; return d < 2 ? 'ora' : d < 60 ? Math.round(d) + ' min fa' : d < 1440 ? Math.round(d / 60) + ' ore fa' : Math.round(d / 1440) + ' giorni fa'; }
+  function storico() {
+    const s = $('[data-p="storico"]');
+    if (!SAV.storico.length) { s.innerHTML = '<div class="vuoto">Non hai ancora giocato nessuna partita.<br>Inizia contro un bot!</div>'; return; }
+    s.innerHTML = SAV.storico.map((g, i) => `<div class="riga" data-i="${i}" style="cursor:pointer"><span class="ris ${g.ris === 1 ? 'v' : g.ris === 0 ? 's' : 'p'}">${g.ris === 1 ? 'V' : g.ris === 0 ? 'P' : '='}</span>
+<span class="nm">${esc((g.ico ? g.ico + ' ' : '') + g.avv)} <small>${g.col > 0 ? '⚪' : '⚫'} ${esc(MOTIVI[g.motivo] || '')} · ${Math.ceil(g.mosse.length / 2)} mosse · ${quando(g.d)}</small></span>
+<span class="el">${g.vera ? (g.delta >= 0 ? '+' : '') + g.delta : '–'}</span></div>`).join('');
+    s.querySelectorAll('[data-i]').forEach(r => r.addEventListener('click', () => rivedi(SAV.storico[+r.dataset.i])));
+  }
+  // rivedere una partita finita: stessa scacchiera, si sfoglia con le frecce
+  function rivedi(g) {
+    if (P && !P.fine) { finestra('<h3>Partita in corso</h3><div class="perche">Finisci prima la partita che stai giocando.</div>', ['Va bene']); return; }
+    const pos = new Pos(), san = [];
+    for (const u of g.mosse) { const r = pos.giocaUci(u); if (!r) break; san.push(r.san); }
+    P = { id: ++nPartita, tipo: 'rivedi', col: g.col, pos, mosse: g.mosse.slice(0, san.length), san, tc: TEMPI.libero, ore: [0, 0], tMossa: ora(), fine: { vince: g.ris === 0.5 ? 0 : g.ris === 1 ? g.col : -g.col, motivo: g.motivo }, avv: { nome: g.avv, elo: g.avvElo, ico: g.ico }, rivista: true };
+    vista = 0; sel = null; girata = false; mostra('partita');
+  }
+
+  /* ---------- la scacchiera ---------- */
+  function misura() {
+    if (!root) return;
+    const w = root.clientWidth || 360, h = (root.clientHeight || 640) - ($('.bar').offsetHeight || 50), oriz = w > h * 1.15;
+    root.classList.toggle('oriz', oriz);
+    LATO = oriz ? Math.floor(Math.min(h - 16, w - 360)) : Math.floor(Math.min(w - 16, h - 200));
+    LATO = Math.max(220, Math.min(LATO, 760));
+    root.style.setProperty('--lato', LATO + 'px');
+    DPR = Math.min(2.5, window.devicePixelRatio || 1);
+    cv.width = Math.round(LATO * DPR); cv.height = Math.round(LATO * DPR);
+    disegna();
+  }
+  const capovolta = () => (P && P.col === -1) !== girata;
+  function casellaXY(s) { const f = s & 7, r = s >> 4, q = LATO / 8, fl = capovolta(); return [((fl ? 7 - f : f) + 0.5) * q, ((fl ? r : 7 - r) + 0.5) * q]; }
+  function casellaDa(x, y) { const q = LATO / 8; let f = Math.floor(x / q), r = Math.floor(y / q); if (f < 0 || f > 7 || r < 0 || r > 7) return -1; if (capovolta()) { f = 7 - f; } else { r = 7 - r; } return r * 16 + f; }
+  function puntoTav(e) {
+    const r = cv.getBoundingClientRect(), o = B.pt ? B.pt(r.left, r.top) : [r.left, r.top], o2 = B.pt ? B.pt(r.right, r.bottom) : [r.right, r.bottom];
+    const x0 = Math.min(o[0], o2[0]), y0 = Math.min(o[1], o2[1]), w = Math.abs(o2[0] - o[0]) || 1, h = Math.abs(o2[1] - o[1]) || 1, p = B.ptE ? B.ptE(e) : [e.clientX, e.clientY];
+    return [(p[0] - x0) / w * LATO, (p[1] - y0) / h * LATO];
+  }
+  function disegna() {
+    if (!ctx || pagina !== 'partita') return;
+    const x = ctx, q = LATO / 8, T = TEMA[SAV.tema], pos = posVista(), um = ultimaMossa(), fl = capovolta();
+    x.setTransform(DPR, 0, 0, DPR, 0, 0);
+    for (let r = 0; r < 8; r++) for (let f = 0; f < 8; f++) {
+      const s = r * 16 + f, [cx, cy] = casellaXY(s), chiara = (f + r) % 2 === 1;
+      let c = chiara ? T.chiaro : T.scuro;
+      if (um && (s === um.da || s === um.a)) c = chiara ? T.selC : T.selS;
+      if (sel === s) c = chiara ? T.selC : T.selS;
+      x.fillStyle = c; x.fillRect(cx - q / 2, cy - q / 2, q + 0.5, q + 0.5);
+    }
+    // coordinate (lettere in basso, numeri a sinistra)
+    x.font = '700 ' + Math.round(q * 0.2) + 'px system-ui,sans-serif';
+    for (let i = 0; i < 8; i++) {
+      const f = fl ? 7 - i : i, r = fl ? i : 7 - i;
+      x.fillStyle = (i + 0) % 2 === 0 ? T.coord[1] : T.coord[0]; x.textAlign = 'right'; x.textBaseline = 'bottom'; x.fillText('abcdefgh'[f], (i + 1) * q - 3, LATO - 2);
+      x.fillStyle = i % 2 === 0 ? T.coord[0] : T.coord[1]; x.textAlign = 'left'; x.textBaseline = 'top'; x.fillText(String(r + 1), 3, i * q + 2);
+    }
+    // re sotto scacco: alone rosso
+    if (pos.inScacco()) { const s = pos.re[pos.turno > 0 ? 0 : 1], [cx, cy] = casellaXY(s), g = x.createRadialGradient(cx, cy, q * 0.1, cx, cy, q * 0.62); g.addColorStop(0, 'rgba(255,40,30,.95)'); g.addColorStop(0.55, 'rgba(230,30,30,.55)'); g.addColorStop(1, 'rgba(230,30,30,0)'); x.fillStyle = g; x.fillRect(cx - q / 2, cy - q / 2, q, q); }
+    // pezzi
+    const tAnim = anim ? Math.min(1, (ora() - anim.t0) / anim.dur) : 1;
+    for (let s = 0; s < 128; s++) {
+      if (s & 0x88) { s += 7; continue; }
+      const p = pos.b[s]; if (!p) continue;
+      if (trascina && trascina.da === s && trascina.mosso) continue;
+      if (anim && tAnim < 1 && vista === null && (s === anim.a || (anim.torre && s === anim.torre.a))) continue;
+      const [cx, cy] = casellaXY(s); disegnaPezzo(x, p, cx, cy, q * 0.94);
+    }
+    // destinazioni possibili
+    if (sel !== null && sel >= 0) {
+      pos.mosse().filter(m => m.da === sel).forEach(m => {
+        const [cx, cy] = casellaXY(m.a); x.fillStyle = 'rgba(20,20,20,.2)';
+        if (pos.b[m.a] || m.sp === 1) { x.beginPath(); x.arc(cx, cy, q * 0.47, 0, 7); x.arc(cx, cy, q * 0.37, 0, 7, true); x.fill(); }
+        else { x.beginPath(); x.arc(cx, cy, q * 0.16, 0, 7); x.fill(); }
+      });
+    }
+    if (anim && tAnim < 1 && vista === null) {
+      const e = 1 - Math.pow(1 - tAnim, 3);
+      disegnaPezzo(x, anim.p, anim.x0 + (anim.x1 - anim.x0) * e, anim.y0 + (anim.y1 - anim.y0) * e, q * 0.94);
+      if (anim.torre) disegnaPezzo(x, anim.torre.p, anim.torre.x0 + (anim.torre.x1 - anim.torre.x0) * e, anim.torre.y, q * 0.94);
+    }
+    if (trascina && trascina.mosso) { const p = pos.b[trascina.da]; if (p) disegnaPezzo(x, p, trascina.x, trascina.y - q * 0.2, q * 1.1); }
+  }
+  function ciclo() {
+    requestAnimationFrame(ciclo);
+    if (!aperto || pagina !== 'partita' || !P) return;
+    if (anim) { disegna(); if (ora() - anim.t0 > anim.dur + 20) { anim = null; disegna(); } }
+    // orologi
+    if (P.tc.m && !P.fine) {
+      const lato = P.pos.turno, t = orologio(lato);
+      if (t <= 0) tempoScaduto(lato);
+      const k = Math.floor(t / 100); if (k !== P._k) { P._k = k; disegnaOre(); }
+    }
+  }
+  function tempoScaduto(lato) {
+    if (!P || P.fine) return;
+    if (P.tipo === 'amico' && lato !== P.col) return;   // il tempo dell'amico lo controlla il suo telefono (o la sua uscita)
+    // se chi resta non ha pezzi per dare matto e' patta (solo il re, o il re con un cavallo o un alfiere)
+    const avversario = -lato; let minori = 0, altri = 0;
+    for (let s = 0; s < 128; s++) { if (s & 0x88) { s += 7; continue; } const p = P.pos.b[s]; if (!p || (p > 0) !== (avversario > 0) || Math.abs(p) === 6) continue; if (Math.abs(p) === 2 || Math.abs(p) === 3) minori++; else altri++; }
+    const puo = altri > 0 || minori >= 2;
+    if (P.tc.m) P.ore[lato > 0 ? 0 : 1] = 0;
+    if (puo) chiudiPartita(avversario, 'tempo'); else chiudiPartita(0, 'tempoPatta');
+    disegnaTutto();
+  }
+  const fmt = ms => { if (ms == null) return ''; const s = ms / 1000; if (s < 10) return '0:0' + s.toFixed(1); const m = Math.floor(s / 60), r = Math.floor(s % 60); return m + ':' + String(r).padStart(2, '0'); };
+  function disegnaOre() {
+    if (!P) return;
+    [['su', -P.col], ['giu', P.col]].forEach(([k, lato]) => {
+      const el = root.querySelector('[data-g="' + k + '"] .ora'); if (!el) return;
+      if (!P.tc.m) { el.hidden = true; return; } el.hidden = false;
+      const t = orologio(lato); el.textContent = fmt(t);
+      el.classList.toggle('va', !P.fine && P.pos.turno === lato); el.classList.toggle('poco', t < 20000 && t < P.tc.m * 60000 * 0.15);
+    });
+  }
+  // pezzi mangiati e vantaggio di materiale
+  function prese(lato) {
+    const conta = { 1: 8, 2: 2, 3: 2, 4: 2, 5: 1 }, ci = { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 }, V = [0, 1, 3, 3, 5, 9];
+    const q = posVista(); let mat = 0;
+    for (let s = 0; s < 128; s++) { if (s & 0x88) { s += 7; continue; } const p = q.b[s]; if (!p || Math.abs(p) === 6) continue; if ((p > 0) !== (lato > 0)) ci[Math.abs(p)]++; mat += (p > 0 ? 1 : -1) * V[Math.abs(p)]; }
+    let html = '';
+    [1, 3, 2, 4, 5].forEach(t => { const n = Math.max(0, conta[t] - ci[t]); for (let i = 0; i < n; i++) html += svgPezzo(-lato * t, 18); });
+    const vant = mat * lato; if (vant > 0) html += '<em>+' + vant + '</em>';
+    return html;
+  }
+  function rigaGiocatore(k, lato) {
+    const el = root.querySelector('[data-g="' + k + '"]'); if (!el || !P) return;
+    const io = lato === P.col, nm = io ? mioNick() : P.avv.nome, elo = io ? (P.fine && P.vera ? SAV.elo : P.eloPrima) : P.avv.elo;
+    const av = io ? '<canvas width="80" height="80"></canvas>' : P.avv.look ? '<canvas width="80" height="80"></canvas>' : (P.avv.ico || '♟');
+    el.innerHTML = `<div class="av">${av}</div><div class="chi"><b>${esc(nm)}<small>(${elo || '?'})</small></b><div class="prese">${!io && P.pensa && !P.fine ? '<span class="pensa">sta pensando…</span>' : prese(lato)}</div></div><div class="ora"></div>`;
+    const c = el.querySelector('canvas'), look = io ? mioLook() : P.avv.look;
+    if (c && look && B.Foto) try { B.Foto.statica(c, look, 'testa'); } catch (e) { }
+  }
+  function disegnaGiocatori() { if (!P || !root) return; rigaGiocatore('su', -P.col); rigaGiocatore('giu', P.col); disegnaOre(); }
+  function disegnaMosse() {
+    const el = $('.mosse'); if (!P) { el.innerHTML = ''; return; }
+    let h = ''; const att = vista === null ? P.san.length : vista;
+    P.san.forEach((s, i) => { if (i % 2 === 0) h += '<span class="n">' + (i / 2 + 1) + '.</span>'; h += `<span class="m${i + 1 === att ? ' on' : ''}" data-i="${i + 1}">${esc(sanIt(s))}</span>`; });
+    if (P.fine) h += '<span class="n">' + (P.fine.vince === 0 ? '½-½' : P.fine.vince > 0 ? '1-0' : '0-1') + '</span>';
+    el.innerHTML = h || '<span class="n">Tocca un pezzo per iniziare</span>';
+    el.querySelectorAll('.m').forEach(m => m.addEventListener('click', () => { const i = +m.dataset.i; vista = i >= P.mosse.length && !P.rivista ? null : i; sel = null; disegnaTutto(); }));
+    const on = el.querySelector('.on'); if (on) on.scrollIntoView({ block: 'nearest', inline: 'center' }); else el.scrollLeft = el.scrollWidth;
+  }
+  function disegnaComandi() {
+    const el = $('.comandi'); if (!P) return;
+    const nav = '<button class="ico" data-c="inizio" aria-label="Inizio">⏮</button><button class="ico" data-c="prima" aria-label="Mossa prima">◀</button><button class="ico" data-c="dopo" aria-label="Mossa dopo">▶</button>';
+    if (P.rivista) el.innerHTML = nav + '<button class="ico" data-c="fine" aria-label="Fine">⏭</button><button class="ico" data-c="gira" aria-label="Gira la scacchiera">⟲</button>';
+    else if (P.fine) el.innerHTML = nav + '<button data-c="rivincita">Rivincita</button><button data-c="menu">Menu</button>';
+    else el.innerHTML = '<button data-c="abbandona">🏳 Abbandona</button><button data-c="patta">½ Patta</button>' + nav.replace('<button class="ico" data-c="inizio" aria-label="Inizio">⏮</button>', '') + '<button class="ico" data-c="gira" aria-label="Gira la scacchiera">⟲</button>';
+    el.querySelectorAll('[data-c]').forEach(b => b.addEventListener('click', () => comando(b.dataset.c)));
+  }
+  function disegnaTutto() { if (!root || pagina !== 'partita') return; disegnaGiocatori(); disegnaMosse(); disegnaComandi(); disegna(); }
+  function sfoglia(d) {
+    if (!P) return; const n = P.mosse.length; let v = vista === null ? n : vista; v = Math.max(0, Math.min(n, v + d));
+    vista = v === n && !P.rivista ? null : v; sel = null; anim = null; disegnaTutto();
+  }
+  function comando(c) {
+    if (c === 'gira') { girata = !girata; disegnaTutto(); return; }
+    if (c === 'prima') return sfoglia(-1); if (c === 'dopo') return sfoglia(1);
+    if (c === 'inizio') { vista = 0; sel = null; disegnaTutto(); return; }
+    if (c === 'fine') { vista = P.mosse.length; disegnaTutto(); return; }
+    if (c === 'menu') { mostra('home'); return; }
+    if (c === 'rivincita') { rivincita(); return; }
+    if (c === 'abbandona') {
+      if (!P || P.fine) return;
+      finestra('<h3>Abbandoni?</h3><div class="perche">La partita conta come persa.</div>', ['Sì, abbandono', 'Continua']).then(r => { if (r === 0 && P && !P.fine) { if (P.tipo === 'amico') ON.ab = 1; chiudiPartita(-P.col, 'abbandono'); disegnaTutto(); } });
+      return;
+    }
+    if (c === 'patta') {
+      if (!P || P.fine) return;
+      if (P.tipo === 'amico') { if (ON.ppMio) return; ON.ppMio = ++ON.nPp; G.emetti('toast', 'Hai proposto la patta a ' + P.avv.nome); return; }
+      // il bot accetta solo se la posizione e' pari o lui sta peggio, e dopo almeno 20 mosse
+      if (P.mosse.length < 40) { finestra('<h3>Patta rifiutata</h3><div class="perche">' + esc(P.avv.nome) + ' vuole giocare ancora un po\'.</div>', ['Va bene']); return; }
+      const r = MOT.cerca(P.pos.copia(), { tempo: 250, profondita: 3 }), perLui = r.valore || 0;
+      if (perLui <= 30) { chiudiPartita(0, 'accordo'); disegnaTutto(); }
+      else finestra('<h3>Patta rifiutata</h3><div class="perche">' + esc(P.avv.nome) + ' pensa di stare meglio.</div>', ['Va bene']);
+    }
+  }
+  function rivincita() {
+    if (!P) return;
+    if (P.tipo === 'bot') { nuovaPartita({ tipo: 'bot', col: -P.col, tempo: P.tcId, liv: P.liv, avv: P.avv }); return; }
+    if (P.tipo === 'amico' && ON) { const a = amici.get(ON.peer); if (a && fresco(a)) { sfida = { a: String(a.d.id), n: 1 + Math.floor(Math.random() * 1e9), tc: P.tcId, t: Date.now() }; G.emetti('toast', 'Rivincita chiesta a ' + P.avv.nome); mostra('amici'); return; } }
+    mostra('home');
+  }
+  function esciPartita() {
+    if (!P || P.fine) { mostra('home'); return; }
+    if (P.tipo === 'bot' && P.mosse.length < 2) { P = null; mostra('home'); return; }
+    finestra('<h3>Lasci la partita?</h3><div class="perche">Se esci, la partita conta come persa.</div>', ['Resta', 'Esci e abbandona']).then(r => { if (r === 1 && P && !P.fine) { if (P.tipo === 'amico') ON.ab = 1; chiudiPartita(-P.col, 'abbandono'); chiudiFinestra(); mostra('home'); } });
+  }
+  function finePopup() {
+    if (!P || !P.fine || P.rivista) return;
+    const f = P.fine, ris = f.vince === 0 ? 0.5 : f.vince === P.col ? 1 : 0;
+    const tit = ris === 1 ? '🏆 Hai vinto!' : ris === 0 ? 'Hai perso' : '½ Patta';
+    const L = ELO.livello(SAV.elo);
+    let h = `<h3>${tit}</h3><div class="perche">${esc(MOTIVI[f.motivo] || '')}${f.motivo === 'abbandono' ? (ris === 1 ? ': ' + esc(P.avv.nome) + ' si è arreso' : '') : ''}</div>`;
+    if (P.vera) h += `<div class="elo-box">Elo <b>${SAV.elo}</b> <span class="${P.delta >= 0 ? 'su' : 'giu'}">${P.delta >= 0 ? '+' : ''}${P.delta}</span></div>`;
+    else h += '<div class="elo-box" style="color:var(--tenue);font-size:13px">Partita annullata prima della prima mossa di tutti e due: non conta.</div>';
+    if (P.saliLiv) h += `<div class="liv-su">Nuovo livello: ${L.ico} ${esc(L.nome)}!</div>`;
+    if (P.primaVolta) h += `<div class="liv-su">Hai battuto ${esc(P.avv.nome)} per la prima volta!</div>`;
+    if (P.premio && B.Eco) h += `<div class="premio">+${B.Eco.fmt(P.premio)}</div>`;
+    finestra(h, ['Rivincita', 'Rivedi la partita', 'Menu']).then(r => { if (r === 0) rivincita(); else if (r === 2) mostra('home'); else { vista = P.mosse.length; disegnaTutto(); } });
+    disegnaTutto();
+  }
+
+  /* ---------- tocchi sulla scacchiera ---------- */
+  function puoMuovere(s) { if (!mioTurno() || s < 0) return false; const p = P.pos.b[s]; return p && (p > 0) === (P.col > 0); }
+  function giu(e) {
+    if (!P || pagina !== 'partita') return;
+    if (vista !== null && !P.rivista) { vista = null; sel = null; disegnaTutto(); return; }
+    const [x, y] = puntoTav(e), s = casellaDa(x, y); if (s < 0) return;
+    try { e.currentTarget.setPointerCapture(e.pointerId); } catch (er) { }
+    if (sel !== null && sel !== s && prova(sel, s)) return;
+    if (puoMuovere(s)) { const gia = sel === s; sel = s; trascina = { da: s, x, y, x0: x, y0: y, mosso: false, gia }; disegna(); return; }
+    sel = null; disegna();
+  }
+  function muovi(e) {
+    if (!trascina) return; const [x, y] = puntoTav(e);
+    trascina.x = x; trascina.y = y; if (!trascina.mosso && Math.hypot(x - trascina.x0, y - trascina.y0) > LATO / 40) trascina.mosso = true;
+    if (trascina.mosso) disegna();
+  }
+  function su(e) {
+    if (!trascina) return; const t = trascina; trascina = null;
+    const [x, y] = puntoTav(e), s = casellaDa(x, y);
+    if (t.mosso) { if (s !== t.da && prova(t.da, s, true)) return; }
+    else if (t.gia) sel = null;   // secondo tocco sullo stesso pezzo: lo lascio
+    disegna();
+  }
+  // prova a muovere da -> a (con la scelta della promozione se serve)
+  function prova(da, a, trascinato) {
+    if (!mioTurno()) return false;
+    const l = P.pos.mosse().filter(m => m.da === da && m.a === a); if (!l.length) return false;
+    if (l[0].pr) { scegliPromozione(l, trascinato); return true; }
+    if (trascinato) anim = null;
+    const u = MOT.uci(l[0]); eseguiMossa(u); if (trascinato) anim = null;
+    if (P && P.tipo === 'amico') inviaSubito();
+    return true;
+  }
+  function scegliPromozione(l, trascinato) {
+    const pr = $('.promo'); pr.innerHTML = '';
+    [5, 4, 3, 2].forEach(t => { const m = l.find(x => Math.abs(x.pr) === t); if (!m) return; const b = nodo('button', '', svgPezzo(P.col * t, Math.round(LATO / 5.5))); b.addEventListener('click', ev => { ev.stopPropagation(); pr.classList.remove('on'); eseguiMossa(MOT.uci(m)); if (trascinato) anim = null; if (P && P.tipo === 'amico') inviaSubito(); }); pr.appendChild(b); });
+    const no = nodo('button', '', '✕'); no.style.cssText = 'font-size:22px;width:44px;height:44px;color:#333'; no.addEventListener('click', ev => { ev.stopPropagation(); pr.classList.remove('on'); sel = null; disegna(); }); pr.appendChild(no);
+    pr.classList.add('on');
+  }
+
+  /* =====================================================================
+     ONLINE CON GLI AMICI (presenza, vedi src/online/amici.js)
+     Nella Casa degli Scacchi ognuno mette nella presenza il suo Elo; chi sfida
+     manda { sf: { a: id dell'amico, n, tc } }; l'amico accetta con { acc: n };
+     chi ha sfidato apre la partita (st 'gioco', con = id dell'amico, col = il suo colore).
+     Durante la partita ognuno manda tutte le mosse (mv) e il suo orologio (tr):
+     chi riceve una mossa nuova la controlla e la gioca. ab = abbandono,
+     pp = proposta di patta, ok = patta accettata, fi = fine vista da lui.
+     ===================================================================== */
+  const mioId = Math.random().toString(36).slice(2, 8), amici = new Map();
+  let ON = null, sfida = null, accetto = null, chiesta = 0, invito = null;
+  const fresco = a => ora() - a.t < 9000;
+  const inPartita = () => !!(P && !P.fine && !P.rivista);
+  const amiciQui = () => [...amici.values()].filter(a => fresco(a) && a.d && a.d.id);
+  function inviaSubito() { /* la presenza parte da sola al prossimo giro (amici.js): qui niente */ }
+  function rete() {
+    const base = { id: mioId, elo: SAV.elo, n: SAV.n };
+    if (ON && P && P.tipo === 'amico' && !(P.fine && (sfida || accetto))) {   // finita, con una nuova sfida in ballo: torno al menu
+      const io = P.col > 0 ? 0 : 1;
+      return Object.assign(base, { st: 'gioco', con: ON.id, g: ON.g, col: P.col, tc: P.tcId, mv: P.mosse.slice(-300), nm: P.mosse.length, tr: P.tc.m ? Math.round(P.ore[io]) : 0, ab: ON.ab ? ON.g : 0, pp: ON.ppMio || 0, ok: ON.okMio || 0, fi: P.fine ? [P.fine.vince, P.fine.motivo] : 0 });
+    }
+    if (sfida && Date.now() - sfida.t > 60000) sfida = null;   // nessuna risposta in un minuto
+    return Object.assign(base, { st: !aperto ? 'casa' : P && !P.fine && P.tipo === 'bot' ? 'bot' : 'menu', sf: sfida ? { a: sfida.a, n: sfida.n, tc: sfida.tc } : 0, acc: accetto ? accetto.n : 0 });
+  }
+  function amico(peer, nick, d, look) {
+    if (!d || typeof d !== 'object') { const a = amici.get(peer); if (a) a.t = 0; return; }
+    const a = amici.get(peer) || {}; a.nick = String(nick || 'Amico').slice(0, 20); a.d = d; a.t = ora(); a.peer = peer; if (look) a.look = look; amici.set(peer, a);
+    // per la classifica: ricordo l'Elo degli amici che ho incontrato
+    const elo = num(d.elo, 0); if (elo >= 100 && elo <= 3500) { const k = a.nick.toLowerCase(), v = SAV.amici[k]; if (!v || v.elo !== elo || Date.now() - v.t > 600000) { SAV.amici[k] = { nick: a.nick, elo: Math.round(elo), t: Date.now() }; const ks = Object.keys(SAV.amici); if (ks.length > 60) delete SAV.amici[ks.sort((x, y) => SAV.amici[x].t - SAV.amici[y].t)[0]]; salva(); } }
+    if (ON && ON.peer === peer && P && P.tipo === 'amico') { partitaRete(a, d); if (!P.fine) return; }
+    // chi ho sfidato ha accettato: apro la partita
+    if (sfida && d.acc && d.acc === sfida.n && String(d.id) === sfida.a && !inPartita()) { avviaOnline(a, 'h', sfida); sfida = null; return; }
+    // ho accettato e la partita dell'amico e' pronta: entro
+    if (accetto && d.st === 'gioco' && d.con === mioId && String(d.id) === accetto.id && num(d.g, -1) === accetto.n && !inPartita()) { avviaOnline(a, 'o', { n: d.g, tc: d.tc, col: -num(d.col, 1) }); accetto = null; return; }
+    // mi sfidano
+    if (d.sf && d.sf.a === mioId && d.sf.n !== chiesta && !accetto && !inPartita()) { chiesta = d.sf.n; mostraInvito(a, d.sf); }
+    if (aperto && pagina === 'amici') listaAmici();
+  }
+  function mostraInvito(a, sf) {
+    if (invito) invito.remove();
+    const tc = TEMPI[sf.tc] || TEMPI.libero;
+    invito = nodo('div', 'sc-invito', `<span>♞ ${esc(a.nick)} ti sfida a scacchi (${esc(tc.nome)})</span><div><button class="pri">Accetta</button><button>No, grazie</button></div>`);
+    const chiudi = () => { if (invito) { invito.remove(); invito = null; } };
+    invito.querySelector('.pri').addEventListener('click', () => { chiudi(); accetta(a, sf); });
+    invito.querySelectorAll('button')[1].addEventListener('click', chiudi);
+    document.body.appendChild(invito);
+    setTimeout(() => { if (invito && invito.textContent.includes(a.nick)) chiudi(); }, 30000);
+  }
+  function accetta(a, sf) {
+    if (inPartita()) return;
+    accetto = { n: sf.n, id: String(a.d.id), t: Date.now() };
+    if (!aperto) SC.apri(); mostra('amici'); G.emetti('toast', 'Hai accettato: la partita sta per cominciare');
+  }
+  function sfidaAmico(a) {
+    const mia = sfida && sfida.a === String(a.d.id);
+    sfida = mia ? null : { a: String(a.d.id), n: 1 + Math.floor(Math.random() * 1e9), tc: scelta.tempo, t: Date.now() };
+    if (!mia) G.emetti('toast', 'Sfida mandata a ' + a.nick + ': aspetta che accetti');
+  }
+  function avviaOnline(a, ruolo, o) {
+    const col = ruolo === 'h' ? (Math.random() < 0.5 ? 1 : -1) : (o.col === -1 ? -1 : 1);
+    ON = { peer: a.peer, id: String(a.d.id), g: num(o.n, 1), ruolo, ab: 0, ppMio: 0, nPp: 0, okMio: 0, ppVisto: 0, via: 0 };
+    if (invito) { invito.remove(); invito = null; }
+    if (!aperto) SC.apri();
+    nuovaPartita({ tipo: 'amico', col, tempo: TEMPI[o.tc] ? o.tc : 'libero', avv: { nome: a.nick, elo: Math.round(num(a.d.elo, ELO.iniziale)), look: a.look || null } });
+    G.emetti('toast', 'Partita con ' + a.nick + ': hai ' + (col > 0 ? 'il bianco, muovi tu' : 'il nero'));
+    disegnaTutto();
+  }
+  function partitaRete(a, d) {
+    if (!P || P.tipo !== 'amico') return;
+    if (d.st !== 'gioco' || d.con !== mioId || num(d.g, -1) !== ON.g) return;
+    ON.via = 0;
+    // mosse nuove dell'amico
+    const sue = Array.isArray(d.mv) ? d.mv.map(String) : [], tot = num(d.nm, sue.length), off = tot - sue.length;
+    if (!P.fine && tot > P.mosse.length && off <= P.mosse.length) {
+      let ok = true; for (let i = off; i < P.mosse.length; i++) if (sue[i - off] !== P.mosse[i]) { ok = false; break; }
+      if (ok) for (let i = P.mosse.length; i < tot && !P.fine; i++) {
+        if (P.pos.turno === P.col) break;               // tocca a me: l'amico non puo' muovere per me
+        if (!eseguiMossa(sue[i - off], { t: num(d.tr, 0) })) break;
+      }
+    }
+    if (P.fine) return;
+    if (d.ab === ON.g) { chiudiPartita(P.col, 'abbandono'); disegnaTutto(); return; }
+    if (Array.isArray(d.fi) && d.fi[1] === 'tempo' && d.fi[0] === P.col) { chiudiPartita(P.col, 'tempo'); disegnaTutto(); return; }
+    if (Array.isArray(d.fi) && d.fi[1] === 'tempoPatta') { chiudiPartita(0, 'tempoPatta'); disegnaTutto(); return; }
+    if (ON.ppMio && d.ok === ON.ppMio) { chiudiPartita(0, 'accordo'); disegnaTutto(); return; }
+    if (Array.isArray(d.fi) && d.fi[1] === 'accordo' && d.fi[0] === 0) { chiudiPartita(0, 'accordo'); disegnaTutto(); return; }
+    if (d.pp && d.pp !== ON.ppVisto) {
+      ON.ppVisto = d.pp; const n = d.pp;
+      finestra('<h3>Patta?</h3><div class="perche">' + esc(P.avv.nome) + ' propone la patta.</div>', ['Accetto la patta', 'No, continuiamo']).then(r => { if (r === 0 && P && !P.fine && ON) { ON.okMio = n; chiudiPartita(0, 'accordo'); disegnaTutto(); } });
+    }
+  }
+  // l'amico non c'e' piu' (20 secondi senza notizie): vince chi resta
+  setInterval(() => {
+    if (ON && P && P.tipo === 'amico' && !P.fine) {
+      const a = amici.get(ON.peer), ok = a && fresco(a) && a.d.st === 'gioco' && a.d.con === mioId;
+      ON.via = ok ? 0 : ON.via + 1;
+      if (ON.via >= 20) { chiudiPartita(P.col, 'uscito'); disegnaTutto(); }
+    }
+    if (accetto && Date.now() - accetto.t > 30000) { accetto = null; if (aperto && pagina === 'amici') listaAmici(true); }
+    if (aperto && pagina === 'amici') listaAmici();
+  }, 1000);
+  function listaAmici(forza) {
+    const s = root && $('[data-p="amici"]'); if (!s) return;
+    const l = amiciQui();
+    const k = JSON.stringify([l.map(a => [a.peer, a.nick, a.d.st, a.d.elo]), sfida && sfida.a, accetto && accetto.n, scelta.tempo]);
+    if (!forza && k === s._k) return; s._k = k;
+    let h = `<div class="card" style="font-size:13.5px;color:var(--tenue);line-height:1.45">Qui trovi gli amici che sono nella Casa degli Scacchi adesso. Per giocare insieme dovete essere online tutti e due, con lo stesso link di The Borg.</div>`;
+    if (accetto) h += `<div class="card" style="text-align:center;font-weight:800">⏳ Hai accettato la sfida: aspetto che l'amico apra la scacchiera…</div>`;
+    h += `<h2>Tempo della sfida</h2>` + scelteHtml('tempo', ORDINE_TEMPI.map(k2 => [k2, TEMPI[k2].nome]), scelta.tempo) + `<h2>Amici qui</h2>`;
+    if (!l.length) h += '<div class="vuoto">Nessun amico nella Casa degli Scacchi in questo momento.<br>Invita qualcuno a raggiungerti!</div>';
+    l.forEach(a => {
+      const st = a.d.st, mia = sfida && sfida.a === String(a.d.id), occupato = st === 'gioco' || st === 'bot', L = ELO.livello(num(a.d.elo, ELO.iniziale));
+      h += `<div class="riga"><span class="nm">${esc(a.nick)}<small>${L.ico} ${esc(L.nome)} · ${num(a.d.elo, '?')} · ${occupato ? 'sta giocando' : st === 'menu' ? 'alla scacchiera' : 'nella Casa'}</small></span>${occupato ? '' : `<button class="${mia ? '' : 'pri'}" data-sf="${esc(a.peer)}">${mia ? 'Annulla' : 'Sfida'}</button>`}</div>`;
+    });
+    s.innerHTML = h;
+    s.querySelectorAll('[data-scelta] button').forEach(b => b.addEventListener('click', () => { scelta.tempo = b.dataset.v; salvaScelta(); listaAmici(true); }));
+    s.querySelectorAll('[data-sf]').forEach(b => b.addEventListener('click', () => {
+      const a = amici.get(b.dataset.sf); if (!a) return;
+      sfidaAmico(a); listaAmici(true);
+    }));
+  }
+
+  /* ---------- tabellone della classifica nella Casa degli Scacchi ---------- */
+  function topClassifica(n) {
+    const l = [{ nome: mioNick(), elo: SAV.elo, io: true }];
+    Object.values(SAV.amici).forEach(a => { if (a && a.nick) l.push({ nome: a.nick, elo: a.elo }); });
+    BOT.forEach(b => l.push({ nome: b.nome, elo: b.elo, bot: true }));
+    return l.sort((a, b) => b.elo - a.elo).slice(0, n || 8);
+  }
+  function aggiornaTabellone() { if (B.CasaScacchi && B.CasaScacchi.tabellone) try { B.CasaScacchi.tabellone(topClassifica(8)); } catch (e) { } }
+
+  /* ---------- apertura / chiusura ---------- */
+  B.ScacchiPezzi = { svg: svgPezzo, disegna: disegnaPezzo };
+  const SC = B.Scacchi = {
+    get attivo() { return aperto; },
+    avvia() { SC.apri(); },
+    apri(dove) {
+      if (!root) costruisci();
+      if (window.UI && window.UI.paginaPiena && !window.UI.paginaPiena._sc) { const orig = window.UI.paginaPiena; window.UI.paginaPiena = () => aperto || orig(); window.UI.paginaPiena._sc = true; }   // il mondo 3D si ferma mentre si gioca
+      aperto = true; root.classList.add('on'); document.body.classList.add('sc-attivo');
+      if (B.app && B.app.joy) B.app.joy.x = B.app.joy.y = 0;
+      if (B.Audio && B.Audio.sblocca) try { B.Audio.sblocca(); } catch (e) { }
+      setTimeout(misura, 60); misura();
+      mostra(dove && ['classifica', 'bot', 'amici', 'storico'].includes(dove) ? dove : P && !P.fine ? 'partita' : 'home');
+    },
+    chiudi() {
+      if (P && !P.fine && P.tipo !== 'rivedi') { esciPartita(); return; }
+      chiudiFinestra();
+      aperto = false; if (root) root.classList.remove('on'); document.body.classList.remove('sc-attivo');
+      if (P && P.fine) P = null;
+    },
+    rete, amico: (peer, nick, d, look) => amico(peer, nick, d, look), classifica: topClassifica, aggiornaTabellone,
+    elo: () => SAV.elo, livello: () => ELO.livello(SAV.elo),
+    // per le prove (test/scacchi-online): gli stessi passi dei pulsanti
+    _sav: SAV, _p: () => P, _nuova: nuovaPartita, _mossa: u => prova(MOT.daNome(u.slice(0, 2)), MOT.daNome(u.slice(2, 4))) || false,
+    _sfida: peer => { const a = amici.get(peer); if (a) sfidaAmico(a); }, _accetta: peer => { const a = amici.get(peer); if (a && a.d.sf) accetta(a, a.d.sf); },
+    _comando: c => comando(c), _tempo: (s, n) => { if (s) scelta.tempo = s; return n; }
+  };
+})();
+
+</script>
+<script>
+/* =====================================================================
    BORGO LUME 3D - PROGRAMMA PRINCIPALE
    Scena, luci e atmosfere, stanze (piazza e casa), avatar del giocatore,
    abitanti DEMO, camera isometrica, comandi, tocco sugli oggetti.
@@ -25253,13 +26829,13 @@ body.bb-attivo #controlli,body.bb-attivo #joy,body.bb-attivo #btn-contesto,body.
   const riempi = new T.DirectionalLight(0xffe2c8, 0.55); riempi.position.set(8, 9, 12); scene.add(riempi);
 
   /* ---------- le due stanze ---------- */
-  const gP = new T.Group(), gC = new T.Group(), gN = new T.Group(), gS = new T.Group(), gL = new T.Group(), gT = new T.Group(), gB = new T.Group(); scene.add(gB); scene.add(gT); gT.visible = false; gB.visible = false; scene.add(gP); scene.add(gC); scene.add(gN); scene.add(gS); scene.add(gL); gN.visible = false; gS.visible = false; gL.visible = false;
+  const gP = new T.Group(), gC = new T.Group(), gN = new T.Group(), gS = new T.Group(), gL = new T.Group(), gT = new T.Group(), gB = new T.Group(), gK = new T.Group(); scene.add(gK); gK.visible = false; scene.add(gB); scene.add(gT); gT.visible = false; gB.visible = false; scene.add(gP); scene.add(gC); scene.add(gN); scene.add(gS); scene.add(gL); gN.visible = false; gS.visible = false; gL.visible = false;
   const piazza = B.costruisciMondo(gP, scene);
   let casa = B.costruisciCasa(gC, B.Eco ? B.Eco.stato.liv : 0, B.Eco ? B.Eco.stato.stili : null);
-  const negozio = B.costruisciNegozio(gN, { vuota: true }), sala = B.costruisciSala(gS), coll = B.costruisciCollectibles(gL, 'negozio'), tcgR = B.costruisciCollectibles(gT, 'tcg'), bib = B.costruisciBiblioteca(gB);
+  const negozio = B.costruisciNegozio(gN, { vuota: true }), sala = B.costruisciSala(gS), coll = B.costruisciCollectibles(gL, 'negozio'), tcgR = B.costruisciCollectibles(gT, 'tcg'), bib = B.costruisciBiblioteca(gB), scac = B.costruisciCasaScacchi(gK);
   const PZ = CFG.plaza;
   // la scena e le stanze non si muovono mai: cosi' three.js puo' saltare i pezzi fermi e le stanze nascoste
-  const gruppiStanze = [gP, gC, gN, gS, gL, gT, gB];
+  const gruppiStanze = [gP, gC, gN, gS, gL, gT, gB, gK];
   [scene].concat(gruppiStanze).forEach(g => { g.updateMatrix(); g.matrixAutoUpdate = false; g.matrixWorldNeedsUpdate = true; });
   const stanze = {
     piazza: { id: 'piazza', nome: 'Piazza del Borgo', pubblica: true, gruppo: gP, m: piazza, ostacoli: piazza.ostacoli, porte: piazza.porte, sedili: piazza.sedili, toccabili: piazza.toccabili,
@@ -25271,6 +26847,8 @@ body.bb-attivo #controlli,body.bb-attivo #joy,body.bb-attivo #btn-contesto,body.
       area: negozio.area, alt: () => 0, zoom: 0.75, spawn: { x: 0, z: 6.2, yaw: PI }, rect: { x0: -12.25, x1: 12.25, z0: -9.1, z1: 10.0 }, edifici: [], sfondo: '#2a2040' },
     biblioteca: { id: 'biblioteca', nome: 'Biblioteca', pubblica: true, gruppo: gB, m: bib, ostacoli: bib.ostacoli, porte: bib.porte, sedili: bib.sedili, toccabili: bib.toccabili,
       area: bib.area, alt: () => 0, zoom: 0.8, spawn: { x: 0, z: 6.0, yaw: PI }, rect: { x0: -7.5, x1: 7.5, z0: -6.5, z1: 7.5 }, edifici: [], sfondo: '#1c2a24' },
+    scacchi: { id: 'scacchi', nome: 'Casa degli Scacchi', pubblica: true, gruppo: gK, m: scac, ostacoli: scac.ostacoli, porte: scac.porte, sedili: scac.sedili, toccabili: scac.toccabili,
+      area: scac.area, alt: () => 0, zoom: 0.72, spawn: { x: 0, z: 7.0, yaw: PI }, rect: { x0: -10, x1: 10, z0: -8, z1: 9 }, edifici: [], sfondo: '#1d2a24' },
     collectibles: { id: 'collectibles', nome: 'Laugh Tale Collectibles', pubblica: true, gruppo: gL, m: coll, ostacoli: coll.ostacoli, porte: coll.porte, sedili: coll.sedili, toccabili: coll.toccabili,
       area: coll.area, alt: () => 0, zoom: 0.85, spawn: { x: 0, z: 13.5, yaw: PI }, rect: { x0: -10.5, x1: 10.5, z0: -5, z1: 15 }, edifici: [], sfondo: '#2a2040' },
     tcg: { id: 'tcg', nome: 'Sala giochi TCG', pubblica: true, gruppo: gT, m: tcgR, ostacoli: tcgR.ostacoli, porte: tcgR.porte, sedili: tcgR.sedili, toccabili: tcgR.toccabili,
@@ -25326,7 +26904,7 @@ body.bb-attivo #controlli,body.bb-attivo #joy,body.bb-attivo #btn-contesto,body.
     B.finestreMat.forEach(m => { m.emissiveIntensity = a.finestre; });
     const k = clamp(a.lampioni / 1.6, 0, 1) * 0.95;
     piazza.aloni.forEach(s => { s.material.opacity = k; });
-    casa.atm(nome); if (stanze.ospite) stanze.ospite.m.atm(nome); negozio.atm(nome); sala.atm(nome); coll.atm(nome); tcgR.atm(nome); bib.atm(nome); assegnaLuci();
+    casa.atm(nome); if (stanze.ospite) stanze.ospite.m.atm(nome); negozio.atm(nome); sala.atm(nome); coll.atm(nome); tcgR.atm(nome); bib.atm(nome); scac.atm(nome); assegnaLuci();
   }
 
   /* ---------- collisioni ---------- */
@@ -25491,7 +27069,7 @@ body.bb-attivo #controlli,body.bb-attivo #joy,body.bb-attivo #btn-contesto,body.
   /* ---------- cambio stanza ---------- */
   function entraStanza(id, arrivo) {
     stanza = stanze[id]; io.st = stanza; io.seduto = null; G.stato.stanzaId = id;
-    gP.visible = id === 'piazza'; gC.visible = id === 'casa'; gN.visible = id === 'negozio'; gS.visible = id === 'sala'; gL.visible = id === 'collectibles'; gT.visible = id === 'tcg'; gB.visible = id === 'biblioteca'; gO.visible = id === 'ospite';
+    gP.visible = id === 'piazza'; gC.visible = id === 'casa'; gN.visible = id === 'negozio'; gS.visible = id === 'sala'; gL.visible = id === 'collectibles'; gT.visible = id === 'tcg'; gB.visible = id === 'biblioteca'; gK.visible = id === 'scacchi'; gO.visible = id === 'ospite';
     const sp = arrivo || stanza.spawn;
     io.x = sp.x; io.z = sp.z; io.vx = io.vz = 0; io.yaw = sp.yaw === undefined ? 0 : sp.yaw; io.y = stanza.alt(io.x, io.z);
     C.azT = C.az = stanza.az === undefined ? PI / 4 : stanza.az; impostaZoom(stanza.zoom); if (stanza.elev) { C.elev = stanza.elev; C.elevAuto = true; } else if (C.elevAuto) { C.elev = 28; C.elevAuto = false; } C.tx = io.x; C.tz = io.z; C.ty = 1.0 + io.y;
@@ -25540,7 +27118,7 @@ body.bb-attivo #controlli,body.bb-attivo #joy,body.bb-attivo #btn-contesto,body.
     if (p.arredi) { if (B.NegozioArredi) B.NegozioArredi.apri(); return; }
     if (p.biblioteca) { if (B.Biblioteca) B.Biblioteca.apri(); return; }
     if (p.sito) { if (B.Sito) B.Sito.apri(); return; }
-    if (p.gioco) { const gm = p.gioco === 'paintball' ? B.Paintball : p.gioco === 'raid' ? B.Raid : p.gioco === 'nascondino' ? B.Nascondino : B.Kart; if (gm) gm.avvia(); return; }
+    if (p.gioco) { const gm = p.gioco === 'paintball' ? B.Paintball : p.gioco === 'raid' ? B.Raid : p.gioco === 'nascondino' ? B.Nascondino : p.gioco === 'scacchi' ? B.Scacchi : B.Kart; if (gm) gm.avvia(); return; }
     if (!p.verso) { G.emetti('toast', p.nome + ': non ancora disponibile (dimostrativo)'); return; }
     G.emetti('transizione', () => entraStanza(p.verso, p.arrivo || (p.verso === 'casa' ? stanze.casa.spawn : { x: 12.4, z: -4.3, yaw: PI / 4 })));
   }
@@ -25877,6 +27455,7 @@ body.bb-attivo #controlli,body.bb-attivo #joy,body.bb-attivo #btn-contesto,body.
     $('#btn-casa').title = info.id === 'casa' ? 'Vai in piazza' : 'Vai a casa';
     $('#btn-contesto').hidden = true;
     rendiChat(); evidenziaTab(); UI.aggiornaArea();
+    if (info.id === 'scacchi') UI.toast('Casa degli Scacchi: avvicinati a un tavolo e premi "Gioca a scacchi". In fondo c\'è la classifica.');
     if (info.id === 'biblioteca') UI.toast('Biblioteca: al leggio, in fondo, premi "Leggi" per le letture.');
     if (info.id === 'collectibles') UI.toast('Laugh Tale Collectibles: avvicinati al bancone e premi "Apri il negozio online" (prodotti e pagamenti sono sul sito vero).');
     if (info.id === 'negozio') UI.toast('Stanza ancora vuota. Esci dal tappetino a sud.');
@@ -25889,7 +27468,7 @@ body.bb-attivo #controlli,body.bb-attivo #joy,body.bb-attivo #btn-contesto,body.
   const funziona = p => !!(p.fn || p.sedile || p.alzati || p.arredi || p.biblioteca || p.sito || p.gioco || p.verso);
   G.su('porta', p => {
     const b = $('#btn-contesto');
-    if (p && inGioco && !UI.paginaPiena() && !(p.alzati && p.nome === 'Alzati')) { b.textContent = p.testo ? p.testo : p.verso === 'casa' ? 'Entra in casa' : p.verso === 'negozio' ? 'Entra nel negozio' : p.verso === 'collectibles' ? 'Entra da Laugh Tale' : p.verso === 'biblioteca' ? 'Entra in biblioteca' : p.id === 'varco-piazza' ? 'Vai in piazza' : p.verso === 'piazza' ? 'Esci in piazza' : funziona(p) ? p.nome : p.nome + ' (presto)'; b.hidden = false; }
+    if (p && inGioco && !UI.paginaPiena() && !(p.alzati && p.nome === 'Alzati')) { b.textContent = p.testo ? p.testo : p.verso === 'casa' ? 'Entra in casa' : p.verso === 'negozio' ? 'Entra nel negozio' : p.verso === 'collectibles' ? 'Entra da Laugh Tale' : p.verso === 'biblioteca' ? 'Entra in biblioteca' : p.verso === 'scacchi' ? 'Entra nella Casa degli Scacchi' : p.id === 'varco-piazza' ? 'Vai in piazza' : p.verso === 'piazza' ? 'Esci in piazza' : funziona(p) ? p.nome : p.nome + ' (presto)'; b.hidden = false; }
     else b.hidden = true;
   });
 
@@ -26181,7 +27760,7 @@ body.bb-attivo #controlli,body.bb-attivo #joy,body.bb-attivo #btn-contesto,body.
     const cvs = $('#minimappa'), a = B.app; if (!a || !a.gioco() || !cvs.offsetParent) return;
     const st = a.stanza(), io = a.io, C = a.C, c = cvs.getContext('2d'), W = cvs.width, H = cvs.height;
     const grande = cvs.classList.contains('grande'), r0 = st.rect;
-    const s = grande ? W / (st.id === 'piazza' ? 76 : st.id === 'sala' ? 60 : st.id === 'collectibles' ? 30 : st.id === 'tcg' ? 52 : st.id === 'biblioteca' ? 20 : 28) : (st.id === 'piazza' ? 8.5 : st.id === 'sala' ? 13 : st.id === 'collectibles' || st.id === 'biblioteca' ? 11 : 14) * (W / 196);
+    const s = grande ? W / (st.id === 'piazza' ? 76 : st.id === 'sala' ? 60 : st.id === 'collectibles' ? 30 : st.id === 'tcg' ? 52 : st.id === 'biblioteca' ? 20 : st.id === 'scacchi' ? 24 : 28) : (st.id === 'piazza' ? 8.5 : st.id === 'sala' ? 13 : st.id === 'collectibles' || st.id === 'biblioteca' || st.id === 'scacchi' ? 11 : 14) * (W / 196);
     const mx = grande ? (r0.x0 + r0.x1) / 2 : io.x, mz = grande ? (r0.z0 + r0.z1) / 2 : io.z;       // centro della mappa
     c.setTransform(1, 0, 0, 1, 0, 0); c.fillStyle = st.sfondo; c.fillRect(0, 0, W, H);
     c.translate(W / 2, H / 2); c.rotate(C.az); c.scale(s, s); c.translate(-mx, -mz);
@@ -26192,7 +27771,7 @@ body.bb-attivo #controlli,body.bb-attivo #joy,body.bb-attivo #btn-contesto,body.
       c.fillStyle = '#f1e7dc'; { const BL = B.BEL; c.fillRect(BL.x0, BL.z0, BL.x1 - BL.x0, BL.z1 - BL.z0); }
       c.fillStyle = '#6f9a60'; [[-16.2, 33.2, 2.2, 1.2], [16.4, 33.6, 2.2, 1.2]].forEach(q => c.fillRect(q[0] - q[2] / 2, q[1] - q[3] / 2, q[2], q[3]));
       st.edifici.forEach(e => { if (e.mappa === 'acqua') { c.fillStyle = '#9cc77a'; c.beginPath(); c.ellipse(e.x, e.z, e.w / 2 + 2, e.d / 2 + 2, 0, 0, 7); c.fill(); c.fillStyle = '#58b4da'; c.beginPath(); c.ellipse(e.x, e.z, e.w / 2, e.d / 2, 0, 0, 7); c.fill(); return; } if (e.mappa === 'banchi') return; c.fillStyle = '#8a6a7a'; c.fillRect(e.x - e.w / 2, e.z - e.d / 2, e.w, e.d); });
-    } else if (st.id === 'negozio' || st.id === 'sala' || st.id === 'collectibles' || st.id === 'tcg' || st.id === 'biblioteca') {
+    } else if (st.id === 'negozio' || st.id === 'sala' || st.id === 'collectibles' || st.id === 'tcg' || st.id === 'biblioteca' || st.id === 'scacchi') {
       if (st.id === 'sala') { c.fillStyle = '#4a3a7a'; c.fillRect(-17, -13, 34, 28); c.fillStyle = '#35607a'; c.fillRect(-27, -6, 10, 14); c.fillStyle = '#5a5a68'; c.fillRect(17, -6, 10, 14); c.fillStyle = '#ffd36a'; c.font = 'bold 2px sans-serif'; c.textAlign = 'center'; c.fillText('PAINTBALL', -22, 1); c.fillText('KART', 22, 1); } else { c.fillStyle = '#b9a090'; c.fillRect(r.x0, r.z0, r.x1 - r.x0, r.z1 - r.z0); c.fillStyle = '#6a4bd6'; c.fillRect(-0.2, r.z0, 0.4, 0.3); }
     } else {
       c.fillStyle = '#cf966a'; c.fillRect(-5, -4, 10, 7); c.fillStyle = '#d9a877'; c.fillRect(-5, 3, 10, 3.1);
@@ -26479,7 +28058,7 @@ body.bb-attivo #controlli,body.bb-attivo #joy,body.bb-attivo #btn-contesto,body.
     { sel: '#btn-arreda', t: 'Arreda la casa', d: 'Qui in casa tocca questo pulsante per spostare i mobili col dito, girarli e cambiare pavimento e pareti. Parti con una stanza vuota ma con tutti i mobili base nello zaino.' },
     { sel: '#chat', t: 'Chat della piazza', d: 'In piazza puoi scrivere agli altri. Tocca un personaggio per vedere il profilo, scrivergli in privato, segnalarlo o bloccarlo.' },
     { sel: '#tabbar', t: 'Il menu', d: 'Mondo, Chat privata, Amici, Zaino e Profilo (qui cambi aspetto e atmosfera, e puoi rivedere questo tutorial).' },
-    { t: 'Dove andare in piazza 🏛️', d: 'Esci da casa dalla porta in alto: in piazza trovi il negozio Arredamenti (lato ovest), Laugh Tale Collectibles con la sala giochi TCG, la Sala Giochi con kart, paintball e nascondino, la Biblioteca e il belvedere. Quando sei vicino a una porta compare un pulsante giallo per entrare.' },
+    { t: 'Dove andare in piazza 🏛️', d: 'Esci da casa dalla porta in alto: in piazza trovi il negozio Arredamenti (lato ovest), Laugh Tale Collectibles con la sala giochi TCG, la Sala Giochi con kart, paintball e nascondino, la Casa degli Scacchi, la Biblioteca e il belvedere. Quando sei vicino a una porta compare un pulsante giallo per entrare.' },
     { t: 'Tutto pronto! 🎉', d: 'Divertiti e fai amicizia. Ricorda: gli altri abitanti e la chat sono ancora simulati (DEMO).', fine: true }
   ];
 
@@ -27018,7 +28597,7 @@ body.orizz #pagina-zaino .zn-carte{grid-template-columns:repeat(auto-fill,minmax
    Fuori da claude.ai si gioca con un codice nel link (?amici=CODICE):
    i telefoni si collegano tra loro (PeerJS, lib/peerjs.min.js); il primo
    arrivato fa da padrone di casa e gira a tutti la presenza degli altri.
-   Nei minigiochi (kart, paintball, raid, carte, bubble, nascondino) la presenza porta anche lo stato di
+   Nei minigiochi (kart, paintball, raid, carte, bubble, nascondino, scacchi) la presenza porta anche lo stato di
    gioco (k = B.Kart/Paintball/Raid/Belinverse/Bubble.rete()): chi gioca nello stesso momento
    gioca con gli altri.
    Con un server di gioco (?server= o B3.SERVER) la stanza del codice vive sul
@@ -27040,7 +28619,7 @@ body.orizz #pagina-zaino .zn-carte{grid-template-columns:repeat(auto-fill,minmax
   const LOOK = ['pelle', 'stile', 'capelli', 'occhi', 'giacca', 'dettagli', 'abito', 'pantaloni', 'stivali', 'accessorio'];
   const lookDa = l => { const o = {}; LOOK.forEach(k => { o[k] = Math.max(0, Math.min(40, Math.round(num(l && l[k], 0)))); }); return o; };
   // minigiochi online: ognuno da' il suo stato (rete) e riceve quello degli amici (amico)
-  const GIOCHI = { kart: () => B.Kart, paintball: () => B.Paintball, raid: () => B.Raid, carte: () => B.Belinverse, bubble: () => B.Bubble, nascondino: () => B.Nascondino };
+  const GIOCHI = { kart: () => B.Kart, paintball: () => B.Paintball, raid: () => B.Raid, carte: () => B.Belinverse, bubble: () => B.Bubble, nascondino: () => B.Nascondino, scacchi: () => B.Scacchi };
   const aiGiochi = (peer, nick, pr) => Object.keys(GIOCHI).forEach(n => { const m = GIOCHI[n](); if (m && m.amico) m.amico(peer, nick, pr && pr.s === n ? pr.k : null, pr ? lookDa(pr.look) : null); });
   let room = null, nMsg = 0, nEm = 0, ultimo = '', tInvio = 0, nInvio = 0, prec = null;
 
@@ -27061,7 +28640,7 @@ body.orizz #pagina-zaino .zn-carte{grid-template-columns:repeat(auto-fill,minmax
   function mia() {
     const io = app.io, st = app.stanza(), gioco = G.stato.giocatore;
     if (!gioco || !io.av) return null;
-    const dove = (B.Raid && B.Raid.attivo) ? 'raid' : (B.Paintball && B.Paintball.attivo) ? 'paintball' : (B.Kart && B.Kart.attivo) ? 'kart' : (B.Belinverse && B.Belinverse.attivo) ? 'carte' : (B.Bubble && B.Bubble.attivo) ? 'bubble' : (B.Nascondino && B.Nascondino.attivo) ? 'nascondino' : luogo();
+    const dove = (B.Raid && B.Raid.attivo) ? 'raid' : (B.Paintball && B.Paintball.attivo) ? 'paintball' : (B.Kart && B.Kart.attivo) ? 'kart' : (B.Belinverse && B.Belinverse.attivo) ? 'carte' : (B.Bubble && B.Bubble.attivo) ? 'bubble' : (B.Nascondino && B.Nascondino.attivo) ? 'nascondino' : (B.Scacchi && B.Scacchi.attivo) ? 'scacchi' : luogo();
     return { v: 1, nick: testo(gioco.nick, 20), look: lookDa(gioco.look), s: dove, x: +io.x.toFixed(2), z: +io.z.toFixed(2), y: +io.y.toFixed(2), r: +io.yaw.toFixed(2),
       vel: +Math.hypot(io.vx, io.vz).toFixed(2), sed: io.seduto ? (io.seduto.dorme ? 2 : 1) : 0, bk: io.bici ? 1 : 0, k: GIOCHI[dove] && GIOCHI[dove]().rete ? GIOCHI[dove]().rete() : null,
       mc: B.Mercato && B.Mercato.annunciRete ? B.Mercato.annunciRete() : null, mo: mieiMo.length ? { l: mieiMo } : undefined, re: mieiRe.length ? { l: mieiRe } : undefined,
@@ -27232,7 +28811,7 @@ body.orizz #pagina-zaino .zn-carte{grid-template-columns:repeat(auto-fill,minmax
       G.emetti('dm', { id });
     });
   }
-  const NOMI = { piazza: 'In piazza', raid: 'Nel raid', paintball: 'A paintball', kart: 'Sui kart', carte: 'A Belinverse', bubble: 'A Borg Bubble', nascondino: 'A nascondino', casa: 'A casa sua' };
+  const NOMI = { piazza: 'In piazza', raid: 'Nel raid', paintball: 'A paintball', kart: 'Sui kart', carte: 'A Belinverse', bubble: 'A Borg Bubble', nascondino: 'A nascondino', scacchi: 'Alla Casa degli Scacchi', casa: 'A casa sua' };
   const utenteOrig = G.utente, inviaOrig = G.inviaDM, sussurroOrig = G.inviaSussurro;
   // sussurro a un amico: deve essere nel tuo stesso luogo; parte con la chat (msg.a), lo legge solo lui
   G.inviaSussurro = function (id, t) {

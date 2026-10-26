@@ -141,6 +141,7 @@
     $('#btn-casa').title = info.id === 'casa' ? 'Vai in piazza' : 'Vai a casa';
     $('#btn-contesto').hidden = true;
     rendiChat(); evidenziaTab(); UI.aggiornaArea();
+    if (info.id === 'scacchi') UI.toast('Casa degli Scacchi: avvicinati a un tavolo e premi "Gioca a scacchi". In fondo c\'è la classifica.');
     if (info.id === 'biblioteca') UI.toast('Biblioteca: al leggio, in fondo, premi "Leggi" per le letture.');
     if (info.id === 'collectibles') UI.toast('Laugh Tale Collectibles: avvicinati al bancone e premi "Apri il negozio online" (prodotti e pagamenti sono sul sito vero).');
     if (info.id === 'negozio') UI.toast('Stanza ancora vuota. Esci dal tappetino a sud.');
@@ -153,7 +154,7 @@
   const funziona = p => !!(p.fn || p.sedile || p.alzati || p.arredi || p.biblioteca || p.sito || p.gioco || p.verso);
   G.su('porta', p => {
     const b = $('#btn-contesto');
-    if (p && inGioco && !UI.paginaPiena() && !(p.alzati && p.nome === 'Alzati')) { b.textContent = p.testo ? p.testo : p.verso === 'casa' ? 'Entra in casa' : p.verso === 'negozio' ? 'Entra nel negozio' : p.verso === 'collectibles' ? 'Entra da Laugh Tale' : p.verso === 'biblioteca' ? 'Entra in biblioteca' : p.id === 'varco-piazza' ? 'Vai in piazza' : p.verso === 'piazza' ? 'Esci in piazza' : funziona(p) ? p.nome : p.nome + ' (presto)'; b.hidden = false; }
+    if (p && inGioco && !UI.paginaPiena() && !(p.alzati && p.nome === 'Alzati')) { b.textContent = p.testo ? p.testo : p.verso === 'casa' ? 'Entra in casa' : p.verso === 'negozio' ? 'Entra nel negozio' : p.verso === 'collectibles' ? 'Entra da Laugh Tale' : p.verso === 'biblioteca' ? 'Entra in biblioteca' : p.verso === 'scacchi' ? 'Entra nella Casa degli Scacchi' : p.id === 'varco-piazza' ? 'Vai in piazza' : p.verso === 'piazza' ? 'Esci in piazza' : funziona(p) ? p.nome : p.nome + ' (presto)'; b.hidden = false; }
     else b.hidden = true;
   });
 
@@ -445,7 +446,7 @@
     const cvs = $('#minimappa'), a = B.app; if (!a || !a.gioco() || !cvs.offsetParent) return;
     const st = a.stanza(), io = a.io, C = a.C, c = cvs.getContext('2d'), W = cvs.width, H = cvs.height;
     const grande = cvs.classList.contains('grande'), r0 = st.rect;
-    const s = grande ? W / (st.id === 'piazza' ? 76 : st.id === 'sala' ? 60 : st.id === 'collectibles' ? 30 : st.id === 'tcg' ? 52 : st.id === 'biblioteca' ? 20 : 28) : (st.id === 'piazza' ? 8.5 : st.id === 'sala' ? 13 : st.id === 'collectibles' || st.id === 'biblioteca' ? 11 : 14) * (W / 196);
+    const s = grande ? W / (st.id === 'piazza' ? 76 : st.id === 'sala' ? 60 : st.id === 'collectibles' ? 30 : st.id === 'tcg' ? 52 : st.id === 'biblioteca' ? 20 : st.id === 'scacchi' ? 24 : 28) : (st.id === 'piazza' ? 8.5 : st.id === 'sala' ? 13 : st.id === 'collectibles' || st.id === 'biblioteca' || st.id === 'scacchi' ? 11 : 14) * (W / 196);
     const mx = grande ? (r0.x0 + r0.x1) / 2 : io.x, mz = grande ? (r0.z0 + r0.z1) / 2 : io.z;       // centro della mappa
     c.setTransform(1, 0, 0, 1, 0, 0); c.fillStyle = st.sfondo; c.fillRect(0, 0, W, H);
     c.translate(W / 2, H / 2); c.rotate(C.az); c.scale(s, s); c.translate(-mx, -mz);
@@ -456,7 +457,7 @@
       c.fillStyle = '#f1e7dc'; { const BL = B.BEL; c.fillRect(BL.x0, BL.z0, BL.x1 - BL.x0, BL.z1 - BL.z0); }
       c.fillStyle = '#6f9a60'; [[-16.2, 33.2, 2.2, 1.2], [16.4, 33.6, 2.2, 1.2]].forEach(q => c.fillRect(q[0] - q[2] / 2, q[1] - q[3] / 2, q[2], q[3]));
       st.edifici.forEach(e => { if (e.mappa === 'acqua') { c.fillStyle = '#9cc77a'; c.beginPath(); c.ellipse(e.x, e.z, e.w / 2 + 2, e.d / 2 + 2, 0, 0, 7); c.fill(); c.fillStyle = '#58b4da'; c.beginPath(); c.ellipse(e.x, e.z, e.w / 2, e.d / 2, 0, 0, 7); c.fill(); return; } if (e.mappa === 'banchi') return; c.fillStyle = '#8a6a7a'; c.fillRect(e.x - e.w / 2, e.z - e.d / 2, e.w, e.d); });
-    } else if (st.id === 'negozio' || st.id === 'sala' || st.id === 'collectibles' || st.id === 'tcg' || st.id === 'biblioteca') {
+    } else if (st.id === 'negozio' || st.id === 'sala' || st.id === 'collectibles' || st.id === 'tcg' || st.id === 'biblioteca' || st.id === 'scacchi') {
       if (st.id === 'sala') { c.fillStyle = '#4a3a7a'; c.fillRect(-17, -13, 34, 28); c.fillStyle = '#35607a'; c.fillRect(-27, -6, 10, 14); c.fillStyle = '#5a5a68'; c.fillRect(17, -6, 10, 14); c.fillStyle = '#ffd36a'; c.font = 'bold 2px sans-serif'; c.textAlign = 'center'; c.fillText('PAINTBALL', -22, 1); c.fillText('KART', 22, 1); } else { c.fillStyle = '#b9a090'; c.fillRect(r.x0, r.z0, r.x1 - r.x0, r.z1 - r.z0); c.fillStyle = '#6a4bd6'; c.fillRect(-0.2, r.z0, 0.4, 0.3); }
     } else {
       c.fillStyle = '#cf966a'; c.fillRect(-5, -4, 10, 7); c.fillStyle = '#d9a877'; c.fillRect(-5, 3, 10, 3.1);
