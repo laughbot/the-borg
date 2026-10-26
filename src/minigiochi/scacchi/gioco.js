@@ -33,16 +33,17 @@
   };
   const ORDINE_TEMPI = ['libero', '15+10', '10', '5', '3+2'];   // (le chiavi numeriche di un oggetto non tengono l'ordine)
   const TEMA = {
-    verde: { nome: 'Verde', chiaro: '#ebecd0', scuro: '#739552', selC: '#f5f682', selS: '#b9ca43', coord: ['#739552', '#ebecd0'] },
-    legno: { nome: 'Legno', chiaro: '#f0d9b5', scuro: '#b58863', selC: '#f7ec74', selS: '#dac34b', coord: ['#b58863', '#f0d9b5'] },
+    // colori nostri (non quelli di chess.com o di altri siti): i toni del borgo al tramonto, di notte e dell'insegna viola
+    tramonto: { nome: 'Tramonto', chiaro: '#f6e3c6', scuro: '#c0705a', selC: '#ffd98a', selS: '#e8a24e', coord: ['#c0705a', '#f6e3c6'] },
+    notte: { nome: 'Notte stellata', chiaro: '#dcdff0', scuro: '#55639c', selC: '#f6e08e', selS: '#c9a64c', coord: ['#55639c', '#dcdff0'] },
     borgo: { nome: 'Borgo', chiaro: '#e8dcc2', scuro: '#7a62c8', selC: '#f2c76e', selS: '#d8a548', coord: ['#7a62c8', '#e8dcc2'] }
   };
 
   /* ---------- salvataggio ---------- */
   const CHIAVE = 'theborg.scacchi.v1';
-  const SAV = { elo: ELO.iniziale, n: 0, v: 0, p: 0, s: 0, picco: ELO.iniziale, battuti: {}, storico: [], amici: {}, tema: 'verde', tempo: '10', colore: 'caso', premi: { g: '', n: 0 } };
+  const SAV = { elo: ELO.iniziale, n: 0, v: 0, p: 0, s: 0, picco: ELO.iniziale, battuti: {}, storico: [], amici: {}, tema: 'tramonto', tempo: '10', colore: 'caso', premi: { g: '', n: 0 } };
   try { const x = JSON.parse(localStorage.getItem(CHIAVE) || 'null'); if (x && typeof x === 'object') Object.keys(SAV).forEach(k => { if (x[k] !== undefined && typeof x[k] === typeof SAV[k]) SAV[k] = x[k]; }); } catch (e) { }
-  if (!TEMA[SAV.tema]) SAV.tema = 'verde'; if (!TEMPI[SAV.tempo]) SAV.tempo = '10';
+  if (!TEMA[SAV.tema]) SAV.tema = 'tramonto'; if (!TEMPI[SAV.tempo]) SAV.tempo = '10';
   const salva = () => { try { localStorage.setItem(CHIAVE, JSON.stringify(SAV)); } catch (e) { } };
   const oggi = () => { const d = new Date(); return d.getFullYear() + '-' + (d.getMonth() + 1) + '-' + d.getDate(); };
   const mioNick = () => (G && G.stato.giocatore && G.stato.giocatore.nick) || 'Tu';

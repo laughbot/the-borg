@@ -180,7 +180,7 @@
     porte.push({ id: 'tabellone', nome: 'Classifica', testo: '🏆 Guarda la classifica', fn: () => { if (B.Scacchi) B.Scacchi.apri('classifica'); }, x: 0, z: Z0 + 1.5, r: 1.4 });
 
     /* ---------- tavoli da gioco: scacchiera con i pezzi e due sedie ---------- */
-    const texTav = texScacchiera('#efe6d2', '#6f8f56', '#5a3a24');
+    const texTav = texScacchiera('#f6e3c6', '#c0705a', '#5a3a24');
     // pezzi in partenza (o a meta' partita, per varieta')
     const PARTENZA = 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR', META = ['r1bqk2r/pppp1ppp/2n2n2/2b1p3/2B1P3/3P1N2/PPP2PPP/RNBQK2R', 'r2q1rk1/ppp2ppp/2np1n2/2b1p1B1/2B1P1b1/2NP1N2/PPP2PPP/R2Q1RK1', '6k1/5ppp/8/8/3R4/8/5PPP/6K1', 'r1bq1rk1/pp3ppp/2n1pn2/2pp4/3P4/2PBPN2/PP1N1PPP/R2QK2R'];
     const DA = { p: 1, n: 2, b: 3, r: 4, q: 5, k: 6 };
@@ -215,7 +215,7 @@
     (function () {
       const cx = 0, cz = -1.6, L = 4.8, q = L / 8;
       scena.add(mesh(new T.BoxGeometry(L + 0.5, 0.12, L + 0.5), M('#3a2a22'), { x: cx, y: 0.06, z: cz, lb: 0.02 }));
-      const sc = new T.Mesh(new T.PlaneGeometry(L, L), new T.MeshToonMaterial({ map: texScacchiera('#efe6d2', '#5b7a49', null), gradientMap: gm })); sc.rotation.x = -PI / 2; sc.position.set(cx, 0.125, cz); sc.receiveShadow = true; scena.add(sc);
+      const sc = new T.Mesh(new T.PlaneGeometry(L, L), new T.MeshToonMaterial({ map: texScacchiera('#f6e3c6', '#b5624d', null), gradientMap: gm })); sc.rotation.x = -PI / 2; sc.position.set(cx, 0.125, cz); sc.receiveShadow = true; scena.add(sc);
       // una partita a meta': pochi pezzi, cosi' resta spazio per passeggiare
       [['K', 6, 7], ['R', 4, 7], ['P', 5, 6], ['P', 6, 6], ['B', 3, 4], ['N', 5, 5], ['Q', 2, 6], ['k', 6, 0], ['r', 3, 0], ['p', 5, 1], ['p', 6, 2], ['q', 4, 2], ['n', 2, 2], ['b', 1, 3]].forEach(([c, f, r]) => {
         const t = DA[c.toLowerCase()], bianco = c !== c.toLowerCase(), p = pezzo3D(t, bianco, 0.022);
