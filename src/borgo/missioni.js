@@ -27,7 +27,8 @@
       { id: 'posa', t: 'Posa un mobile in casa', ev: 'posa', n: 1, r: 20 },
       { id: 'pesca', t: 'Pesca 3 pesci al laghetto', ev: 'pesca', n: 3, r: 25 },
       { id: 'ruota', t: 'Fai un giro sulla ruota panoramica', ev: 'ruota', n: 1, r: 20 },
-      { id: 'mercato', t: 'Compra o vendi qualcosa al mercatino', ev: 'mercato', n: 1, r: 20 }
+      { id: 'mercato', t: 'Compra o vendi qualcosa al mercatino', ev: 'mercato', n: 1, r: 20 },
+      { id: 'scacchi', t: 'Gioca una partita a scacchi', ev: 'scacchi', n: 1, r: 25 }
     ],
     settimanale: { t: 'Completa 5 missioni quotidiane in una settimana', n: 5, coins: Math.round(B.Eco.quota('missioni') * 1.5 / 5) * 5, premio: 'statua' },
     serieLunga: { giorni: 7, premio: 'lanterna' },
