@@ -54,7 +54,7 @@
     quote: { minigiochi: 0.40, missioni: 0.20, accesso: 0.15, piazza: 0.25 },
     partite: 6,                                      // partite premiate a pieno al giorno, su tutti i minigiochi insieme
     dopoTetto: 0.2,                                  // oltre la quota del giorno una partita rende solo il 20%
-    giochi: { kart: 1, paintball: 1, cripta: 1.6, belinverse: 1, borgbubble: 1, nascondino: 1, scacchi: 1 }   // peso di una partita (la Cripta dura di piu')
+    giochi: { kart: 1, paintball: 1, cripta: 1.6, belinverse: 1, borgbubble: 1, nascondino: 1, scacchi: 1, fronte: 1.2 }   // peso di una partita (la Cripta dura di piu', il Fronte un po')
   };
   const oggiG = () => { const d = new Date(); return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); };
   function registra(fonte, n) {

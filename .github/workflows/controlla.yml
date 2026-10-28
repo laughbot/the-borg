@@ -18,6 +18,7 @@ jobs:
       - run: node test/filtro.test.mjs
       - run: node test/cripta.test.mjs
       - run: node test/nascondino.test.mjs
+      - run: node test/fronte.test.mjs
       - run: node test/scacchi.test.mjs
       - run: node test/sito.test.mjs
       - run: bash server/test/produzione.test.sh

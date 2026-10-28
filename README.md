@@ -14,14 +14,14 @@ src/
   borgo/               il mondo: piazza, casa, avatar, interfaccia, coins, missioni, suoni...
   chat/                filtro della chat (parolacce, dati personali, modalità lenta)
   negozi/              Laugh Tale Collectibles e negozio TCG
-  minigiochi/          go-kart, paintball, cripta, belinverse, borg-bubble, nascondino, scacchi, comandi FPS condivisi
+  minigiochi/          go-kart, paintball, cripta, belinverse, borg-bubble, nascondino, scacchi, fronte (Fronte della Cometa), comandi FPS condivisi
   online/              gioco online con gli amici
   librerie/            three.js, il suo caricatore GLB (gltf-loader.js) e PeerJS (codice di terzi, non si tocca)
   dati/                immagini incollate come testo (loghi)
 img/belinverse/        immagini delle carte di Belinverse (file a parte: il telefono le scarica solo quando servono)
 modelli/               modelli 3D .glb (file a parte, scaricati quando servono; licenze in modelli/LEGGIMI.md)
 server/                server di gioco Nakama (vedi server/README.md)
-test/                  prove automatiche (node test/filtro.test.mjs, node test/nascondino.test.mjs, node test/scacchi.test.mjs...)
+test/                  prove automatiche (node test/filtro.test.mjs, node test/nascondino.test.mjs, node test/scacchi.test.mjs, node test/fronte.test.mjs...)
 strumenti/             costruisci.mjs, scomponi.mjs, pubblica.mjs e impacchetta-glb.mjs (unisce modelli glTF in un .glb)
 ```
 

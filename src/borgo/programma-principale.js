@@ -239,7 +239,7 @@
   let W = 1, H = 1;
   function misura() {
     W = app.clientWidth || window.innerWidth; H = app.clientHeight || window.innerHeight;
-    renderer.setPixelRatio(G.stato.grafica === 'leggera' ? 1 : Math.min(window.devicePixelRatio || 1, (B.Kart && B.Kart.attivo) || (B.Paintball && B.Paintball.attivo) || (B.Raid && B.Raid.attivo) || (B.Nascondino && B.Nascondino.attivo) ? 1.5 : 2));
+    renderer.setPixelRatio(G.stato.grafica === 'leggera' ? 1 : Math.min(window.devicePixelRatio || 1, (B.Kart && B.Kart.attivo) || (B.Paintball && B.Paintball.attivo) || (B.Raid && B.Raid.attivo) || (B.Nascondino && B.Nascondino.attivo) || (B.Fronte && B.Fronte.attivo) ? 1.5 : 2));
     renderer.setSize(W, H, false);
     const asp = W / H, z = C.zoom;
     let hw, hh; if (asp < 1) { hw = 4.6 / z; hh = hw / asp; } else { hh = 8 / z; hw = hh * asp; }
@@ -316,7 +316,7 @@
     if (p.arredi) { if (B.NegozioArredi) B.NegozioArredi.apri(); return; }
     if (p.biblioteca) { if (B.Biblioteca) B.Biblioteca.apri(); return; }
     if (p.sito) { if (B.Sito) B.Sito.apri(); return; }
-    if (p.gioco) { const gm = p.gioco === 'paintball' ? B.Paintball : p.gioco === 'raid' ? B.Raid : p.gioco === 'nascondino' ? B.Nascondino : p.gioco === 'scacchi' ? B.Scacchi : B.Kart; if (gm) gm.avvia(); return; }
+    if (p.gioco) { const gm = p.gioco === 'paintball' ? B.Paintball : p.gioco === 'raid' ? B.Raid : p.gioco === 'nascondino' ? B.Nascondino : p.gioco === 'scacchi' ? B.Scacchi : p.gioco === 'fronte' ? B.Fronte : B.Kart; if (gm) gm.avvia(); return; }
     if (!p.verso) { G.emetti('toast', p.nome + ': non ancora disponibile (dimostrativo)'); return; }
     G.emetti('transizione', () => entraStanza(p.verso, p.arrivo || (p.verso === 'casa' ? stanze.casa.spawn : { x: 12.4, z: -4.3, yaw: PI / 4 })));
   }
@@ -456,10 +456,11 @@
     const dt = Math.min(0.05, clock.getDelta()); t += dt;
     G.tick(dt);
     if (!giocoAttivo) return;
-    B.Audio.scena((B.Kart && B.Kart.attivo) || (B.Paintball && B.Paintball.attivo) || (B.Raid && B.Raid.attivo) || (B.Nascondino && B.Nascondino.attivo) ? 'kart' : stanza.id === 'piazza' ? 'piazza' : 'altro');
+    B.Audio.scena((B.Kart && B.Kart.attivo) || (B.Paintball && B.Paintball.attivo) || (B.Raid && B.Raid.attivo) || (B.Nascondino && B.Nascondino.attivo) || (B.Fronte && B.Fronte.attivo) ? 'kart' : stanza.id === 'piazza' ? 'piazza' : 'altro');
     if (B.Raid && B.Raid.attivo) { B.Raid.frame(dt, t, renderer); return; }
     if (B.Paintball && B.Paintball.attivo) { B.Paintball.frame(dt, t, renderer); return; }
     if (B.Nascondino && B.Nascondino.attivo) { B.Nascondino.frame(dt, t, renderer); return; }
+    if (B.Fronte && B.Fronte.attivo) { B.Fronte.frame(dt, t, renderer); return; }
     if (B.Kart && B.Kart.attivo) { B.Kart.frame(dt, t, renderer); return; }
     const UIm = window.UI, copre = UIm && UIm.paginaPiena();
     const vel = muoviIo(dt, !copre); io.av.aggiorna(dt, vel, t); aggBolla(io, dt);
