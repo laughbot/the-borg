@@ -201,6 +201,41 @@
       porte.push({ id: 'gioco-nascondino', nome: 'Nascondino', testo: 'Gioca a Nascondino', gioco: 'nascondino', x: px, z: pz + 1.6, r: 2.0 });
     })();
 
+    /* ---------- SALA CENTRALE: FRONTE DELLA COMETA (varco con sacchi di sabbia, rete mimetica e bandiere) ---------- */
+    (function () {
+      const px = 9.5, pz = HZ0 + 2.0;
+      const g = new T.Group(); g.position.set(px, 0, pz); scena.add(g);
+      scatola(g, 5.4, 0.16, 2.4, '#2a2048', 0, 0.08, 0, 0.02);
+      // portale di legno scuro rinforzato
+      [-1.45, 1.45].forEach(x => { scatola(g, 0.42, 3.3, 0.42, '#4a3a2c', x, 1.65, 0, 0.02); scatola(g, 0.5, 0.12, 0.5, '#e2b24f', x, 3.0, 0, 0.012); });
+      scatola(g, 3.5, 0.42, 0.52, '#3a2e24', 0, 3.4, 0, 0.02);
+      const buio = new T.Mesh(new T.PlaneGeometry(2.5, 3.1), new T.MeshBasicMaterial({ color: 0x141018 })); buio.position.set(0, 1.55, -0.05); g.add(buio);
+      // rete mimetica sopra il varco
+      const [cvR, xR] = B.tela(128, 64); xR.fillStyle = '#4f5a3e'; xR.fillRect(0, 0, 128, 64);
+      ['#3c4630', '#6b7550', '#5a4a34'].forEach(c => { for (let i = 0; i < 18; i++) { xR.fillStyle = c; xR.beginPath(); xR.ellipse(Math.random() * 128, Math.random() * 64, 6 + Math.random() * 10, 4 + Math.random() * 6, Math.random() * 3, 0, 7); xR.fill(); } });
+      const rete = new T.Mesh(new T.PlaneGeometry(4.4, 1.3, 8, 2), new T.MeshToonMaterial({ map: B.tex(cvR), gradientMap: gm, side: T.DoubleSide }));
+      const pr0 = rete.geometry.attributes.position; for (let i = 0; i < pr0.count; i++) pr0.setZ(i, Math.sin(pr0.getX(i) * 2.3) * 0.12 + (pr0.getY(i) < 0 ? 0.18 : 0)); rete.geometry.computeVertexNormals();
+      rete.position.set(0, 3.1, 0.38); rete.rotation.x = -0.35; g.add(rete);
+      // sacchi di sabbia ai lati
+      [-1, 1].forEach(sd => { for (let r = 0; r < 3; r++) for (let k = 0; k < 3 - r; k++) { const sc = mesh(new T.SphereGeometry(0.36, 10, 8), M(['#c9b07a', '#bba06c', '#d3bd88'][(r + k) % 3]), { x: sd * (2.2 + k * 0.62 + r * 0.31), y: 0.2 + r * 0.32, z: 0.55, l: 0.012 }); sc.scale.set(0.95, 0.5, 0.75); g.add(sc); } });
+      // due bandiere: la Milizia (blu) e i Predoni (rossi)
+      [['#3f8cff', -1], ['#ff5a4a', 1]].forEach(([c, sd]) => {
+        cil(g, 0.04, 0.05, 3.8, '#2c2431', sd * 3.6, 1.9, -0.2, 6);
+        const fl = new T.Mesh(new T.PlaneGeometry(1.0, 0.65, 6, 1), new T.MeshToonMaterial({ color: new T.Color(c), gradientMap: gm, side: T.DoubleSide })); fl.position.set(sd * 3.6 + sd * 0.52, 3.35, -0.2); g.add(fl);
+        anim.push(t => { const p = fl.geometry.attributes.position; for (let i = 0; i < p.count; i++) p.setZ(i, Math.sin(t * 4 + p.getX(i) * 5 * sd) * 0.06 * (0.5 + sd * p.getX(i))); p.needsUpdate = true; });
+      });
+      // insegna con la cometa
+      const [cv, cx] = B.tela(512, 128); cx.fillStyle = '#17171f'; B.rr(cx, 4, 4, 504, 120, 18); cx.fill(); cx.lineWidth = 7; cx.strokeStyle = '#e2b24f'; cx.stroke();
+      cx.fillStyle = '#9fe9ff'; cx.beginPath(); cx.arc(56, 64, 16, 0, 7); cx.fill(); cx.globalAlpha = 0.5; cx.beginPath(); cx.moveTo(40, 58); cx.lineTo(10, 40); cx.lineTo(44, 72); cx.fill(); cx.globalAlpha = 1;
+      cx.font = '900 46px Arial Black, Impact, sans-serif'; cx.textAlign = 'center'; cx.textBaseline = 'middle'; cx.lineWidth = 8; cx.strokeStyle = '#3a2a08'; cx.strokeText('FRONTE', 280, 50); cx.fillStyle = '#ffd36a'; cx.fillText('FRONTE', 280, 50);
+      cx.font = 'bold 26px Georgia, serif'; cx.fillStyle = '#f4ecd8'; cx.fillText('della Cometa', 280, 96);
+      const ins = new T.Mesh(new T.PlaneGeometry(4.2, 1.05), new T.MeshBasicMaterial({ map: B.tex(cv) })); ins.position.set(0, 4.3, 0.05); g.add(ins);
+      ostBox(px - 1.45, pz, 0.6, 0.6); ostBox(px + 1.45, pz, 0.6, 0.6); ostBox(px - 2.8, pz + 0.55, 2.2, 0.8); ostBox(px + 2.8, pz + 0.55, 2.2, 0.8); ostCer(px - 3.6, pz - 0.2, 0.2); ostCer(px + 3.6, pz - 0.2, 0.2);
+      const pr = new T.Mesh(new T.BoxGeometry(3.0, 3.2, 1.2), new T.MeshBasicMaterial()); pr.position.set(px, 1.6, pz); pr.visible = false; scena.add(pr);
+      toccabili.push({ obj: pr, tipo: 'azione', testo: 'Fronte della Cometa: sparatutto a squadre in prima persona (anche con gli amici)' });
+      porte.push({ id: 'gioco-fronte', nome: 'Fronte della Cometa', testo: 'Gioca al Fronte', gioco: 'fronte', x: px, z: pz + 1.6, r: 2.0 });
+    })();
+
     /* la Cripta del Re non e' piu' qui: si entra dal portale in piazza (js/portale-cripta.js) */
 
     /* ---------- luci e uscita ---------- */
